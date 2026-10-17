@@ -1,0 +1,87 @@
+{
+  "_comment": "Campus Walk demo scenario (UofT St. George). Single source for mocks, seed, and Demo Mode. P3 owns and may extend. IDs must match supabase/seed.sql. Lives in src/lib/demo/ so mocks can import it.",
+  "jam": {
+    "id": "00000000-0000-4000-8000-0000000000a1",
+    "name": "Campus Walk",
+    "joinCode": "CAMPUS",
+    "travelMode": "walking",
+    "checkinDelaySeconds": 12,
+    "groupResponseTimeoutSeconds": 15
+  },
+  "start": { "name": "Bahen Centre", "latitude": 43.6597, "longitude": -79.3972 },
+  "destination": { "name": "St. George Station", "latitude": 43.6683, "longitude": -79.3997 },
+  "members": [
+    {
+      "userId": "00000000-0000-4000-8000-000000000001",
+      "displayName": "Priya",
+      "role": "host",
+      "demoRole": "host",
+      "email": "host@jam.demo",
+      "position": { "latitude": 43.6622, "longitude": -79.398 }
+    },
+    {
+      "userId": "00000000-0000-4000-8000-000000000002",
+      "displayName": "Daniel",
+      "role": "member",
+      "demoRole": "group_member",
+      "email": "member@jam.demo",
+      "position": { "latitude": 43.6623, "longitude": -79.3978 }
+    },
+    {
+      "userId": "00000000-0000-4000-8000-000000000003",
+      "displayName": "Alex",
+      "role": "member",
+      "demoRole": "affected_user",
+      "email": "affected@jam.demo",
+      "position": { "latitude": 43.662, "longitude": -79.3981 }
+    }
+  ],
+  "emergencyContact": {
+    "userId": "00000000-0000-4000-8000-000000000004",
+    "displayName": "Sam",
+    "email": "contact@jam.demo",
+    "relationship": "Sibling"
+  },
+  "plannedRoute": [
+    { "latitude": 43.6597, "longitude": -79.3972 },
+    { "latitude": 43.662, "longitude": -79.3979 },
+    { "latitude": 43.6645, "longitude": -79.3986 },
+    { "latitude": 43.6668, "longitude": -79.3993 },
+    { "latitude": 43.6683, "longitude": -79.3997 }
+  ],
+  "affectedUserOffRoutePath": [
+    { "latitude": 43.6625, "longitude": -79.3985 },
+    { "latitude": 43.6628, "longitude": -79.3998 },
+    { "latitude": 43.6631, "longitude": -79.4012 },
+    { "latitude": 43.6634, "longitude": -79.4026 },
+    { "latitude": 43.6636, "longitude": -79.404 }
+  ],
+  "alternativeRoute": [
+    { "latitude": 43.6597, "longitude": -79.3972 },
+    { "latitude": 43.6612, "longitude": -79.394 },
+    { "latitude": 43.665, "longitude": -79.3925 },
+    { "latitude": 43.668, "longitude": -79.3935 },
+    { "latitude": 43.6688, "longitude": -79.396 },
+    { "latitude": 43.6683, "longitude": -79.3997 }
+  ],
+  "supportPoints": [
+    { "id": "sp-robarts", "name": "Robarts Library", "category": "library", "latitude": 43.6644, "longitude": -79.3994, "openNow": true, "source": "demo" },
+    { "id": "sp-hart-house", "name": "Hart House", "category": "community_centre", "latitude": 43.6638, "longitude": -79.3946, "openNow": true, "source": "demo" },
+    { "id": "sp-st-george", "name": "St. George Station", "category": "transit", "latitude": 43.6683, "longitude": -79.3997, "source": "demo" },
+    { "id": "sp-spadina", "name": "Spadina Station", "category": "transit", "latitude": 43.6673, "longitude": -79.4037, "source": "demo" },
+    { "id": "sp-museum", "name": "Museum Station", "category": "transit", "latitude": 43.6671, "longitude": -79.3935, "source": "demo" },
+    { "id": "sp-queens-park-washroom", "name": "Queen's Park washroom", "category": "washroom", "latitude": 43.664, "longitude": -79.392, "source": "demo" },
+    { "id": "sp-western-hospital", "name": "Toronto Western Hospital", "category": "hospital", "latitude": 43.6533, "longitude": -79.4058, "openNow": true, "source": "demo" }
+  ],
+  "mockDisruption": {
+    "id": "disruption-1",
+    "line": "Line 1 Yonge-University",
+    "station": "St. George Station",
+    "message": "Demo disruption: reduced service at St. George Station.",
+    "source": "mock"
+  },
+  "health": {
+    "baselineHeartRate": 75,
+    "spikeHeartRate": 145
+  }
+}
