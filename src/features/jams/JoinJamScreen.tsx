@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { StyleSheet, Text, View } from "react-native";
+import { PenguinHuddle } from "@/components/brand";
 import { Button, Card, OptionCard, Screen, TextField, Toggle } from "@/components/ui";
 import { requestConsentPermission } from "@/features/auth/consentPermissions";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -175,6 +176,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
 
   return (
     <Screen scroll>
+      <PenguinHuddle height={150} />
       <Text style={type.title}>Join a Huddle</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
         Enter the 6-character code a Huddle member shared with you, or scan their QR code.

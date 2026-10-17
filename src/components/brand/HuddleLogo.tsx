@@ -1,46 +1,31 @@
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { Image, type ImageStyle, type StyleProp } from "react-native";
 import { APP_NAME, APP_TAGLINE } from "@/lib/constants";
-import { colors, fonts } from "@/theme";
+import { LOGO_SLOGAN, LOGO_SLOGAN_ASPECT, LOGO_WORDMARK, LOGO_WORDMARK_ASPECT } from "./brandAssets";
 
 /**
- * The Huddle logo. Until the wordmark artwork (the penguin "u") is ready, this sets the name in
- * Inter Bold in the brand burgundy. When the art lands, swap the body for an <Image> or SvgXml
- * here; every screen uses this component, so nothing else changes.
+ * The Huddle logo artwork. `wordmark` is the name alone (tab headers, the Home header);
+ * `slogan` adds "N' Waddle" underneath (Welcome, splash). The wordmark already contains a
+ * penguin, so don't place a separate Pico right next to it.
  */
 export function HuddleLogo({
-  size = 40,
-  tagline = false,
-  align = "center",
+  variant = "wordmark",
+  height = 32,
   style,
 }: {
-  /** Font size of the wordmark. */
-  size?: number;
-  tagline?: boolean;
-  align?: "center" | "left";
-  style?: StyleProp<ViewStyle>;
+  variant?: "wordmark" | "slogan";
+  /** Height in points; width follows the artwork's aspect ratio. */
+  height?: number;
+  style?: StyleProp<ImageStyle>;
 }) {
+  const slogan = variant === "slogan";
   return (
-    <View
-      style={[styles.wrap, align === "left" && styles.left, style]}
+    <Image
+      source={slogan ? LOGO_SLOGAN : LOGO_WORDMARK}
+      resizeMode="contain"
+      style={[{ height, width: height * (slogan ? LOGO_SLOGAN_ASPECT : LOGO_WORDMARK_ASPECT) }, style]}
       accessible
-      accessibilityRole="header"
-      accessibilityLabel={tagline ? `${APP_NAME}. ${APP_TAGLINE}` : APP_NAME}
-    >
-      <Text style={[styles.word, { fontSize: size, letterSpacing: -size * 0.03 }]} maxFontSizeMultiplier={1.3}>
-        {APP_NAME}
-      </Text>
-      {tagline ? (
-        <Text style={[styles.tagline, { fontSize: Math.max(14, size * 0.38) }]} maxFontSizeMultiplier={1.4}>
-          {APP_TAGLINE}
-        </Text>
-      ) : null}
-    </View>
+      accessibilityRole="image"
+      accessibilityLabel={slogan ? `${APP_NAME}. ${APP_TAGLINE}` : APP_NAME}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { alignItems: "center" },
-  left: { alignItems: "flex-start" },
-  word: { fontFamily: fonts.bold, fontWeight: "700", color: colors.brand },
-  tagline: { fontFamily: fonts.medium, fontWeight: "500", color: colors.brandMuted, marginTop: 2 },
-});

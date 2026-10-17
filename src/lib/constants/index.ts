@@ -1,7 +1,11 @@
 import type { ConsentKey, EscalationState, RealtimeEventName } from "@/lib/types";
 
 export const APP_NAME = "Huddle";
-export const APP_TAGLINE = "Your journey, connected.";
+export const APP_TAGLINE = "Huddle N' Waddle";
+/** Call to action next to the penguin huddle (Create, Home). */
+export const APP_SLOGAN_CTA = "Just Huddle N' Waddle.";
+/** The brand promise (Welcome, Solo Huddle). Never in alert, call, or incident screens. */
+export const BRAND_PROMISE = "Nobody walks home alone, even when they're on their own.";
 
 // ---------- Realtime ----------
 

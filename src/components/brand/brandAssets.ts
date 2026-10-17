@@ -22,3 +22,14 @@ export const PICO: Record<PicoMood, ImageSourcePropType> = {
 
 /** Width / height of pico.png, so callers can size by height or width without measuring. */
 export const PICO_ASPECT = 841 / 1033;
+
+/** The Huddle wordmark (walking-penguin "u"), and the lockup with "N' Waddle" underneath. */
+export const LOGO_WORDMARK: ImageSourcePropType = require("../../../assets/brand/logo-wordmark.png");
+export const LOGO_SLOGAN: ImageSourcePropType = require("../../../assets/brand/logo-slogan.png");
+/** Width / height of the trimmed logo files (1200x497 and 1200x499). */
+export const LOGO_WORDMARK_ASPECT = 1200 / 497;
+export const LOGO_SLOGAN_ASPECT = 1200 / 499;
+
+/** Three penguins in scarves: the "your group" illustration for creating and joining a Huddle. */
+export const PENGUIN_HUDDLE: ImageSourcePropType = require("../../../assets/brand/penguin-huddle.png");
+export const PENGUIN_HUDDLE_ASPECT = 1000 / 846;

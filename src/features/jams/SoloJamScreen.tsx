@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { BrandLine, Pico } from "@/components/brand";
 import { Button, Card, OptionCard, Screen, TextField } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { useTrustedContacts } from "@/features/contacts/useTrustedContacts";
+import { BRAND_PROMISE } from "@/lib/constants";
 import type { EmergencyPreference } from "@/lib/types";
 import { colors, space, type } from "@/theme";
 import { DestinationPicker } from "./DestinationPicker";
@@ -68,6 +70,10 @@ export function SoloJamScreen() {
 
   return (
     <Screen scroll>
+      <View style={styles.promiseHero}>
+        <Pico mood="walking" size={120} />
+        <BrandLine text={BRAND_PROMISE} size={24} style={styles.promise} />
+      </View>
       <Text style={type.title}>Travelling alone?</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
         Huddle watches for anything unusual while you’re on your own, and reaches out directly — no
@@ -134,3 +140,8 @@ export function SoloJamScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  promiseHero: { alignItems: "center", gap: space(2) },
+  promise: { maxWidth: 320 },
+});

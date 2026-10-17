@@ -1,9 +1,10 @@
 import { useRouter } from "expo-router";
 import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { HuddleLogo, Pico } from "@/components/brand";
+import { BrandLine, HuddleLogo, PenguinHuddle } from "@/components/brand";
 import { Avatar, Badge, Button, Card, Icon, IconBadge, ListRow, Screen, SectionHeader } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
+import { APP_SLOGAN_CTA } from "@/lib/constants";
 import { signOut } from "@/lib/supabase/auth";
 import type { JamRow } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, tones, type, type Tone } from "@/theme";
@@ -31,10 +32,7 @@ export function HomeScreen() {
   return (
     <Screen scroll>
       <View style={styles.brandRow}>
-        <View style={styles.brandMark}>
-          <Pico size={40} />
-          <HuddleLogo size={28} align="left" />
-        </View>
+        <HuddleLogo variant="wordmark" height={36} />
         <Avatar name={name} size={36} />
       </View>
 
@@ -56,6 +54,13 @@ export function HomeScreen() {
       ) : null}
 
       {featured ? <StatusHero pair={featured} onOpen={() => openJam(featured)} /> : null}
+
+      {!loading && !error && active.length === 0 ? (
+        <View style={styles.huddleHero}>
+          <PenguinHuddle height={170} />
+          <BrandLine text={APP_SLOGAN_CTA} size={26} />
+        </View>
+      ) : null}
 
       <View style={styles.quickRow}>
         <QuickAction icon={Plus} label="Create a Huddle" onPress={() => router.push("/create")} primary />
@@ -189,7 +194,7 @@ function QuickAction({ icon, label, onPress, primary }: { icon: LucideIcon; labe
 
 const styles = StyleSheet.create({
   brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  brandMark: { flexDirection: "row", alignItems: "center", gap: space(2) },
+  huddleHero: { alignItems: "center", gap: space(1), paddingVertical: space(2) },
   hero: { gap: space(1) },
   summaryRow: { flexDirection: "row", gap: space(2) },
   statChip: { flex: 1, alignItems: "center", gap: 2, paddingVertical: space(3), borderRadius: radius.card },

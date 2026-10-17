@@ -92,6 +92,8 @@ export const fonts = {
   medium: "Inter_500Medium",
   semibold: "Inter_600SemiBold",
   bold: "Inter_700Bold",
+  /** Caveat (handwritten): brand lines only (BrandLine), at 20pt or more. */
+  script: "Caveat_600SemiBold",
 } as const;
 
 export const type = {

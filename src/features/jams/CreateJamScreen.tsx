@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { Clock } from "lucide-react-native";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { BrandLine, PenguinHuddle } from "@/components/brand";
 import { Button, Card, Chip, Icon, OptionCard, Screen, TextField } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { routeOrigin } from "@/features/map/useJamMapData";
+import { APP_SLOGAN_CTA } from "@/lib/constants";
 import type { EmergencyPreference, TravelMode } from "@/lib/types";
 import { routingService } from "@/services";
 import { colors, radius, space, type } from "@/theme";
@@ -99,6 +101,11 @@ export function CreateJamScreen() {
 
   return (
     <Screen scroll>
+      <View style={styles.huddleHero}>
+        <PenguinHuddle height={160} />
+        <BrandLine text={APP_SLOGAN_CTA} size={26} />
+      </View>
+
       <Button label='Use the "Campus Walk" preset' variant="secondary" onPress={applyCampusWalkPreset} />
 
       <Card>
@@ -204,6 +211,7 @@ function clampSeconds(value: string): number {
 }
 
 const styles = StyleSheet.create({
+  huddleHero: { alignItems: "center", gap: space(1) },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
   trip: { flexDirection: "row", alignItems: "center", gap: space(3), padding: space(4), borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   tripText: { flex: 1, gap: space(1) },

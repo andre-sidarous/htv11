@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { HuddleLogo, Pico } from "@/components/brand";
+import { BrandLine, HuddleLogo } from "@/components/brand";
 import { Button, Card, Screen, TextField } from "@/components/ui";
+import { BRAND_PROMISE } from "@/lib/constants";
 import { publicEnv } from "@/lib/env";
 import { sendEmailCode, signInWithDevAccount, signInWithGoogle, verifyEmailCode } from "@/lib/supabase/auth";
 import { colors, space, type } from "@/theme";
@@ -65,11 +66,8 @@ export function WelcomeScreen() {
   return (
     <Screen scroll>
       <View style={[styles.hero, styles.brandHero]}>
-        <Pico mood="wave" size={150} />
-        <HuddleLogo size={44} tagline />
-        <Text style={[type.bodyMuted, styles.centerText]} maxFontSizeMultiplier={1.6}>
-          Travel together. Huddle quietly looks out for your group.
-        </Text>
+        <HuddleLogo variant="slogan" height={124} />
+        <BrandLine text={BRAND_PROMISE} size={24} tone="muted" style={styles.promise} />
       </View>
 
       <Card>
@@ -154,6 +152,7 @@ const styles = StyleSheet.create({
   hero: { gap: space(2), marginBottom: space(2) },
   brandHero: { alignItems: "center", paddingTop: space(4) },
   centerText: { textAlign: "center" },
+  promise: { maxWidth: 320, marginTop: space(1) },
   devList: { gap: space(2) },
   errorText: { color: colors.escalation, fontSize: 14 },
 });

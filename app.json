@@ -74,8 +74,8 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/brand/pico.png",
-          "imageWidth": 180,
+          "image": "./assets/brand/logo-slogan.png",
+          "imageWidth": 260,
           "resizeMode": "contain",
           "backgroundColor": "#F8F4F1"
         }

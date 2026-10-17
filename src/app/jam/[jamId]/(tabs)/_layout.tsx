@@ -2,9 +2,15 @@ import { useKeepAwake } from "expo-keep-awake";
 import { Tabs, useLocalSearchParams } from "expo-router";
 import { Activity, Map as MapIcon, Settings, Users, type LucideIcon } from "lucide-react-native";
 import { StyleSheet, View, type ColorValue } from "react-native";
+import { HuddleLogo } from "@/components/brand";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
 import { JamIdProvider } from "@/features/jams/JamIdContext";
 import { fonts, colors } from "@/theme";
+
+/** Every Huddle tab shows the wordmark in its header; the tab bar (and each screen's title) names the tab. */
+function HeaderLogo() {
+  return <HuddleLogo variant="wordmark" height={28} />;
+}
 
 function tabIcon(Glyph: LucideIcon) {
   return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
@@ -28,6 +34,8 @@ export default function JamTabsLayout() {
           screenOptions={{
             headerStyle: { backgroundColor: colors.warmWhite },
             headerShadowVisible: false,
+            headerTitle: HeaderLogo,
+            headerTitleAlign: "center",
             headerTintColor: colors.brand,
             headerTitleStyle: { color: colors.ink, fontFamily: fonts.semibold, fontWeight: "600" },
             tabBarActiveTintColor: colors.brand,

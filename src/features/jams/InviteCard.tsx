@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import QRCode from "react-native-qrcode-svg";
 import { Share, StyleSheet, Text } from "react-native";
 import { Button, Card } from "@/components/ui";
+import { APP_SLOGAN_CTA } from "@/lib/constants";
 import { fonts, colors, space, type } from "@/theme";
 
 /**
@@ -12,7 +13,7 @@ export function InviteCard({ joinCode, jamName, note }: { joinCode: string; jamN
   async function handleShare() {
     const link = Linking.createURL(`join/${joinCode}`);
     try {
-      await Share.share({ message: `Join my Huddle "${jamName}" on Huddle.\nCode: ${joinCode}\n${link}` });
+      await Share.share({ message: `Join my Huddle "${jamName}" on Huddle.\nCode: ${joinCode}\n${link}\n\n${APP_SLOGAN_CTA}` });
     } catch {
       // The user dismissed the share sheet — nothing to do.
     }
