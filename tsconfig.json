@@ -1,9 +1,12 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./packages/types" },
-    { "path": "./packages/db" },
-    { "path": "./apps/api" },
-    { "path": "./apps/web" }
-  ]
+  "extends": "expo/tsconfig.base.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["node_modules", "apps", "packages", "supabase/functions"]
 }

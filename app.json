@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Jam",
+    "slug": "jam",
+    "version": "0.1.0",
+    "scheme": "jam",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#fbf8f3",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.htv11.jam",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Jam shares your location with your Jam while it is active. You can pause it at any time.",
+        "NSMicrophoneUsageDescription": "Jam records audio during an AI support call only if you turned on emergency recording.",
+        "NSCameraUsageDescription": "Jam uses the camera to scan a Jam QR code."
+      }
+    },
+    "android": {
+      "package": "com.htv11.jam",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "RECORD_AUDIO",
+        "CAMERA"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Jam shares your location with your Jam while it is active. You can pause it at any time."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Jam records audio during an AI support call only if you turned on emergency recording."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Jam uses the camera to scan a Jam QR code.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

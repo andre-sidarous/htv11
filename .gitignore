@@ -1,5 +1,55 @@
+# dependencies
 node_modules/
+
+# build output
 dist/
 *.tsbuildinfo
 coverage/
+
+# legacy web build output
+.next/
+out/
+.vercel/
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
+
+# env files (keep the example)
+.env
+.env*.local
+.env.*
+!.env.example
+
+# Expo
+.expo/
+web-build/
+expo-env.d.ts
+/ios/
+/android/
+.kotlin/
+*.orig.*
+.metro-health-check*
+
+# native signing / secrets
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / editor
 .DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
