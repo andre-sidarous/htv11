@@ -1,5 +1,4 @@
 import type { RiskService } from "@/lib/types";
-import { mockRiskService } from "./mock";
+import { riskEngine } from "./engine";
 
-// P4: swap for the real risk engine.
-export const riskService: RiskService = mockRiskService;
+export const riskService: RiskService = riskEngine;
