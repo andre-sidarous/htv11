@@ -13,6 +13,6 @@ export const CAMPUS_WALK_DESTINATION: DestinationPreset = {
 export const DESTINATION_PRESETS: DestinationPreset[] = [
   CAMPUS_WALK_DESTINATION,
   ...campusWalk.supportPoints
-    .filter((p) => p.category === "transit" || p.category === "library")
+    .filter((p) => (p.category === "transit" || p.category === "library") && p.name !== CAMPUS_WALK_DESTINATION.name)
     .map((p) => ({ name: p.name, latitude: p.latitude, longitude: p.longitude })),
 ];
