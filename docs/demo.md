@@ -1,46 +1,67 @@
-# Demo plan (3 to 4 phones)
+# Demo plan (4 phones)
 
-> P5 finalizes this document (fallbacks, `DEMO_CHECKLIST.md`). This is the foundation's plan.
+Presentation-day checklist: [DEMO_CHECKLIST.md](../DEMO_CHECKLIST.md).
 
-## Setup
+## Roles
 
-1. Each presenter signs in with their **own account**. Presenter 1 creates "Campus Walk" (Campus Walk preset: Bahen Centre to St. George Station), and the others join by code or QR. `supabase/seed.sql` adds a backup Jam (code `CAMPUS`) and four demo accounts, in case real sign-in fails.
-2. Every phone runs the app in **Expo Go** (SDK 57), from the presenter laptop (`npm run start:tunnel`) or from an EAS Update published beforehand.
-3. Presenter 1 opens Demo Mode → Demo Control and picks the affected user (presenter 3). Backup: the seeded accounts (password `jam-demo-1234`, with `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
-4. Mirror one phone to the projector (AirPlay / QuickTime on Mac, or scrcpy on Android).
+Everyone signs in with their **own real account** (email code). The seeded accounts are only a backup.
 
-| Presenter | Role | Backup account (seed) | Backup name |
+| Presenter | Role | In the Jam? | Backup account (seed) |
 |---|---|---|---|
-| 1 | Host | host@jam.demo | Priya |
-| 2 | Group member | member@jam.demo | Daniel |
-| 3 | Affected user | affected@jam.demo | Alex |
-| 4 (optional) | Emergency contact | contact@jam.demo, or a simulated recipient | Sam |
+| 1 | Host, runs **Demo Control** | yes | host@jam.demo (Priya) |
+| 2 | Group member | yes | member@jam.demo (Daniel) |
+| 3 | Affected user | yes | affected@jam.demo (Alex) |
+| 4 | Emergency contact (gets the phone call + text) | **no** | contact@jam.demo (Sam) |
 
-The Demo Control panel (P5) runs on presenter 1's phone.
+Backup password: `jam-demo-1234` (needs `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
 
-## Sequence
+## Before the demo (once)
 
-1. Presenter 1 signs in and creates "Campus Walk" (or loads the seeded Jam from Demo Mode).
-2. Presenters 2 and 3 join by code or QR. Everyone appears on the shared map.
-3. Presenter 3 confirms the destination and emergency preference, and shares live location.
-4. **Move affected user away** (simulated location). The map shows route deviation.
-5. **Heart-rate spike + running**: baseline 75, current 145. Risk is 3 + 2 + 1 = 6, which is the group-alert range.
-6. Jam asks "Are you okay?" Presenter 3 doesn't answer. The unanswered check-in adds +3, for a total of 9, so it escalates.
-7. Everyone gets the in-app alert (with haptics), and nobody acknowledges.
-8. The AI support call starts and speaks "Hi, this is Jam. Your group could not reach you. Are you safe?" The screen shows "Recording enabled under your emergency preference."
-9. Presenter 3 stays unresponsive, and the incident package is created.
-10. Members are notified in-app (and through ntfy if configured). The map shows the last known location.
+1. **Supabase:** all migrations run in the SQL Editor (`supabase/migrations/*`, in order). Secrets set and every function deployed:
+   ```bash
+   npx supabase secrets set --env-file supabase/functions/.env
+   npx supabase functions deploy --use-api
+   ```
+2. **Twilio:** presenter 4's number is a **Verified Caller ID** (trial accounts can only call and text verified numbers). Canada/US are allowed under Voice → Geo permissions.
+3. **Sign-up on every phone:** profile, check-in buffer, consents. Presenter 3 turns on **all five** consents (location, health, AI call, recording, trusted-contact notifications) and picks **AI support call**, so the OS location and microphone permissions are granted now, not on stage.
+4. **Presenter 3 → Trusted contacts:** add presenter 4 with their phone (`+1…`) and the **same email presenter 4 signs in with**, turn on location, health summary, and recording, and tap **Test call**. Presenter 4's phone should ring.
+5. **Presenter 4:** sign in to Jam with that email. They don't join the Jam. The **Incidents** screen (`/incidents`) is where the package will appear.
+6. Optional: everyone subscribes to the Jam's ntfy topic (Jam → Notifications → Copy topic → ntfy app).
+
+## Setup on stage
+
+1. Every phone opens Jam in **Expo Go** (SDK 57): `npm run start:tunnel` on the laptop, or an EAS Update published beforehand.
+2. Presenter 1 creates "Campus Walk" (Bahen Centre → St. George Station). Presenters 2 and 3 join by QR or code.
+3. Presenter 1 opens **Demo Control** (`/demo-control`), picks the Jam, then picks presenter 3 as the **Affected user**, then taps **1. Reset demo**.
+4. Mirror presenter 1's or 2's phone to the projector (AirPlay / QuickTime, or scrcpy on Android).
+
+## Sequence (Demo Control buttons in bold)
+
+1. Everyone is on the shared map.
+2. Presenter 3 confirms the destination and emergency preference and shares live location.
+3. **Move affected user away**: the map shows route deviation.
+4. **Trigger heart-rate spike** + **Trigger running**: baseline 75, now 145. Risk 3 + 2 + 1 = 6.
+5. **Send check-in**: presenter 3 sees "Are you okay?" and doesn't answer. Demo Mode shortens their buffer (`DEMO_CHECKIN_TIMEOUT_MS`), or tap **Simulate no response**. The unanswered check-in brings risk to 9.
+6. Presenters 1 and 2 get the in-app card "Alex may need support." (and an ntfy push). Nobody taps "I'm going to help". Tap **Simulate no group response** to skip the wait.
+7. The **AI support call starts on presenter 3's phone by itself**: "Hi, this is Jam. Your group could not reach you. Are you safe?" It guides them toward the destination. The screen shows "Recording enabled under your emergency preference."
+8. Presenter 3 stays silent for **45 seconds**, or tap **Simulate AI non-response** under More actions.
+9. **Presenter 4's phone rings** (Twilio), then they get a text with the last-seen location, why Jam was concerned, and a recording link. If P4's flow didn't fire it, tap **Send incident package**.
+10. Presenters 1 and 2 see **View incident** on the alert card: map, reasons, recording, who it was shared with. Presenter 4 opens **Incidents** and sees their filtered view.
 11. Jam shows: "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."
-12. Presenter marks the user safe. The alert resolves, and the deletion status appears.
+12. **Resolve incident** (or "Mark safe" on the card): the alert resolves on every phone. Optionally **Delete package** on the incident screen to show the data deletion.
 
-## Everything must work without third parties
+To run it again: **Reset demo** (host only). It clears alerts, incidents, notifications, health signals, and live locations for that Jam. Accounts, members, and contacts stay.
+
+## When something fails
 
 | If this fails | Fallback |
 |---|---|
-| Google / email sign-in | seeded demo accounts |
-| Gemini | scripted support-call lines (always available) |
-| ntfy | in-app alerts only, with status shown |
-| OSRM | predefined Campus Walk route labelled "Demo route" |
-| Live GPS | simulated location source (demo actions move people) |
+| Email sign-in (rate limit, no email) | seeded demo accounts |
+| Gemini | scripted support-call lines (always on) |
+| Twilio call or text | the incident package still appears in-app, and Notifications shows the reason. Show the SMS preview |
+| ntfy | in-app alert cards only. Notifications shows "Unavailable" |
+| OSRM | Campus Walk route labelled "Demo route" |
+| Live GPS | simulated location (Demo Control moves people) |
+| An app reloads mid-alert | alert cards recover from the database on reopen |
 | Laptop / dev server | EAS Update published beforehand |
 | Supabase entirely | `EXPO_PUBLIC_USE_MOCK_SERVICES=true` on one phone (single-device walkthrough) |

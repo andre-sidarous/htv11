@@ -53,3 +53,6 @@ desktop.ini
 .vscode/*
 !.vscode/extensions.json
 *.swp
+
+# Deno (Edge Function tests)
+deno.lock

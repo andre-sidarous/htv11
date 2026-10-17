@@ -33,7 +33,7 @@ export type EscalationState =
 
 export type AlertResponseKind = "seen" | "acknowledged" | "responding" | "safe";
 export type ConfirmationStatus = "pending" | "confirmed" | "declined";
-export type NotificationChannel = "ntfy" | "sms_preview" | "in_app";
+export type NotificationChannel = "ntfy" | "sms_preview" | "in_app" | "voice_call" | "sms";
 export type NotificationStatus = "sent" | "skipped" | "failed";
 
 export type MemberPresence = "live" | "stale" | "offline" | "paused" | "unavailable";
@@ -186,6 +186,10 @@ export type AiCallContext = {
   activity?: Activity;
   nearestSupportPoint?: string;
   groupResponded: boolean;
+  /** Where the Jam is heading, so the AI can guide them there. */
+  destinationName?: string;
+  /** P3's next spoken direction, e.g. "Turn left on Harbord Street, then walk 200 metres". */
+  guidance?: string;
 };
 
 export type AiCallTurn = { text: string; source: "gemini" | "scripted"; step: number };

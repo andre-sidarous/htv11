@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Marker, Polyline } from "react-native-maps";
@@ -84,6 +85,17 @@ export default function DevScreen() {
       </View>
 
       <View style={styles.card}>
+        <Text style={type.heading}>Screens in progress</Text>
+        {(["/contacts", "/demo-control", "/incidents", "/notifications"] as const).map((href) => (
+          <Link key={href} href={href} asChild>
+            <Pressable accessibilityRole="link" style={styles.link}>
+              <Text style={styles.linkText}>Open {href}</Text>
+            </Pressable>
+          </Link>
+        ))}
+      </View>
+
+      <View style={styles.card}>
         <Text style={type.heading}>Registered demo actions</Text>
         {actions.length === 0 ? (
           <EmptyState title="None registered yet" description="P3 and P4 register actions in features/demo/demoActions.ts." />
@@ -113,4 +125,6 @@ const styles = StyleSheet.create({
   dim: { opacity: 0.6 },
   buttonText: { color: colors.warmWhite, fontSize: 16, fontWeight: "600" },
   mono: { fontFamily: "monospace", fontSize: 12, color: colors.ink },
+  link: { minHeight: TAP_TARGET, justifyContent: "center" },
+  linkText: { color: colors.navy, fontSize: 16, fontWeight: "600", textDecorationLine: "underline" },
 });

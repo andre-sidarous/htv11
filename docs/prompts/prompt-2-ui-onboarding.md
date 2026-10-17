@@ -43,14 +43,20 @@ Flow: welcome → sign in → profile setup if no `profiles` row → home. Sessi
 
 Sign-in options, all already implemented in `@/lib/supabase/auth`:
 1. **"Continue with email"**: `sendEmailCode(email)`, then a 6-digit code screen calls `verifyEmailCode(email, code)`. It creates the account on first use, so this is also **sign-up**.
-2. **Demo accounts** (shown when `publicEnv.enableDevLogin`): one-tap buttons for `host@jam.demo`, `member@jam.demo`, `affected@jam.demo`, `contact@jam.demo` (password `jam-demo-1234`) using `signInWithDevAccount`.
+2. **Demo accounts** (backup only; the team signs in with real accounts; shown when `publicEnv.enableDevLogin`): one-tap buttons for `host@jam.demo`, `member@jam.demo`, `affected@jam.demo`, `contact@jam.demo` (password `jam-demo-1234`) using `signInWithDevAccount`.
 3. **"Continue with Google"** (`signInWithGoogle()`): show it, but it's optional in Expo Go. Handle `{ error }` calmly.
 
-Profile asks only for: display name, optional phone, optional photo (photo upload is optional. If you add it, add an `avatars` Storage bucket via a migration and tell the team). Copy: "Let's set up your Jam profile. You can change these settings later." Never ask for a home address, unnecessary medical info, or weight. Insert the `profiles` row here (no trigger exists).
+Profile asks only for: display name, optional phone, **check-in buffer**, optional photo (photo upload is optional. If you add it, add an `avatars` Storage bucket via a migration and tell the team). Copy: "Let's set up your Jam profile. You can change these settings later." Never ask for a home address, unnecessary medical info, or weight. Insert the `profiles` row here (no trigger exists).
+
+**Check-in buffer** (`profiles.checkin_buffer_seconds`): "If Jam checks on you and you don't answer, how long should it wait before alerting your group?" Offer `CHECKIN_BUFFER_CHOICES_S` (1, 2, 5, 10 minutes), default 2 minutes (`DEFAULT_CHECKIN_BUFFER_S`). Editable later in settings.
 
 ## Consent screen
 
 Separate plain-language toggles for: location sharing, health signals, AI support call, emergency recording, trusted-contact notifications. **All off by default** (`DEFAULT_CONSENTS` in `@/lib/constants`). Example: "Location sharing lets your Jam see where you are while the Jam is active. You can pause it at any time."
+
+**Ask for OS permissions here, once, at sign-up**, so nothing ever prompts during an emergency. When a toggle is turned on, request the matching permission right away: location (`Location.requestForegroundPermissionsAsync`), microphone for recording (`requestRecordingPermissionsAsync` from `expo-audio`). Ask for the camera only when someone opens the QR scanner. If a permission is denied, turn the toggle back off and explain calmly how to enable it in Settings. Later, P4 starts the AI call and recording automatically, with no confirmation step, so these permissions must already be granted.
+
+Trusted contacts (P5) are the last step: if the user doesn't answer the check-in, the group doesn't respond, and the user stays silent on the AI support call for 45 seconds, Jam phones their contacts and texts them the last-seen location and summary (Twilio). The trusted-contact notification consent covers that call and text.
 
 Emergency preference (`ai_support_call` or `contact_only_alert`) must be **actively chosen**, with nothing pre-selected. Keep a draft in local state, then persist it to the user's `jam_members` row when they create or join a Jam. RLS lets members update only those columns on their own row.
 

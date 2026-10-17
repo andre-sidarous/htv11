@@ -29,13 +29,25 @@ Implement the TODO in `supabase/functions/notify-ntfy/index.ts`. Publish only Ti
 
 Implement `NotificationService` in `src/services/notification/supabase.ts` (`notifyGroup` calls `notifyNtfy` and reports `in_app` too; `getStatus` reads the latest `notification_events`). Switch `index.ts` to it. Add a notification settings screen (new route file): ntfy configured/unavailable, topic status (show the topic so members can subscribe in the free ntfy app), last notification sent, and fallback state.
 
+## Escalation order (P4 runs the steps; you show them and own the last one)
+
+1. **Trigger:** going off the route (P3) or a health signal such as a sudden fall or stop (P4) → "Are you okay?" check-in.
+2. **No answer within the person's buffer** (`profiles.checkin_buffer_seconds`, chosen at sign-up, e.g. 2 min) → **group alert**: in-app alert on every phone + ntfy push.
+3. **Nobody in the group acknowledges** within `jams.group_response_timeout_seconds` → **AI support call** starts by itself on the affected phone. It guides them toward the destination (P3's spoken guidance), checks in every 15s, and is **recorded** if they consented.
+4. **45 seconds of silence** on the AI call → the **emergency contact's phone rings** (Twilio).
+5. Then the **contact gets a text** and the **group gets the incident package**: recording, last-seen location, and the relevant health/route data, each only as allowed.
+
+## Last step: call + text + incident package (Twilio, built)
+
+Built in `supabase/functions/_shared/contactEscalation.ts` (`escalateToContacts`), exposed as the `call-contacts` function and `notificationService.notifyContacts({ alertId, recordingPath? })`. It creates one incident package per alert, phones each trusted contact who has a phone number and hasn't declined, then texts them, then pings the group on ntfy. The call says their name, that the person may need support, the last known place **only if** `receive_location`, Jam's reasons **only if** `receive_health_summary`, and "if you believe they are in immediate danger, call 9 1 1". The text adds a maps link (location toggle) and a 24-hour recording link (`receive_recording`). Each attempt is logged in `notification_events` (`voice_call`, `sms`, `ntfy`), with no phone numbers. Phone numbers are stored in E.164 (`+14165550123`). Twilio trial accounts can only call and text **verified** numbers.
+
 ## SMS preview
 
-ntfy isn't SMS. Without Twilio, show an **"SMS preview"** of what would be sent and send nothing. If Twilio is added later, its credentials go in Edge Function secrets only.
+With Twilio unset, the call and text are `skipped`; show an **"SMS preview"** (`previewSms`) of what would have been sent. Twilio credentials go in Edge Function secrets only.
 
 ## Contact access to incident data
 
-Add `supabase/functions/incident-access`: input `{ token }`; compute SHA-256 of the token; look up `incident_packages.access_token_hash` with `adminClient()`; reject if expired or deleted; return **only** the fields that contact is permitted (location / health summary / recording signed URL per their `trusted_contacts` toggles). Copy `requireUser`-style helpers from `_shared/supabase.ts`. Because Presenter 4 runs the app too, the contact view is the `/incident/[token]` screen calling this function. A shared link can carry the token as text.
+`supabase/functions/incident-access` (built): `{}` lists packages shared with me; `{ incidentId }` returns one, filtered for me; `{ incidentId, action: "delete" }` wipes it and its recording. Jam members and the affected user are authorized by RLS. A **trusted contact** is matched by the email they sign in to Jam with (`trusted_contacts.email`) and gets only what their `receive_*` toggles allow. Recordings come back as 1-hour signed URLs. The contact opens **Incidents** (`/incidents`) → the package (`/incident/[id]`). They also get the text with the map link and recording link, so the app is optional for them.
 
 ## Incident package screen (`IncidentScreen.tsx`)
 
@@ -58,11 +70,11 @@ Presenter roles: Host (P1), Group member (P2), Affected user (P3), Emergency con
 3. Presenter 3 confirms the destination and emergency preference, and shares live location.
 4. Presenter 3 moves away (simulated location). The map shows route deviation.
 5. Health signal: baseline 75, current 145, activity running.
-6. Jam shows "Are you okay?" Presenter 3 doesn't respond.
-7. All members receive the in-app alert. Nobody acknowledges.
-8. The AI support-call screen starts and speaks "Hi, this is Jam. Your group could not reach you. Are you safe?" The screen shows "Recording enabled under your emergency preference."
-9. Presenter 3 stays unresponsive, and the incident package is created.
-10. Members are notified in-app and via ntfy if configured. The map shows the last known location.
+6. Jam shows "Are you okay?" Presenter 3 doesn't respond within their buffer (Demo Mode shortens it).
+7. All members receive the in-app alert and the ntfy push. Nobody acknowledges.
+8. The AI support-call screen starts by itself and speaks "Hi, this is Jam. Your group could not reach you. Are you safe?", then guides them toward the destination. The screen shows "Recording enabled under your emergency preference."
+9. Presenter 3 stays silent for 45 seconds. **Presenter 4's phone rings** and they get a text with the last-seen location and the recording link.
+10. The group sees the incident package in-app (and via ntfy). The map shows the last known location.
 11. Jam shows: "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."
 12. A presenter marks the user safe. The alert resolves, and the recording/data deletion status appears.
 
