@@ -19,7 +19,7 @@ export function SoloJamScreen() {
   const { onboardingDraft } = useSession();
   const { contacts, loading: contactsLoading } = useTrustedContacts();
 
-  const [name, setName] = useState("Solo Jam");
+  const [name, setName] = useState("Solo Huddle");
   const [nameEdited, setNameEdited] = useState(false);
   const [destination, setDestination] = useState<DestinationPreset | null>(null);
   const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
@@ -29,7 +29,7 @@ export function SoloJamScreen() {
   /** Suggests a name from the destination, unless the person already typed their own. */
   function handleSelectDestination(preset: DestinationPreset | null) {
     setDestination(preset);
-    if (!nameEdited) setName(preset ? `Solo: ${preset.name}` : "Solo Jam");
+    if (!nameEdited) setName(preset ? `Solo: ${preset.name}` : "Solo Huddle");
   }
 
   async function handleStart() {
@@ -50,7 +50,7 @@ export function SoloJamScreen() {
     });
     if (!jam) {
       setLoading(false);
-      setError(createError ?? "Couldn't start your Solo Jam. Try again.");
+      setError(createError ?? "Couldn't start your Solo Huddle. Try again.");
       return;
     }
 
@@ -67,7 +67,7 @@ export function SoloJamScreen() {
     <Screen scroll>
       <Text style={type.title}>Travelling alone?</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-        Jam watches for anything unusual while you’re on your own, and reaches out directly — no
+        Huddle watches for anything unusual while you’re on your own, and reaches out directly — no
         group needed. Starts right away.
       </Text>
 
@@ -100,14 +100,14 @@ export function SoloJamScreen() {
       </Card>
 
       <Card>
-        <Text style={type.heading}>If Jam notices something unusual</Text>
+        <Text style={type.heading}>If Huddle notices something unusual</Text>
         <Text style={type.caption} maxFontSizeMultiplier={1.8}>
-          With no group to check with first, Jam moves straight to this.
+          With no group to check with first, Huddle moves straight to this.
         </Text>
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <OptionCard
             title="Call me"
-            description="Jam places an automatic support call that checks in and guides you toward your destination."
+            description="Huddle places an automatic support call that checks in and guides you toward your destination."
             selected={preference === "ai_support_call"}
             onPress={() => setPreference("ai_support_call")}
           />
@@ -137,7 +137,7 @@ export function SoloJamScreen() {
         </Text>
       ) : null}
 
-      <Button label="Start Solo Jam" onPress={handleStart} loading={loading} disabled={!name.trim() || !preference} />
+      <Button label="Start Solo Huddle" onPress={handleStart} loading={loading} disabled={!name.trim() || !preference} />
     </Screen>
   );
 }

@@ -238,7 +238,7 @@ Install native modules only with `npx expo install <pkg>`, and only modules that
 src/app/                 Expo Router routes. Keep them THIN: they render a screen from src/features
   (auth)/                welcome, profile, consent, baseline
   jam/[jamId]/(tabs)/    map, group, signals, settings (+ JamOverlayHost, keep-awake in _layout)
-  jam/[jamId]/lobby, support-call · incident/[token] · incidents · contacts · notifications · demo-control · data-sources · dev
+  jam/[jamId]/lobby, chat, support-call · solo · incident/[token] · incidents · contacts · notifications · demo-control · data-sources · dev
 src/features/<area>/     screens + logic per owner; each has a README.md with the details
   auth, jams (P2) · map, location (P3) · health, ai (P4) · alerts, contacts (P5) · demo (shared registry)
 src/components/          JamMapView, JamOverlayHost (P4/P5 overlays), ui/ (Button, Card, Badge, Screen, States…)
@@ -257,7 +257,7 @@ supabase/functions/      Edge Functions + _shared/ (Deno; can't import from src/
 ## Architecture essentials
 
 - **Realtime:** one Broadcast channel per Huddle, `jam:{jamId}`. Use `const ch = useJamChannel(jamId); useJamEvent(ch, "location_update", fn)`. Events: `location_update`, `member_status`, `health_update`, `alert_created`, `alert_updated`, `checkin_requested`, `ai_call_state`, `incident_created`. Delivery includes your own messages (`self: true`), so filter by `userId`. Channels are public-but-unguessable, so broadcasts carry **ids and states only**: no phone numbers, health history, recordings, or alert reasons.
-- **`postgres_changes` covers only `jams`, `jam_members`, `alerts`, `alert_responses`** (the `supabase_realtime` publication). `live_locations` and `health_signals` are NOT published. Use the broadcasts plus a periodic re-read (see `src/features/jams/useLiveLocations.ts`).
+- **`postgres_changes` covers only `jams`, `jam_members`, `alerts`, `alert_responses`, `chat_messages`** (the `supabase_realtime` publication). `live_locations` and `health_signals` are NOT published. Use the broadcasts plus a periodic re-read (see `src/features/jams/useLiveLocations.ts`).
 - **Timers survive closed phones:** there's no server scheduler. Deadlines live in `alerts.next_deadline_at`, and any member's open app calls `advance-alert` when one passes.
 - **Civic data:** Toronto Open Data + OSM, preprocessed into `src/features/map/data/*.json` and imported statically. To regenerate, run `node src/features/map/data/extract/extract-toronto.mjs <cache-dir-outside-repo>`, then `server-support-points.mjs` (writes `supabase/functions/_shared/support-points.json`, used by the Lifeline phone call).
 

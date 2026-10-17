@@ -99,7 +99,7 @@ export function GroupScreen({ jamId }: { jamId: string }) {
         icon={MessageCircle}
         variant="secondary"
         onPress={() => router.push({ pathname: "/jam/[jamId]/chat", params: { jamId } })}
-        accessibilityHint="Opens the group chat for this Jam"
+        accessibilityHint="Opens the group chat for this Huddle"
       />
 
       {canInvite && jam ? (
