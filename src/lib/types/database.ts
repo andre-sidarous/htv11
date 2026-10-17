@@ -26,6 +26,8 @@ export type ProfileRow = {
   display_name: string;
   phone_number: string | null;
   avatar_url: string | null;
+  /** Seconds Jam waits for a check-in answer before alerting the group. Chosen at sign-up (30-1800, default 120). */
+  checkin_buffer_seconds: number;
   created_at: string;
   updated_at: string;
 };

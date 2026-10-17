@@ -71,6 +71,15 @@ export interface RiskService {
 
 export interface NotificationService {
   notifyGroup(input: { jamId: string; alertId: string }): Promise<NotificationResult[]>;
+  /**
+   * Last escalation step (after 45s of silence on the AI call). Server-side: creates the incident
+   * package (last-seen location, health summary, recording), phones each trusted contact, texts them
+   * the location and summary, and pings the group (ntfy). Respects contact_notify_consent and each
+   * contact's receive_* toggles. Idempotent per alert. advance-alert runs the same step at
+   * CONTACTS_NOTIFIED, so it still happens if every app is closed.
+   * recordingPath: the AI-call recording already uploaded to the recordings bucket ({userId}/...).
+   */
+  notifyContacts(input: { alertId: string; recordingPath?: string }): Promise<NotificationResult[]>;
   previewSms(input: { alertId: string; contactIds: string[] }): Promise<SmsPreview[]>;
   getStatus(jamId: string): Promise<{
     ntfyConfigured: boolean;
