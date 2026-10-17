@@ -1,0 +1,22 @@
+# Minimal Supabase CLI config. Only needed for `npx supabase link` / `db push` / `functions deploy`.
+# Unlisted settings use CLI defaults. Hosted-project auth settings live in the dashboard.
+project_id = "jam"
+
+[auth]
+site_url = "jam://"
+# Expo Go uses exp://<host>:8081/--/... ; standalone builds use jam://...
+additional_redirect_urls = ["exp://**", "jam://**"]
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+# Every function requires a signed-in user's JWT (the default). Listed for clarity.
+[functions.advance-alert]
+verify_jwt = true
+
+[functions.ai-support-call]
+verify_jwt = true
+
+[functions.notify-ntfy]
+verify_jwt = true
