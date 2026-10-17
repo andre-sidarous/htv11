@@ -1,15 +1,16 @@
 import * as Haptics from "expo-haptics";
 import { router, type Href } from "expo-router";
 import { memo, useEffect, useState } from "react";
-import { BellRing, CircleCheck, Clock, EyeOff, FileText, HandHeart, Map as MapIcon, MapPin, Phone } from "lucide-react-native";
+import { BellRing, CircleCheck, Clock, EyeOff, FileText, HandHeart, Map as MapIcon, MapPin, Navigation, Phone } from "lucide-react-native";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Badge, Button, Icon, IconBadge } from "@/components/ui";
 import { timelineFor } from "@/features/health/escalationStages";
+import { mapUi } from "@/features/map/mapUiStore";
 import type { AlertResponseKind, SafetyAlert } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { acknowledgeAlert, getLastSeen, resolveAlert, respond, type LastSeen } from "./api";
-import { escalationLine, formatAgo, isAiCallState, responseStatus } from "./presentation";
+import { alertHeadline, escalationLine, formatAgo, isAiCallState, responseStatus } from "./presentation";
 import { useJamAlerts } from "./useJamAlerts";
 
 /**
@@ -137,7 +138,7 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
           <View style={styles.flex}>
             <Text style={type.overline}>{resolved ? "Resolved" : escalated ? "Escalated" : "Group alert"}</Text>
             <Text style={type.heading} accessibilityRole="header" maxFontSizeMultiplier={1.6}>
-              {resolved ? `${name} is marked safe.` : `${name} may need support.`}
+              {alertHeadline(name, alert.checkinResponse, resolved)}
             </Text>
           </View>
           <Badge label={status} tone={resolved ? "ok" : "neutral"} />
@@ -146,7 +147,7 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
         {!resolved ? (
           <>
             <Text style={type.body} maxFontSizeMultiplier={1.6}>
-              {escalationLine(alert.escalationState, name)}
+              {escalationLine(alert.escalationState, name, alert.checkinResponse)}
             </Text>
             <View style={styles.steps} accessibilityLabel={`Escalation step ${stages.findIndex((st) => st.status === "active" || st.status === "settled") + 1} of ${stages.length}`}>
               {stages.map((st) => (
@@ -166,7 +167,9 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
         <View style={styles.meta}>
           <View style={styles.metaRow}>
             <Icon icon={Clock} size={14} color={colors.inkMuted} />
-            <Text style={type.caption}>No response since {formatAgo(alert.createdAt)}</Text>
+            <Text style={type.caption}>
+              {alert.checkinResponse ? `Alert started ${formatAgo(alert.createdAt)}` : `No response since ${formatAgo(alert.createdAt)}`}
+            </Text>
           </View>
           <View style={styles.metaRow}>
             <Icon icon={MapPin} size={14} color={colors.inkMuted} />
@@ -191,6 +194,18 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
 
         {!resolved ? (
           <View style={styles.actions}>
+            {lastSeen ? (
+              <Button
+                label={`Find ${name}`}
+                icon={Navigation}
+                variant={alert.checkinResponse === "im_lost" ? "primary" : "secondary"}
+                accessibilityHint={`Shows a walking route from you to ${name} on the map`}
+                onPress={() => {
+                  mapUi.set({ guide: { kind: "member", userId: alert.affectedUserId, name } });
+                  router.push(`/jam/${jamId}/map` as Href);
+                }}
+              />
+            ) : null}
             <Button
               label={helping ? "You’re helping" : "I’m going to help"}
               icon={HandHeart}

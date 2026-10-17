@@ -1,6 +1,7 @@
 import type {
   Activity,
   AlertResponseKind,
+  CheckInResponse,
   AlertStatus,
   ConfirmationStatus,
   EmergencyPreference,
@@ -65,6 +66,11 @@ export type JamMemberRow = {
   emergency_preference: EmergencyPreference | null;
   joined_at: string;
   left_at: string | null;
+  /** Migration 006: "I changed my destination" (overrides the Jam's destination for this member). */
+  destination_name?: string | null;
+  destination_lat?: number | null;
+  destination_lng?: number | null;
+  destination_updated_at?: string | null;
 };
 
 export type LiveLocationRow = {
@@ -105,6 +111,8 @@ export type AlertRow = {
   created_at: string;
   acknowledged_at: string | null;
   resolved_at: string | null;
+  /** Migration 006. What they answered on the check-in; null = no answer. */
+  checkin_response?: CheckInResponse | null;
 };
 
 export type AlertResponseRow = {
@@ -203,6 +211,11 @@ export type Database = {
       delete_incident_package: { Args: { p_id: string }; Returns: string | null };
       is_jam_member: { Args: { p_jam_id: string }; Returns: boolean };
       is_active_jam_member: { Args: { p_jam_id: string }; Returns: boolean };
+      /** Migration 006: other active members' numbers, only for a caller with an open alert in the Jam. */
+      member_phone_numbers: {
+        Args: { p_jam_id: string };
+        Returns: { user_id: string; display_name: string; phone_number: string }[];
+      };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

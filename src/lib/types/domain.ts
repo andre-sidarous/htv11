@@ -164,6 +164,8 @@ export type SafetyAlert = {
   nextDeadlineAt?: string | null;
   acknowledgedAt?: string | null;
   resolvedAt?: string | null;
+  /** What they answered on the check-in ("I'm lost", ...). Null/absent = no answer yet. */
+  checkinResponse?: CheckInResponse | null;
 };
 
 export type CheckInResponse =

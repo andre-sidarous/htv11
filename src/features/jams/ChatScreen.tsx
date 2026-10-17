@@ -17,6 +17,7 @@ import { Avatar, ErrorState, Icon, LoadingState } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import type { ChatMessageRow } from "@/lib/types";
 import { fonts, colors, radius, space, type } from "@/theme";
+import { chatUnread } from "./chatUnread";
 import { useChatMessages } from "./useChatMessages";
 import { useJamMembers } from "./useJamMembers";
 
@@ -38,6 +39,12 @@ export function ChatScreen({ jamId }: { jamId: string }) {
   const [sendError, setSendError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessageRow>>(null);
   const insets = useSafeAreaInsets();
+
+  // While this screen is open, new messages aren't "unread" and no banner shows.
+  useEffect(() => {
+    chatUnread.opened(jamId);
+    return () => chatUnread.closed(jamId);
+  }, [jamId]);
 
   // Keep the newest message in view when the keyboard opens.
   useEffect(() => {

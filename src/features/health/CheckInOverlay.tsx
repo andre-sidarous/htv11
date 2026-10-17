@@ -1,11 +1,18 @@
 import * as Haptics from "expo-haptics";
-import { CircleCheck, Compass, HandHeart, Info, Navigation, PhoneOff, type LucideIcon } from "lucide-react-native";
+import { ArrowLeft, CircleCheck, Compass, HandHeart, Info, Navigation, Phone, PhoneCall, PhoneOff, Users, type LucideIcon } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pico } from "@/components/brand";
-import { Icon } from "@/components/ui";
-import type { CheckInResponse } from "@/lib/types";
+import { Button, Icon } from "@/components/ui";
+import { DestinationPicker } from "@/features/jams/DestinationPicker";
+import { memberPhoneNumbers, setMyDestination } from "@/features/jams/jamsApi";
+import type { Place } from "@/features/jams/placeSearch";
+import { useCurrentPosition } from "@/features/jams/useCurrentPosition";
+import { mapUi } from "@/features/map/mapUiStore";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import type { AlertRow, CheckInResponse } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, tones, type } from "@/theme";
 import { createCheckInAlert, dispatchAlertEvent } from "./alertActions";
 import { alertRepository } from "./alertRepository";
@@ -62,9 +69,26 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   const snapshot = useSafetySnapshot();
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
+  /** "choose" the answer; some answers need one more step first. */
+  const [step, setStep] = useState<"choose" | "destination" | "help">("choose");
+  const [newDestination, setNewDestination] = useState<Place | null>(null);
+  const [helpNote, setHelpNote] = useState<string | null>(null);
+  /** "Call someone in my group": shown after the group has been alerted. */
+  const [callList, setCallList] = useState<{ userId: string; name: string; phone: string }[] | "loading" | null>(null);
+  const here = useCurrentPosition();
 
   const myAlert = openAlertFor(snapshot, engine.me);
   const checkInOpen = myAlert?.escalation_state === "CHECK_IN_SENT" || (!myAlert && snapshot.manualCheckIn !== null);
+  // A check-in that closed (answered elsewhere, or timed out) starts over at the main choices next time.
+  const [wasOpen, setWasOpen] = useState(checkInOpen);
+  if (wasOpen !== checkInOpen) {
+    setWasOpen(checkInOpen);
+    if (!checkInOpen) {
+      setStep("choose");
+      setNewDestination(null);
+    }
+  }
   const deadlineAt = myAlert?.escalation_state === "CHECK_IN_SENT" ? myAlert.next_deadline_at : snapshot.manualCheckIn?.deadlineAt;
   const { secondsLeft, progress } = useCountdown(deadlineAt);
   const reasons = (Array.isArray(myAlert?.reasons) ? (myAlert.reasons as unknown[]) : [])
@@ -79,8 +103,9 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
     hapticFor.current = key;
   }, [checkInOpen, myAlert?.id]);
 
-  async function respond(response: CheckInResponse) {
-    if (!engine.me || busy) return;
+  /** Records the answer on the alert (so the group sees "Alex is lost", not "hasn't checked in"). */
+  async function respond(response: CheckInResponse): Promise<AlertRow | null> {
+    if (!engine.me || busy) return null;
     setBusy(true);
     try {
       let alert = myAlert;
@@ -89,18 +114,73 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
       if (!alert) {
         // Manual group check-in with no alert: "okay" just closes; asking for help opens one.
         safetyStore.set({ manualCheckIn: null });
-        if (okay) return;
+        if (okay) return null;
         const evaluation = snapshot.evaluation ?? { riskScore: 0, severity: "low" as const, reasons: [] };
         alert = await createCheckInAlert({ jamId, userId: engine.me, evaluation, requestedBy: engine.me });
-        if (!alert) return;
+        if (!alert) return null;
         engine.markResponded(alert.id);
       }
       if (okay) await alertRepository.respond(alert.id, engine.me, "safe");
-      await dispatchAlertEvent(alert, { type: "CHECK_IN_RESPONSE", response });
+      const updated = await dispatchAlertEvent(alert, { type: "CHECK_IN_RESPONSE", response });
       if (okay) engine.calmDown();
+      return updated;
     } finally {
       setBusy(false);
     }
+  }
+
+  function choose(response: CheckInResponse) {
+    if (response === "changed_destination") return setStep("destination");
+    if (response === "need_help") return setStep("help");
+    void (async () => {
+      await respond(response);
+      if (response === "im_lost") guideToGroup();
+    })();
+  }
+
+  /** "I'm lost": the group sees where they are; they get a route back to the nearest member. */
+  function guideToGroup() {
+    mapUi.set({ guide: { kind: "group" } });
+    router.navigate({ pathname: "/jam/[jamId]/map", params: { jamId } });
+  }
+
+  /** "I changed my destination": save it, tell the group in the chat, then answer the check-in. */
+  async function shareNewDestination() {
+    if (!engine.me || !newDestination) return;
+    setBusy(true);
+    const { error } = await setMyDestination(jamId, engine.me, newDestination);
+    if (!error) {
+      await getSupabaseClient()
+        ?.from("chat_messages")
+        .insert({ jam_id: jamId, user_id: engine.me, body: `Changed my destination to ${newDestination.name}.`.slice(0, 1000) });
+    }
+    setBusy(false);
+    if (error) return setHelpNote("Couldn’t save your new destination. Try again.");
+    await respond("changed_destination");
+    setStep("choose");
+    setNewDestination(null);
+  }
+
+  /** "I need help" → stay on a live call with Huddle's AI (it rings their phone and keeps guiding). */
+  async function helpWithCall() {
+    const updated = await respond("need_help");
+    if (!updated) return;
+    const started = updated.escalation_state === "GROUP_ALERT_SENT" ? await dispatchAlertEvent(updated, { type: "START_AI_CALL" }) : null;
+    setStep("choose");
+    if (!started) setHelpNote("The support call is off for you in this Huddle. Your group has been alerted.");
+  }
+
+  /** "I need help" → call someone in the group (numbers are only shared while you have an open alert). */
+  async function helpCallGroup() {
+    setCallList("loading");
+    await respond("need_help");
+    setStep("choose");
+    setCallList(await memberPhoneNumbers(jamId));
+  }
+
+  async function helpAlertOnly() {
+    await respond("need_help");
+    setStep("choose");
   }
 
   async function markSafe() {
@@ -125,6 +205,10 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
       {showBar ? (
         <View pointerEvents="box-none" style={[styles.barWrap, { top: insets.top + space(2) }]}>
           <View style={styles.bar}>
+            {myAlert?.checkin_response === "im_lost" ? (
+              <Button label="Guide me back to my group" icon={Navigation} onPress={guideToGroup} />
+            ) : null}
+            {helpNote ? <Text style={type.caption}>{helpNote}</Text> : null}
             <SafetyControls alert={myAlert} onSafe={markSafe} onCancel={cancel} />
           </View>
         </View>
@@ -173,6 +257,37 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
               </View>
             ) : null}
 
+            {step === "destination" ? (
+              <ScrollView style={styles.stepScroll} contentContainerStyle={styles.stepBody} keyboardShouldPersistTaps="handled">
+                <Text style={type.heading}>Where are you heading now?</Text>
+                <Text style={type.caption}>Your group sees your new destination, and your route follows it.</Text>
+                <DestinationPicker value={newDestination} onChange={setNewDestination} near={here.position} disabled={busy} />
+                {helpNote ? <Text style={[type.caption, { color: colors.escalation }]}>{helpNote}</Text> : null}
+                <Button label="Share my new destination" icon={Navigation} disabled={!newDestination} loading={busy} onPress={() => void shareNewDestination()} />
+                <Button label="Back" icon={ArrowLeft} variant="ghost" onPress={() => setStep("choose")} />
+              </ScrollView>
+            ) : step === "help" ? (
+              <View style={styles.options}>
+                <Text style={type.heading}>What would help right now?</Text>
+                <Text style={type.caption}>Your group is alerted with any choice.</Text>
+                <HelpOption
+                  icon={PhoneCall}
+                  title="Stay on a call with Huddle"
+                  description="Huddle’s AI calls your phone and stays on the line, guiding you, until you’re somewhere you feel okay."
+                  disabled={busy}
+                  onPress={() => void helpWithCall()}
+                />
+                <HelpOption
+                  icon={Users}
+                  title="Call someone in my group"
+                  description="Pick a member to phone right away."
+                  disabled={busy}
+                  onPress={() => void helpCallGroup()}
+                />
+                <HelpOption icon={HandHeart} title="Just alert my group" description="They’ll see you asked for help and where you are." disabled={busy} onPress={() => void helpAlertOnly()} />
+                <Button label="Back" icon={ArrowLeft} variant="ghost" onPress={() => setStep("choose")} />
+              </View>
+            ) : (
             <View style={styles.options}>
               {RESPONSES.map((r) => {
                 const look = LOOK[r.look];
@@ -184,7 +299,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
                     disabled={busy}
                     onPress={() => {
                       void Haptics.selectionAsync();
-                      void respond(r.value);
+                      choose(r.value);
                     }}
                     style={({ pressed }) => [styles.option, look.box, (pressed || busy) && styles.dim]}
                   >
@@ -196,8 +311,9 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
                 );
               })}
             </View>
+            )}
 
-            {myAlert ? <SafetyControls alert={myAlert} onSafe={markSafe} onCancel={cancel} compact /> : null}
+            {myAlert && step === "choose" ? <SafetyControls alert={myAlert} onSafe={markSafe} onCancel={cancel} compact /> : null}
             <View style={styles.footer}>
               <Icon icon={Info} size={13} color={colors.inkFaint} />
               <Text style={[type.caption, styles.center]}>Simulated wearable data. Huddle is not a medical service.</Text>
@@ -205,7 +321,59 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={callList !== null} transparent animationType="slide" onRequestClose={() => setCallList(null)}>
+        <View style={styles.backdrop}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + space(4) }]} accessibilityViewIsModal>
+            <View style={styles.handle} />
+            <Text style={type.title} accessibilityRole="header">
+              Call someone in your group
+            </Text>
+            <Text style={type.caption}>Your group has been alerted that you asked for help.</Text>
+            {callList === "loading" ? (
+              <ActivityIndicator color={colors.brand} />
+            ) : callList && callList.length ? (
+              callList.map((m) => (
+                <Pressable
+                  key={m.userId}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Call ${m.name}`}
+                  onPress={() => void Linking.openURL(`tel:${m.phone}`).catch(() => undefined)}
+                  style={({ pressed }) => [styles.option, LOOK.soft.box, pressed && styles.dim]}
+                >
+                  <Icon icon={Phone} size={20} color={LOOK.soft.fg} strokeWidth={2} />
+                  <Text style={[styles.optionText, { color: LOOK.soft.fg }]}>Call {m.name}</Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={type.body}>No one in your group has added a phone number to their profile yet.</Text>
+            )}
+            <Button label="Close" variant="ghost" onPress={() => setCallList(null)} />
+          </View>
+        </View>
+      </Modal>
     </>
+  );
+}
+
+function HelpOption({ icon, title, description, onPress, disabled }: { icon: LucideIcon; title: string; description: string; onPress: () => void; disabled?: boolean }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${description}`}
+      disabled={disabled}
+      onPress={() => {
+        void Haptics.selectionAsync();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.helpOption, (pressed || disabled) && styles.dim]}
+    >
+      <Icon icon={icon} size={22} color={colors.escalation} strokeWidth={2} />
+      <View style={styles.flex}>
+        <Text style={[styles.optionText, { color: colors.ink }]}>{title}</Text>
+        <Text style={type.caption}>{description}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -221,6 +389,18 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg + 6,
     backgroundColor: colors.warmWhite,
     ...shadow.raised,
+  },
+  stepScroll: { maxHeight: 520 },
+  stepBody: { gap: space(3), paddingBottom: space(2) },
+  helpOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space(3),
+    padding: space(4),
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.escalationSoft,
+    backgroundColor: colors.surface,
   },
   handle: { alignSelf: "center", width: 40, height: 5, borderRadius: 3, backgroundColor: colors.border, marginBottom: space(1) },
   header: { flexDirection: "row", gap: space(3), alignItems: "flex-start" },

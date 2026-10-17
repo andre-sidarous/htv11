@@ -28,7 +28,10 @@ export type AlertInsert = Pick<
 >;
 
 export type AlertPatch = Partial<
-  Pick<AlertRow, "escalation_state" | "status" | "next_deadline_at" | "resolved_at" | "acknowledged_at" | "risk_score" | "severity" | "reasons">
+  Pick<
+    AlertRow,
+    "escalation_state" | "status" | "next_deadline_at" | "resolved_at" | "acknowledged_at" | "risk_score" | "severity" | "reasons" | "checkin_response"
+  >
 >;
 
 export type MemberPolicy = {
@@ -72,13 +75,14 @@ export function toSafetyAlert(row: AlertRow): SafetyAlert {
     nextDeadlineAt: row.next_deadline_at,
     acknowledgedAt: row.acknowledged_at,
     resolvedAt: row.resolved_at,
+    checkinResponse: row.checkin_response ?? null,
   };
 }
 
 // ---------- Supabase ----------
 
 const ALERT_COLUMNS =
-  "id, jam_id, affected_user_id, risk_score, severity, status, escalation_state, reasons, next_deadline_at, created_at, acknowledged_at, resolved_at";
+  "id, jam_id, affected_user_id, risk_score, severity, status, escalation_state, reasons, next_deadline_at, created_at, acknowledged_at, resolved_at, checkin_response";
 
 const normalize = (row: AlertRow): AlertRow => ({ ...row, risk_score: Number(row.risk_score) });
 

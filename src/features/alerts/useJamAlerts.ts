@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -32,6 +32,9 @@ async function fetchSnapshot(jamId: string): Promise<Omit<JamAlertsState, "loade
  * the DB (on mount, reconnect, and foreground), Broadcast events, and postgres_changes on alerts.
  */
 export function useJamAlerts(jamId: string) {
+  // Per-instance channel name: supabase.channel(topic) returns the SAME object for a repeated topic
+  // (see realtimeTable.ts), so leaving and reopening a Jam would reuse a channel being removed.
+  const instanceId = useId();
   const channel = useJamChannel(jamId);
   const [state, setState] = useState<JamAlertsState>(EMPTY);
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -92,14 +95,14 @@ export function useJamAlerts(jamId: string) {
     const supabase = getSupabaseClient();
     if (!supabase) return;
     const ch = supabase
-      .channel(`alerts-db:${jamId}`)
+      .channel(`alerts-db:${jamId}:${instanceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "alerts", filter: `jam_id=eq.${jamId}` }, () => void reload())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "alert_responses" }, () => void reload())
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [jamId, reload]);
+  }, [jamId, reload, instanceId]);
 
   useJamEvent(channel, "alert_created", upsert);
   useJamEvent(channel, "alert_updated", upsert);
