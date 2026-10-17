@@ -28,6 +28,20 @@ const { explanation, supportPoints, alternativeRoute } = getRouteRecommendation(
 Pass `route`, `alternativeRoute`, `disruption` (`loadTransitDisruption()` or `null`), `groupPositions`, and
 `userPosition` for a live Jam. It describes support context only; it never labels streets safe or unsafe.
 
+## For P4: spoken guidance
+
+```ts
+import { getSpokenGuidance } from "@/features/map/guidance";
+const { guidance, nearestSupportPoint } = getSpokenGuidance({ position, route, destination, supportPoints });
+// "Head north on St. George Street for about 300 metres, toward Robarts Library."
+```
+
+Pure and deterministic. Within 200m of the route it looks ~100m ahead for the direction and says how far the
+route keeps going that way (max 300m). More than 200m off, it guides back to the route or to the nearest public
+support point if that's closer. `route: null` points straight at the destination. `supportPoints` defaults to
+the bundled Toronto data; landmarks prefer libraries, TTC stations, community centres, hospitals, police, and
+washrooms. Put `nearestSupportPoint` in `AiCallContext.nearestSupportPoint`.
+
 ## Demo actions (owner `"map"`)
 
 Registered while the map is mounted. Each reads `getDemoContext()` at run time and broadcasts on that Jam's channel:
