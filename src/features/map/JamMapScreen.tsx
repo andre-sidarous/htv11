@@ -1,10 +1,14 @@
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import * as Haptics from "expo-haptics";
+import { LocateFixed, Siren } from "lucide-react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import type MapView from "react-native-maps";
 import { Marker, Polyline } from "react-native-maps";
 import { JamMapView, regionAround, toMapCoord } from "@/components/map/JamMapView";
+import { Icon } from "@/components/ui";
 import { ErrorState, LoadingState } from "@/components/ui/States";
+import { createCheckInAlert, dispatchAlertEvent } from "@/features/health/alertActions";
 import { useLocationSharing } from "@/features/location/useLocationSharing";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { campusWalk } from "@/lib/demo/campusWalk";
@@ -245,6 +249,76 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
   const toggleAlternative = useCallback(() => mapUi.set({ showAlternative: !mapUi.get().showAlternative }), []);
   const openDataSources = useCallback(() => router.push("/data-sources"), [router]);
 
+  // ---- recenter on me ----
+  const recenterOnMe = useCallback(() => {
+    const target = sharing.lastPosition ?? (data.selfId ? store.get(data.selfId)?.position : null) ?? null;
+    if (!target) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    mapRef.current?.animateToRegion(regionAround(target, 0.004), 400);
+  }, [sharing.lastPosition, data.selfId, store]);
+
+  // ---- SOS: skips straight to "I need help" on the same check-in alert the engine would open,
+  // so it reuses the real escalation path (dispatchAlertEvent/createCheckInAlert) rather than a
+  // separate "fake emergency" code path. Confirmed first; it notifies the group immediately. ----
+  const [sosBusy, setSosBusy] = useState(false);
+  const [sosSent, setSosSent] = useState(false);
+  const [sosError, setSosError] = useState<string | null>(null);
+
+  const sendSos = useCallback(async () => {
+    if (!data.selfId || sosBusy) return;
+    setSosBusy(true);
+    setSosError(null);
+    try {
+      const alert = await createCheckInAlert({
+        jamId,
+        userId: data.selfId,
+        evaluation: { riskScore: 10, severity: "high", reasons: ["Manual SOS"] },
+        requestedBy: data.selfId,
+      });
+      if (!alert) {
+        setSosError("Couldn't send SOS. Try again.");
+        return;
+      }
+
+      // SOS is an explicit, unambiguous "I need help" — skip the usual wait for the group to
+      // acknowledge and go straight for the next real step. Both dispatches are the same
+      // escalation events the normal flow already uses (answering "need help" on a check-in,
+      // then the documented "start the call now instead of waiting" event), so this can never
+      // reach a state the engine wouldn't otherwise reach on its own — it just gets there
+      // immediately instead of after a timeout. If the person's preference is contact-only (no
+      // AI call), the second dispatch is a no-op and the group alert still stands; the real
+      // group-timeout-then-contacts path (already built) takes over from there.
+      let current = alert;
+      if (current.escalation_state === "CHECK_IN_SENT") {
+        const afterNeedHelp = await dispatchAlertEvent(current, { type: "CHECK_IN_RESPONSE", response: "need_help" });
+        if (afterNeedHelp) current = afterNeedHelp;
+      }
+      if (current.escalation_state === "GROUP_ALERT_SENT") {
+        const afterAiCall = await dispatchAlertEvent(current, { type: "START_AI_CALL" });
+        if (afterAiCall) current = afterAiCall;
+      }
+
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setSosSent(true);
+      setTimeout(() => setSosSent(false), 5_000);
+    } catch (e) {
+      setSosError(e instanceof Error ? e.message : "Couldn't send SOS. Try again.");
+    } finally {
+      setSosBusy(false);
+    }
+  }, [jamId, data.selfId, sosBusy]);
+
+  const confirmSos = useCallback(() => {
+    Alert.alert(
+      "Send SOS?",
+      "Your group will be notified right away that you need help. If you still don't respond, Huddle calls you, then your emergency contacts.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Send SOS", style: "destructive", onPress: () => void sendSos() },
+      ],
+    );
+  }, [sendSos]);
+
   if (data.status === "loading" && !data.jam) return <LoadingState label="Loading the map…" />;
   if (data.status === "error" && !data.jam) {
     return (
@@ -332,6 +406,36 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
         ) : null}
       </View>
 
+      <View style={styles.actions} pointerEvents="box-none">
+        {sosSent ? (
+          <View style={styles.sosToast}>
+            <Text style={[type.caption, styles.sosToastText]}>SOS sent to your group</Text>
+          </View>
+        ) : sosError ? (
+          <View style={[styles.sosToast, styles.sosToastError]}>
+            <Text style={[type.caption, styles.sosToastText]}>{sosError}</Text>
+          </View>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Centre the map on my location"
+          onPress={recenterOnMe}
+          style={({ pressed }) => [styles.fab, styles.fabNeutral, pressed && styles.fabPressed]}
+        >
+          <Icon icon={LocateFixed} size={22} color={colors.brand} strokeWidth={2} />
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Send SOS"
+          accessibilityHint="Notifies your group immediately that you need help"
+          disabled={sosBusy}
+          onPress={confirmSos}
+          style={({ pressed }) => [styles.fab, styles.fabSos, (pressed || sosBusy) && styles.fabPressed]}
+        >
+          <Icon icon={Siren} size={22} color={colors.surface} strokeWidth={2} />
+        </Pressable>
+      </View>
+
       <View style={styles.bottom} pointerEvents="box-none">
         {ui.guide ? (
           <GuideCard
@@ -381,4 +485,28 @@ const styles = StyleSheet.create({
   top: { position: "absolute", top: space(3), left: space(3), right: space(3), gap: space(2) },
   bottom: { position: "absolute", bottom: space(3), left: space(3), right: space(3) },
   banner: { padding: space(3), borderRadius: radius.card, backgroundColor: colors.sky, ...shadow.card },
+  actions: { position: "absolute", right: space(3), top: "42%", alignItems: "center", gap: space(3) },
+  fab: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadow.card,
+  },
+  fabNeutral: { backgroundColor: colors.surface },
+  fabSos: { backgroundColor: colors.escalation },
+  fabPressed: { opacity: 0.85, transform: [{ scale: 0.96 }] },
+  sosToast: {
+    position: "absolute",
+    top: -space(10),
+    right: 0,
+    maxWidth: 180,
+    padding: space(2.5),
+    borderRadius: radius.card,
+    backgroundColor: colors.ink,
+    ...shadow.card,
+  },
+  sosToastError: { backgroundColor: colors.escalation },
+  sosToastText: { color: colors.surface, textAlign: "center" },
 });
