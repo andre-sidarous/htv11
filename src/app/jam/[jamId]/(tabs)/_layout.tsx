@@ -2,6 +2,7 @@ import { useKeepAwake } from "expo-keep-awake";
 import { Tabs, useLocalSearchParams } from "expo-router";
 import { StyleSheet, View } from "react-native";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
+import { JamIdProvider } from "@/features/jams/JamIdContext";
 import { colors } from "@/theme";
 
 /**
@@ -14,25 +15,27 @@ export default function JamTabsLayout() {
   useKeepAwake();
 
   return (
-    <View style={styles.container}>
-      <Tabs
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.warmWhite },
-          headerShadowVisible: false,
-          headerTintColor: colors.navy,
-          tabBarActiveTintColor: colors.navy,
-          tabBarInactiveTintColor: colors.inkFaint,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-        }}
-      >
-        <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map" }} />
-        <Tabs.Screen name="group" options={{ title: "Group", tabBarAccessibilityLabel: "Group" }} />
-        <Tabs.Screen name="signals" options={{ title: "Signals", tabBarAccessibilityLabel: "Signals" }} />
-        <Tabs.Screen name="settings" options={{ title: "Settings", tabBarAccessibilityLabel: "Settings" }} />
-      </Tabs>
-      <JamOverlayHost jamId={jamId} />
-    </View>
+    <JamIdProvider jamId={jamId}>
+      <View style={styles.container}>
+        <Tabs
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.warmWhite },
+            headerShadowVisible: false,
+            headerTintColor: colors.navy,
+            tabBarActiveTintColor: colors.navy,
+            tabBarInactiveTintColor: colors.inkFaint,
+            tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+            tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
+          }}
+        >
+          <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map" }} />
+          <Tabs.Screen name="group" options={{ title: "Group", tabBarAccessibilityLabel: "Group" }} />
+          <Tabs.Screen name="signals" options={{ title: "Signals", tabBarAccessibilityLabel: "Signals" }} />
+          <Tabs.Screen name="settings" options={{ title: "Settings", tabBarAccessibilityLabel: "Settings" }} />
+        </Tabs>
+        <JamOverlayHost jamId={jamId} />
+      </View>
+    </JamIdProvider>
   );
 }
 

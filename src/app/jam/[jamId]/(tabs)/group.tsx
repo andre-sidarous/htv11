@@ -1,7 +1,6 @@
-import { useLocalSearchParams } from "expo-router";
+import { useJamId } from "@/features/jams/JamIdContext";
 import { GroupScreen } from "@/features/jams/GroupScreen";
 
 export default function GroupTabRoute() {
-  const { jamId } = useLocalSearchParams<{ jamId: string }>();
-  return <GroupScreen jamId={jamId} />;
+  return <GroupScreen jamId={useJamId()} />;
 }

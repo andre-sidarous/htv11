@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import * as Haptics from "expo-haptics";
 import { StyleSheet, Text, View } from "react-native";
-import { Avatar, Badge, Button, Card, LoadingState, Screen } from "@/components/ui";
+import { Avatar, Badge, Button, Card, ErrorState, LoadingState, Screen } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { useJamChannel } from "@/hooks/useJamChannel";
 import { PRESENCE_OFFLINE_AFTER_MS, PRESENCE_STALE_AFTER_MS } from "@/lib/constants";
@@ -36,7 +36,7 @@ const PRESENCE_TONE: Record<Presence, "ok" | "amber" | "neutral"> = {
 /** Member roster: presence, last seen, activity, and a one-tap group check-in. */
 export function GroupScreen({ jamId }: { jamId: string }) {
   const { session } = useSession();
-  const { members, loading } = useJamMembers(jamId);
+  const { members, loading, error, refresh } = useJamMembers(jamId);
   const { byUserId: locations } = useLiveLocations(jamId);
   const channel = useJamChannel(jamId);
   const [sending, setSending] = useState(false);
@@ -68,6 +68,7 @@ export function GroupScreen({ jamId }: { jamId: string }) {
   }
 
   if (loading) return <LoadingState label="Loading group…" />;
+  if (error && members.length === 0) return <ErrorState description={error} onRetry={() => void refresh()} />;
 
   return (
     <Screen scroll>

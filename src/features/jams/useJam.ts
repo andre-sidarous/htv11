@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { JamRow } from "@/lib/types";
 import { useTableChanges } from "./realtimeTable";
+import { withTimeout } from "./withTimeout";
 
 /** The Jam row, kept live via `postgres_changes` (jams is in the realtime publication). */
 export function useJam(jamId: string | undefined) {
@@ -10,20 +11,28 @@ export function useJam(jamId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!jamId) return;
+    if (!jamId) {
+      setLoading(false);
+      return;
+    }
     const supabase = getSupabaseClient();
     if (!supabase) {
       setError("Supabase is not configured.");
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase.from("jams").select("*").eq("id", jamId).maybeSingle();
-    if (error) setError(error.message);
-    else {
-      setJam(data ?? null);
-      setError(null);
+    try {
+      const { data, error } = await withTimeout(supabase.from("jams").select("*").eq("id", jamId).maybeSingle());
+      if (error) setError(error.message);
+      else {
+        setJam(data ?? null);
+        setError(null);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load this Jam.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [jamId]);
 
   // Fetching when `jamId` changes is the standard Effect use case; `refresh` also re-runs on

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { JamMemberRow, MemberProfileRow } from "@/lib/types";
 import { useTableChanges } from "./realtimeTable";
+import { withTimeout } from "./withTimeout";
 
 export type JamMemberWithProfile = JamMemberRow & { profile: MemberProfileRow | null };
 
@@ -15,7 +16,10 @@ export function useJamMembers(jamId: string | undefined) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    if (!jamId) return;
+    if (!jamId) {
+      setLoading(false);
+      return;
+    }
     const supabase = getSupabaseClient();
     if (!supabase) {
       setError("Supabase is not configured.");
@@ -23,26 +27,25 @@ export function useJamMembers(jamId: string | undefined) {
       return;
     }
 
-    const { data: memberRows, error: memberError } = await supabase
-      .from("jam_members")
-      .select("*")
-      .eq("jam_id", jamId)
-      .order("joined_at", { ascending: true });
-    if (memberError) {
-      setError(memberError.message);
+    try {
+      const { data: memberRows, error: memberError } = await withTimeout(
+        supabase.from("jam_members").select("*").eq("jam_id", jamId).order("joined_at", { ascending: true }),
+      );
+      if (memberError) throw new Error(memberError.message);
+
+      const ids = (memberRows ?? []).map((m) => m.user_id);
+      const { data: profileRows } = ids.length
+        ? await withTimeout(supabase.from("member_profiles").select("*").in("id", ids))
+        : { data: [] as MemberProfileRow[] };
+      const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]));
+
+      setMembers((memberRows ?? []).map((m) => ({ ...m, profile: profileById.get(m.user_id) ?? null })));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load the group.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const ids = (memberRows ?? []).map((m) => m.user_id);
-    const { data: profileRows } = ids.length
-      ? await supabase.from("member_profiles").select("*").in("id", ids)
-      : { data: [] as MemberProfileRow[] };
-    const profileById = new Map((profileRows ?? []).map((p) => [p.id, p]));
-
-    setMembers((memberRows ?? []).map((m) => ({ ...m, profile: profileById.get(m.user_id) ?? null })));
-    setError(null);
-    setLoading(false);
   }, [jamId]);
 
   // Fetching when `jamId` changes is the standard Effect use case; `refresh` also re-runs on

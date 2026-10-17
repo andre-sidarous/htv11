@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { LiveLocationRow } from "@/lib/types";
 import { useTableChanges } from "./realtimeTable";
+import { withTimeout } from "./withTimeout";
 
 /**
  * Latest `live_locations` row per member, for display only (last-seen / activity / sharing
@@ -12,15 +13,23 @@ export function useLiveLocations(jamId: string | undefined) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    if (!jamId) return;
+    if (!jamId) {
+      setLoading(false);
+      return;
+    }
     const supabase = getSupabaseClient();
     if (!supabase) {
       setLoading(false);
       return;
     }
-    const { data } = await supabase.from("live_locations").select("*").eq("jam_id", jamId);
-    setByUserId(new Map((data ?? []).map((row) => [row.user_id, row])));
-    setLoading(false);
+    try {
+      const { data } = await withTimeout(supabase.from("live_locations").select("*").eq("jam_id", jamId));
+      setByUserId(new Map((data ?? []).map((row) => [row.user_id, row])));
+    } catch {
+      // Display-only data: fail quietly and let the realtime subscription catch up later.
+    } finally {
+      setLoading(false);
+    }
   }, [jamId]);
 
   // Fetching when `jamId` changes is the standard Effect use case; `refresh` also re-runs on

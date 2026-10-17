@@ -1,8 +1,7 @@
-import { useLocalSearchParams } from "expo-router";
+import { useJamId } from "@/features/jams/JamIdContext";
 import { JamMapScreen } from "@/features/map/JamMapScreen";
 
 // Thin route (foundation). P3 edits features/map/JamMapScreen.tsx.
 export default function MapTabRoute() {
-  const { jamId } = useLocalSearchParams<{ jamId: string }>();
-  return <JamMapScreen jamId={jamId} />;
+  return <JamMapScreen jamId={useJamId()} />;
 }

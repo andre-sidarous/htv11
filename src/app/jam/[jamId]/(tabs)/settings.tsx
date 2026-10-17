@@ -1,7 +1,6 @@
-import { useLocalSearchParams } from "expo-router";
+import { useJamId } from "@/features/jams/JamIdContext";
 import { SettingsScreen } from "@/features/jams/SettingsScreen";
 
 export default function SettingsTabRoute() {
-  const { jamId } = useLocalSearchParams<{ jamId: string }>();
-  return <SettingsScreen jamId={jamId} />;
+  return <SettingsScreen jamId={useJamId()} />;
 }
