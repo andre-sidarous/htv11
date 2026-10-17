@@ -35,3 +35,10 @@ verify_jwt = true
 
 [functions.incident-token]
 verify_jwt = true
+
+[functions.ai-phone-call]
+verify_jwt = true
+
+# Called by Twilio (no user JWT). Every request is checked against a per-alert HMAC signature.
+[functions.ai-call-webhook]
+verify_jwt = false

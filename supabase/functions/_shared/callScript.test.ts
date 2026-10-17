@@ -28,7 +28,9 @@ Deno.test("TwiML escapes names and repeats the message", () => {
 
 Deno.test("toE164 normalizes and rejects", () => {
   assertEquals(toE164("+1 (416) 555-0123"), "+14165550123");
-  assertEquals(toE164("416 555 0123"), null);
+  assertEquals(toE164("416 555 0123"), "+14165550123");
+  assertEquals(toE164("14165550123"), "+14165550123");
+  assertEquals(toE164("555 0123"), null);
   assertEquals(toE164("+0123"), null);
   assertEquals(toE164(null), null);
 });

@@ -15,6 +15,7 @@
 // The caller broadcasts alert_updated (and incident_created when `incidentId` is returned) on jam:{jamId}.
 import { TERMINAL_ESCALATION_STATES } from "../_shared/constants.ts";
 import { escalationConfigFor, transition, type EscalationState } from "../_shared/escalation.ts";
+import { startAiPhoneCall } from "../_shared/aiPhoneCall.ts";
 import { escalateToContacts } from "../_shared/contactEscalation.ts";
 import { adminClient, isUuid, json, requireUser, serve } from "../_shared/supabase.ts";
 
@@ -82,6 +83,13 @@ serve(async (req, body) => {
     .maybeSingle();
   if (updateError) return json({ ok: false, error: "update_failed" }, 500);
   if (!updated) return json({ ok: true, advanced: false, state, reason: "already_advanced" });
+
+  if (next.state === "AI_CALL_STARTING") {
+    // Ring the affected person's phone for the live AI call (idempotent; mode "app" = no phone/Twilio,
+    // and their app runs the in-app spoken call instead).
+    const call = await startAiPhoneCall(admin, alertId).catch(() => ({ mode: "app", reason: "start_failed" }));
+    return json({ ok: true, advanced: true, state: next.state, alert: updated, call });
+  }
 
   if (next.state === "CONTACTS_NOTIFIED") {
     // Last step on the server, so it works even if every app is closed: incident package, call + text the

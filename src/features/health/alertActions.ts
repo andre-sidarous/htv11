@@ -1,4 +1,5 @@
 import type { AlertRow, EscalationState, RiskEvaluation } from "@/lib/types";
+import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { notificationService } from "@/services/notification";
 import { alertRepository, toSafetyAlert, type AlertPatch } from "./alertRepository";
 import { transition, type EscalationEvent } from "./escalation";
@@ -25,6 +26,11 @@ async function afterTransition(prevState: EscalationState, next: AlertRow, { byS
   // advance-alert already called and texted the contacts when the server made this move. When a phone
   // made it (AI call silence, demo "Simulate AI non-response"), run the same Twilio step via call-contacts.
   // It reuses this alert's incident package and skips anyone already called, so repeats are harmless.
+  // advance-alert rings the phone itself when the server makes this move.
+  if (!byServer && entered(prevState, next, "AI_CALL_STARTING")) {
+    void startAiPhoneCall(next.id).catch((error) => console.warn("[alerts] AI phone call failed to start", error));
+  }
+
   if (!byServer && entered(prevState, next, "CONTACTS_NOTIFIED")) {
     void notificationService
       .notifyContacts({ alertId: next.id })

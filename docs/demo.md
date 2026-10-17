@@ -22,7 +22,8 @@ Backup password: `jam-demo-1234` (needs `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
    npx supabase secrets set --env-file supabase/functions/.env
    npx supabase functions deploy --use-api
    ```
-2. **Twilio:** presenter 4's number is a **Verified Caller ID** (trial accounts can only call and text verified numbers). Canada/US are allowed under Voice → Geo permissions.
+2. **Twilio:** `TWILIO_FROM_NUMBER` is listed under the account's **Active numbers**, and **presenter 3's and presenter 4's numbers are Verified Caller IDs** (trial accounts can only call verified numbers). Canada/US are allowed under Voice → Geo permissions. On a trial, whoever picks up hears a short Twilio notice and must **press any key** first.
+   **Presenter 3's profile has their phone number** (Profile → phone): that's the number Jam's AI calls.
 3. **Sign-up on every phone:** profile, check-in buffer, consents. Presenter 3 turns on **all five** consents (location, health, AI call, recording, trusted-contact notifications) and picks **AI support call**, so the OS location and microphone permissions are granted now, not on stage.
 4. **Presenter 3 → Trusted contacts:** add presenter 4 with their phone (`+1…`) and the **same email presenter 4 signs in with**, turn on location, health summary, and recording, and tap **Test call**. Presenter 4's phone should ring.
 5. **Presenter 4:** sign in to Jam with that email. They don't join the Jam. The **Incidents** screen (`/incidents`) is where the package will appear.
@@ -43,8 +44,8 @@ Backup password: `jam-demo-1234` (needs `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
 4. **Trigger heart-rate spike** + **Trigger running**: baseline 75, now 145. Risk 3 + 2 + 1 = 6.
 5. **Send check-in**: presenter 3 sees "Are you okay?" and doesn't answer. Demo Mode shortens their buffer (`DEMO_CHECKIN_TIMEOUT_MS`), or tap **Simulate no response**. The unanswered check-in brings risk to 9.
 6. Presenters 1 and 2 get the in-app card "Alex may need support." (and an ntfy push). Nobody taps "I'm going to help". Tap **Simulate no group response** to skip the wait.
-7. The **AI support call starts on presenter 3's phone by itself**: "Hi, this is Jam. Your group could not reach you. Are you safe?" It guides them toward the destination. The screen shows "Recording enabled under your emergency preference."
-8. Presenter 3 stays silent for **10 seconds**, or tap **Simulate AI non-response** under More actions.
+7. **Presenter 3's phone rings: a real call from Jam's AI.** Answer on speaker (hold it to the mic), press a key if the Twilio trial notice plays. The AI says their group couldn't reach them, asks if they're okay, and gives live walking directions from their current position (real street names, nearby public places). Talk to it: "How far is it?", "What's around me?". Saying anything stops the escalation; "I made it" ends the call and resolves the alert. The app shows "Jam is calling your phone". (No phone number / Twilio down → the app speaks the call itself instead.)
+8. For the escalation path: presenter 3 answers and **stays silent** (two ~5s turns), or declines the call. Jam says it's notifying their trusted contacts and hangs up. **Simulate AI non-response** skips this.
 9. **Presenter 4's phone rings** (Twilio), then they get a text with the last-seen location, why Jam was concerned, and a recording link. If P4's flow didn't fire it, tap **Send incident package**.
 10. Presenters 1 and 2 see **View incident** on the alert card: map, reasons, recording, who it was shared with. Presenter 4 opens **Incidents** and sees their filtered view.
 11. Jam shows: "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."

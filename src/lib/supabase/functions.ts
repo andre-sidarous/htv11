@@ -62,6 +62,17 @@ export async function testContactCall(contactId: string): Promise<NotificationRe
   return data ?? { channel: "voice_call", status: "failed", detail: error ?? "unknown" };
 }
 
+export type AiPhoneCallStart = { mode: "phone"; status: "calling" | "already_started" } | { mode: "app"; reason: string };
+
+/**
+ * Rings the affected person's phone for the live AI support call (Twilio; idempotent per alert).
+ * mode "app" = no call placed (no phone number on the profile, Twilio not set up, ...): use the in-app call.
+ */
+export async function startAiPhoneCall(alertId: string): Promise<AiPhoneCallStart> {
+  const { data, error } = await invoke<AiPhoneCallStart>("ai-phone-call", { alertId });
+  return data ?? { mode: "app", reason: error ?? "unknown" };
+}
+
 /** Publishes the fixed generic ntfy message for a Jam. */
 export async function notifyNtfy(jamId: string, alertId: string): Promise<NotificationResult> {
   const { data, error } = await invoke<NotificationResult>("notify-ntfy", { jamId, alertId });

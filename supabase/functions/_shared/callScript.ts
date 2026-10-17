@@ -70,6 +70,9 @@ export function buildTwiml(message: string): string {
 export function toE164(raw: string | null | undefined): string | null {
   if (!raw) return null;
   const compact = raw.replace(/[\s().-]/g, "");
+  // North American numbers typed without the "+": "1 416 555 0123" or "416 555 0123".
+  if (/^1[2-9]\d{9}$/.test(compact)) return `+${compact}`;
+  if (/^[2-9]\d{9}$/.test(compact)) return `+1${compact}`;
   return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null;
 }
 

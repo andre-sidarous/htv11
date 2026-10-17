@@ -13,6 +13,7 @@ import { useJam } from "@/features/jams/useJam";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { AI_CALL_SILENCE_TIMEOUT_MS, SUPPORT_CALL_SCRIPT } from "@/lib/constants";
 import type { AiCallContext, AiCallState, AiCallTurn, AlertRow } from "@/lib/types";
+import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { aiService } from "@/services/ai";
 import { simulatedHealth } from "@/services/health";
 import { routingService } from "@/services/routing";
@@ -25,7 +26,8 @@ import { useCallRecording } from "./useCallRecording";
 const LISTEN_MS = AI_CALL_SILENCE_TIMEOUT_MS / (SUPPORT_CALL_SCRIPT.length - 1);
 const THANKS = "Thank you. Your group can see that you responded.";
 
-type Phase = "loading" | "idle" | "calling" | "responded" | "unresponsive" | "done";
+/** "phone" = Jam is ringing their real phone (Twilio); "calling" = the in-app spoken fallback. */
+type Phase = "loading" | "idle" | "phone" | "calling" | "responded" | "unresponsive" | "done";
 
 const CALL_STATES = ["AI_CALL_STARTING", "AI_CALL_ACTIVE"];
 
@@ -69,6 +71,8 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   // Shown on screen while the call runs: call timer, "Listening… 4s", and the directions card.
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
   const [listeningUntil, setListeningUntil] = useState<number | null>(null);
+  /** Why the real phone call couldn't be placed (shown when we fall back to the in-app call). */
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
   const [directions, setDirections] = useState<Pick<AiCallContext, "guidance" | "nearestSupportPoint" | "supportNote" | "destinationName"> | null>(null);
 
   const recording = useCallRecording({ userId: me });
@@ -234,6 +238,29 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     if (stillCalling()) await finishUnresponsive(false);
   }
 
+  /** Ring their real phone (AI talks on the call); fall back to speaking here if that isn't possible. */
+  async function beginCall(initial: AlertRow) {
+    setCallStartedAt(Date.now());
+    const result = await startAiPhoneCall(initial.id);
+    if (result.mode === "phone") {
+      setPhaseBoth("phone");
+      sendState("active");
+      return;
+    }
+    setFallbackReason(result.reason);
+    setPhaseBoth("calling");
+    await runCall(initial);
+  }
+
+  /** "Didn't get a call?": speak here instead. */
+  function speakHereInstead() {
+    const a = openAlertFor(safetyStore.get(), me);
+    if (!a || phaseRef.current !== "phone") return;
+    setFallbackReason("You chose to continue in the app");
+    setPhaseBoth("calling");
+    void runCall(a);
+  }
+
   /** React to this user's alert (store callback): start the call, or follow changes made elsewhere. */
   const onAlertChange = () => {
     const current = openAlertFor(safetyStore.get(), me);
@@ -246,8 +273,13 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
 
     if (phaseRef.current === "idle" && policyRef.current && started.current !== a.id && current && CALL_STATES.includes(current.escalation_state)) {
       started.current = a.id;
-      setPhaseBoth("calling");
-      void runCall(current);
+      void beginCall(current);
+      return;
+    }
+
+    if (phaseRef.current === "phone") {
+      // The live phone call drives the alert; just follow it.
+      if (!current || current.id !== a.id) setPhaseBoth("done");
       return;
     }
 
@@ -306,8 +338,15 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   if (phase === "loading") return <LoadingState label="Connecting the support call…" />;
 
   const noCall = phase === "idle" && (!alert || !CALL_STATES.includes(alert.escalation_state));
+  const phoneState = alert?.escalation_state;
   const headline =
-    phase === "calling"
+    phase === "phone"
+      ? phoneState === "AI_CALL_USER_RESPONDED"
+        ? "You're talking with Jam"
+        : phoneState === "AI_CALL_USER_UNRESPONSIVE" || phoneState === "CONTACTS_NOTIFIED"
+          ? "Your trusted contacts were notified"
+          : "Jam is calling your phone"
+      : phase === "calling"
       ? "AI support call active"
       : phase === "responded"
         ? "You responded"
@@ -319,7 +358,17 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
 
   const listeningFor = listeningUntil ? Math.max(1, Math.ceil((listeningUntil - now) / 1000)) : null;
   const callStatus =
-    phase === "calling"
+    phase === "phone"
+      ? phoneState === "AI_CALL_STARTING"
+        ? "Ringing your phone"
+        : phoneState === "AI_CALL_ACTIVE"
+          ? "On the call"
+          : phoneState === "AI_CALL_USER_RESPONDED"
+            ? "You responded"
+            : phoneState === "AI_CALL_USER_UNRESPONSIVE" || phoneState === "CONTACTS_NOTIFIED"
+              ? "Contacts notified"
+              : "Call ended"
+      : phase === "calling"
       ? listeningFor
         ? `Listening… ${listeningFor}s`
         : turn
@@ -336,11 +385,17 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
       <ScrollView contentContainerStyle={styles.content}>
         {noCall ? null : (
           <CallHeader
-            live={phase === "calling"}
+            live={phase === "calling" || (phase === "phone" && (phoneState === "AI_CALL_STARTING" || phoneState === "AI_CALL_ACTIVE"))}
             listening={Boolean(listeningFor)}
             status={callStatus}
             elapsed={callStartedAt ? formatTimer(now - callStartedAt) : null}
-            tone={phase === "responded" ? "ok" : phase === "unresponsive" ? "attention" : "calm"}
+            tone={
+              phase === "responded" || (phase === "phone" && phoneState === "AI_CALL_USER_RESPONDED")
+                ? "ok"
+                : phase === "unresponsive" || (phase === "phone" && (phoneState === "AI_CALL_USER_UNRESPONSIVE" || phoneState === "CONTACTS_NOTIFIED"))
+                  ? "attention"
+                  : "calm"
+            }
           />
         )}
         <View style={styles.header}>
@@ -348,7 +403,23 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           <Text style={type.caption}>Jam is an automated check-in. It is not emergency services or a medical service.</Text>
         </View>
 
-        {noCall ? (
+        {phase === "phone" ? (
+          <View style={styles.transcript}>
+            <Text style={styles.line} maxFontSizeMultiplier={1.4}>
+              {phoneState === "AI_CALL_USER_RESPONDED"
+                ? "Stay on the call. Jam's AI is guiding you with your live location."
+                : "Answer the call. Jam's AI will check you're okay and guide you step by step."}
+            </Text>
+            <Text style={type.body}>
+              Put it on speaker and come back to Jam, so your location keeps updating and the directions stay right.
+            </Text>
+            {phoneState === "AI_CALL_STARTING" || phoneState === "AI_CALL_ACTIVE" ? (
+              <Pressable accessibilityRole="button" onPress={speakHereInstead} style={({ pressed }) => [styles.back, pressed && styles.dim]}>
+                <Text style={styles.backText}>Didn&apos;t get a call? Talk here instead</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : noCall ? (
           <Text style={type.body}>
             {alert ? STATE_COPY[alert.escalation_state] : "There's no support call for you right now."}
           </Text>
@@ -361,7 +432,11 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           </View>
         )}
 
-        {!noCall && directions && (directions.guidance || directions.supportNote) ? (
+        {phase === "calling" && fallbackReason ? (
+          <Text style={type.caption}>Couldn&apos;t ring your phone ({fallbackReason}), so Jam is speaking here.</Text>
+        ) : null}
+
+        {!noCall && phase !== "phone" && directions && (directions.guidance || directions.supportNote) ? (
           <View style={styles.directions} accessibilityRole="summary">
             <Text style={styles.directionsLabel}>{directions.destinationName ? `Toward ${directions.destinationName}` : "Where to go"}</Text>
             {directions.guidance ? <Text style={styles.directionsText}>{directions.guidance}</Text> : null}
