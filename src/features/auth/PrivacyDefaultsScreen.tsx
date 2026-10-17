@@ -4,8 +4,9 @@ import { Text, View } from "react-native";
 import { Button, Card, OptionCard, Screen, Toggle } from "@/components/ui";
 import { CONSENT_KEYS } from "@/lib/constants";
 import type { ConsentKey, Consents, EmergencyPreference } from "@/lib/types";
-import { space, type } from "@/theme";
+import { colors, space, type } from "@/theme";
 import { CONSENT_COPY } from "./ConsentScreen";
+import { requestConsentPermission } from "./consentPermissions";
 import { useSession } from "./SessionProvider";
 
 /**
@@ -19,8 +20,17 @@ export function PrivacyDefaultsScreen() {
   const [consents, setConsents] = useState<Consents>(onboardingDraft.consents);
   const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
   const [saving, setSaving] = useState(false);
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
 
-  function setConsent(key: ConsentKey, value: boolean) {
+  async function setConsent(key: ConsentKey, value: boolean) {
+    setPermissionNotice(null);
+    if (value) {
+      const denied = await requestConsentPermission(key);
+      if (denied) {
+        setPermissionNotice(denied);
+        return;
+      }
+    }
     setConsents((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -46,10 +56,15 @@ export function PrivacyDefaultsScreen() {
               label={CONSENT_COPY[key].label}
               description={CONSENT_COPY[key].description}
               value={consents[key]}
-              onValueChange={(value) => setConsent(key, value)}
+              onValueChange={(value) => void setConsent(key, value)}
             />
           ))}
         </View>
+        {permissionNotice ? (
+          <Text accessibilityLiveRegion="polite" style={{ color: colors.amber, fontSize: 13 }}>
+            {permissionNotice}
+          </Text>
+        ) : null}
       </Card>
 
       <Card>

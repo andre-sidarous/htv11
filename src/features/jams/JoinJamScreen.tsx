@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { StyleSheet, Text, View } from "react-native";
 import { Button, Card, OptionCard, Screen, TextField, Toggle } from "@/components/ui";
+import { requestConsentPermission } from "@/features/auth/consentPermissions";
 import { useSession } from "@/features/auth/SessionProvider";
 import { joinCodeSchema } from "@/lib/validation";
 import type { EmergencyPreference } from "@/lib/types";
@@ -25,6 +26,19 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
   const [locationConsent, setLocationConsent] = useState(onboardingDraft.consents.location_consent);
   const [healthConsent, setHealthConsent] = useState(onboardingDraft.consents.health_consent);
   const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
+  const [permissionNotice, setPermissionNotice] = useState<string | null>(null);
+
+  async function handleLocationConsent(value: boolean) {
+    setPermissionNotice(null);
+    if (value) {
+      const denied = await requestConsentPermission("location_consent");
+      if (denied) {
+        setPermissionNotice(denied);
+        return;
+      }
+    }
+    setLocationConsent(value);
+  }
 
   useEffect(() => {
     if (initialCode) void handleJoin(initialCode);
@@ -115,7 +129,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
             label="Location sharing"
             description="Lets this Jam see where you are while it's active."
             value={locationConsent}
-            onValueChange={setLocationConsent}
+            onValueChange={(v) => void handleLocationConsent(v)}
           />
           <Toggle
             label="Health signals"
@@ -123,6 +137,11 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
             value={healthConsent}
             onValueChange={setHealthConsent}
           />
+          {permissionNotice ? (
+            <Text accessibilityLiveRegion="polite" style={{ color: colors.amber, fontSize: 13 }}>
+              {permissionNotice}
+            </Text>
+          ) : null}
         </Card>
 
         <Card>

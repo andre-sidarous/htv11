@@ -3,12 +3,13 @@ import { useRouter } from "expo-router";
 import { Alert, Text, View } from "react-native";
 import { Badge, Button, Card, Chip, LoadingState, OptionCard, Screen, Toggle } from "@/components/ui";
 import { checkinBufferLabel } from "@/features/auth/checkinBuffer";
+import { requestConsentPermission } from "@/features/auth/consentPermissions";
 import { updateCheckinBufferSeconds } from "@/features/auth/profileApi";
 import { useSession } from "@/features/auth/SessionProvider";
 import { setDemoContext } from "@/features/demo/demoContext";
 import { CHECKIN_BUFFER_CHOICES_S } from "@/lib/constants";
 import { signOut } from "@/lib/supabase/auth";
-import type { EmergencyPreference } from "@/lib/types";
+import type { ConsentKey, EmergencyPreference } from "@/lib/types";
 import { colors, space, type } from "@/theme";
 import { useHasActiveAlert } from "./useHasActiveAlert";
 import { deleteMyIncidentData } from "./incidentPrivacy";
@@ -31,10 +32,18 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
   const self = members.find((m) => m.user_id === session?.user.id);
   const isHost = Boolean(jam && session && jam.host_id === session.user.id);
 
-  async function handleToggle(key: "location_consent" | "health_consent" | "recording_consent" | "contact_notify_consent" | "ai_call_consent", value: boolean) {
+  async function handleToggle(key: ConsentKey, value: boolean) {
     if (!session) return;
-    setSaving(key);
     setError(null);
+    setNotice(null);
+    if (value) {
+      const denied = await requestConsentPermission(key);
+      if (denied) {
+        setNotice(denied);
+        return;
+      }
+    }
+    setSaving(key);
     const { error } = await updateMyMembership(jamId, session.user.id, { [key]: value });
     setSaving(null);
     if (error) setError(error);
