@@ -4,7 +4,7 @@ import type { LatLng, LocationService } from "@/lib/types";
 
 /**
  * Simulated location source. Positions come from campus-walk.json and demo overrides, never GPS.
- * P3: add the real watchPosition implementation in ./browser.ts and keep this as the demo source.
+ * The real GPS source is ./device.ts, which delegates here for simulated (Demo Mode) users.
  */
 const paths = new Map<string, { path: LatLng[]; index: number }>();
 const positions = new Map<string, LatLng>();
