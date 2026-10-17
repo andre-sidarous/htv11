@@ -1,11 +1,12 @@
 import * as Haptics from "expo-haptics";
-import { CircleCheck, Compass, HandHeart, Info, MessageCircleQuestionMark, Navigation, PhoneOff, type LucideIcon } from "lucide-react-native";
+import { CircleCheck, Compass, HandHeart, Info, Navigation, PhoneOff, type LucideIcon } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, IconBadge } from "@/components/ui";
+import { Pico } from "@/components/brand";
+import { Icon } from "@/components/ui";
 import type { CheckInResponse } from "@/lib/types";
-import { colors, radius, shadow, space, tones, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, tones, type } from "@/theme";
 import { createCheckInAlert, dispatchAlertEvent } from "./alertActions";
 import { alertRepository } from "./alertRepository";
 import { openAlertFor, safetyStore, useSafetySnapshot } from "./safetyStore";
@@ -134,7 +135,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
           <View style={[styles.sheet, { paddingBottom: insets.bottom + space(4) }]} accessibilityViewIsModal>
             <View style={styles.handle} />
             <View style={styles.header}>
-              <IconBadge icon={MessageCircleQuestionMark} tone="brand" size={44} />
+              <Pico mood="concerned" size={64} />
               <View style={styles.flex}>
                 <Text style={type.title} accessibilityRole="header">
                   Are you okay?
@@ -146,7 +147,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
             </View>
 
             {reasons.length ? (
-              <View style={styles.reasons} accessibilityLabel={`Why Jam is checking in: ${reasons.join(". ")}`}>
+              <View style={styles.reasons} accessibilityLabel={`Why Huddle is checking in: ${reasons.join(". ")}`}>
                 {reasons.map((r) => (
                   <View key={r} style={styles.reasonRow}>
                     <View style={styles.reasonDot} />
@@ -199,7 +200,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
             {myAlert ? <SafetyControls alert={myAlert} onSafe={markSafe} onCancel={cancel} compact /> : null}
             <View style={styles.footer}>
               <Icon icon={Info} size={13} color={colors.inkFaint} />
-              <Text style={[type.caption, styles.center]}>Simulated wearable data. Jam is not a medical service.</Text>
+              <Text style={[type.caption, styles.center]}>Simulated wearable data. Huddle is not a medical service.</Text>
             </View>
           </View>
         </View>
@@ -231,7 +232,7 @@ const styles = StyleSheet.create({
   reasonText: { flex: 1, color: colors.ink },
   countdown: { gap: space(2) },
   countdownRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: space(2) },
-  seconds: { fontSize: 20, fontWeight: "700", color: colors.brand, fontVariant: ["tabular-nums"] },
+  seconds: { fontSize: 20, fontFamily: fonts.bold, fontWeight: "700", color: colors.brand, fontVariant: ["tabular-nums"] },
   track: { height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: colors.blush },
   fill: { height: 6, borderRadius: 3, backgroundColor: colors.brand },
   options: { gap: space(2) },
@@ -244,7 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1.5,
   },
-  optionText: { flex: 1, fontSize: 17, fontWeight: "600" },
+  optionText: { flex: 1, fontSize: 17, fontFamily: fonts.semibold, fontWeight: "600" },
   dim: { opacity: 0.6 },
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space(1.5) },
   center: { textAlign: "center" },

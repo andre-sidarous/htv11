@@ -10,7 +10,7 @@ import { resetDemoJam } from "./incidentApi";
 /** The affected user's open alert in the demo Jam (read through RLS). */
 async function openAlertForAffected() {
   const supabase = getSupabaseClient();
-  if (!supabase) throw new Error("Jam isn't connected.");
+  if (!supabase) throw new Error("Huddle isn't connected.");
   const { jamId, affectedUserId } = getDemoContext();
   const { data } = await supabase
     .from("alerts")

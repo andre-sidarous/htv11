@@ -2,7 +2,7 @@ import * as Linking from "expo-linking";
 import QRCode from "react-native-qrcode-svg";
 import { Share, StyleSheet, Text } from "react-native";
 import { Button, Card } from "@/components/ui";
-import { colors, space, type } from "@/theme";
+import { fonts, colors, space, type } from "@/theme";
 
 /**
  * Join code, QR (`JAM:{code}`), and a Share button. Used in the lobby and in the Group tab, since
@@ -12,7 +12,7 @@ export function InviteCard({ joinCode, jamName, note }: { joinCode: string; jamN
   async function handleShare() {
     const link = Linking.createURL(`join/${joinCode}`);
     try {
-      await Share.share({ message: `Join my Jam "${jamName}" on Jam.\nCode: ${joinCode}\n${link}` });
+      await Share.share({ message: `Join my Huddle "${jamName}" on Huddle.\nCode: ${joinCode}\n${link}` });
     } catch {
       // The user dismissed the share sheet — nothing to do.
     }
@@ -36,6 +36,6 @@ export function InviteCard({ joinCode, jamName, note }: { joinCode: string; jamN
 
 const styles = StyleSheet.create({
   card: { alignItems: "center", gap: space(3) },
-  code: { fontSize: 24, fontWeight: "700", letterSpacing: 4, color: colors.navy },
+  code: { fontSize: 24, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 4, color: colors.navy },
   note: { textAlign: "center" },
 });

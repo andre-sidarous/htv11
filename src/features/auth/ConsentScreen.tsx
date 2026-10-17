@@ -11,15 +11,15 @@ import { useSession } from "./SessionProvider";
 export const CONSENT_COPY: Record<ConsentKey, { label: string; description: string }> = {
   location_consent: {
     label: "Location sharing",
-    description: "Lets your Jam see where you are while the Jam is active. You can pause it at any time.",
+    description: "Lets your Huddle see where you are while the Huddle is active. You can pause it at any time.",
   },
   health_consent: {
     label: "Health signals",
-    description: "Shares a simulated heart-rate signal with your Jam, so they can tell if something feels off.",
+    description: "Shares a simulated heart-rate signal with your Huddle, so they can tell if something feels off.",
   },
   ai_call_consent: {
     label: "AI support call",
-    description: "If you don't respond to a check-in, Jam can call you with a short voice check-in.",
+    description: "If you don't respond to a check-in, Huddle can call you with a short voice check-in.",
   },
   recording_consent: {
     label: "Emergency recording",
@@ -27,7 +27,7 @@ export const CONSENT_COPY: Record<ConsentKey, { label: string; description: stri
   },
   contact_notify_consent: {
     label: "Trusted-contact notifications",
-    description: "If you stop responding to your group and to Jam's support call, Jam calls and texts your trusted contacts.",
+    description: "If you stop responding to your group and to Huddle's support call, Huddle calls and texts your trusted contacts.",
   },
 };
 
@@ -92,13 +92,13 @@ export function ConsentScreen() {
       <Card>
         <Text style={type.heading}>If your group can’t reach you</Text>
         <Text style={type.caption} maxFontSizeMultiplier={1.8}>
-          Choose what happens next. Nothing is pre-selected — you decide. You’ll confirm this again for each Jam.
+          Choose what happens next. Nothing is pre-selected — you decide. You’ll confirm this again for each Huddle.
         </Text>
         <Badge label="Required" tone="amber" />
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <OptionCard
             title="AI support call"
-            description="Jam calls you with a short voice check-in before notifying anyone."
+            description="Huddle calls you with a short voice check-in before notifying anyone."
             selected={preference === "ai_support_call"}
             onPress={() => setPreference("ai_support_call")}
           />

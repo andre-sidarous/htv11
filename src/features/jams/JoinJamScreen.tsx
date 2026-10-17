@@ -55,7 +55,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
     const result = await joinJamByCode(parsed.data);
     setLoading(false);
     if (!result.jamId) {
-      setError(result.error ?? "Couldn't join that Jam.");
+      setError(result.error ?? "Couldn't join that Huddle.");
       return;
     }
     setJamId(result.jamId);
@@ -108,7 +108,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
         />
         <View style={styles.cameraOverlay}>
           <Text style={styles.cameraHint} maxFontSizeMultiplier={1.6}>
-            Point your camera at the Jam’s QR code.
+            Point your camera at the Huddle’s QR code.
           </Text>
           <Button label="Cancel" variant="secondary" onPress={() => setScanning(false)} />
         </View>
@@ -121,19 +121,19 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
       <Screen scroll>
         <Text style={type.title}>You’re joining as {profile?.display_name ?? "yourself"}</Text>
         <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-          Confirm what you’ll share with this Jam. You can change this anytime in Settings.
+          Confirm what you’ll share with this Huddle. You can change this anytime in Settings.
         </Text>
 
         <Card>
           <Toggle
             label="Location sharing"
-            description="Lets this Jam see where you are while it's active."
+            description="Lets this Huddle see where you are while it's active."
             value={locationConsent}
             onValueChange={(v) => void handleLocationConsent(v)}
           />
           <Toggle
             label="Health signals"
-            description="Shares a simulated heart-rate signal with this Jam."
+            description="Shares a simulated heart-rate signal with this Huddle."
             value={healthConsent}
             onValueChange={setHealthConsent}
           />
@@ -149,7 +149,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
           <View style={{ gap: space(3), marginTop: space(2) }}>
             <OptionCard
               title="AI support call"
-              description="Jam calls you with a short voice check-in before notifying anyone."
+              description="Huddle calls you with a short voice check-in before notifying anyone."
               selected={preference === "ai_support_call"}
               onPress={() => setPreference("ai_support_call")}
             />
@@ -168,16 +168,16 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
           </Text>
         ) : null}
 
-        <Button label="Join Jam" onPress={handleConfirm} loading={loading} disabled={!preference} />
+        <Button label="Join Huddle" onPress={handleConfirm} loading={loading} disabled={!preference} />
       </Screen>
     );
   }
 
   return (
     <Screen scroll>
-      <Text style={type.title}>Join a Jam</Text>
+      <Text style={type.title}>Join a Huddle</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-        Enter the 6-character code a Jam member shared with you, or scan their QR code.
+        Enter the 6-character code a Huddle member shared with you, or scan their QR code.
       </Text>
 
       <Card>

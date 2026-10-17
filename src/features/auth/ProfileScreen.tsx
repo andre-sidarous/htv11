@@ -41,7 +41,7 @@ export function ProfileScreen() {
 
   return (
     <Screen scroll>
-      <Text style={type.title}>Let’s set up your Jam profile.</Text>
+      <Text style={type.title}>Let’s set up your Huddle profile.</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
         You can change these settings later.
       </Text>
@@ -54,7 +54,7 @@ export function ProfileScreen() {
           autoCapitalize="words"
           autoComplete="name"
           maxLength={60}
-          placeholder="What should your Jam call you?"
+          placeholder="What should your Huddle call you?"
           editable={!loading}
         />
         <TextField
@@ -63,13 +63,13 @@ export function ProfileScreen() {
           onChangeText={setPhone}
           keyboardType="phone-pad"
           autoComplete="tel"
-          hint="Only visible to you. Jam members never see your phone number."
+          hint="Only visible to you. Huddle members never see your phone number."
           editable={!loading}
         />
       </Card>
 
       <Card>
-        <Text style={type.label}>If Jam checks on you and you don’t answer, how long should it wait before alerting your group?</Text>
+        <Text style={type.label}>If Huddle checks on you and you don’t answer, how long should it wait before alerting your group?</Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {CHECKIN_BUFFER_CHOICES_S.map((seconds) => (
             <Chip

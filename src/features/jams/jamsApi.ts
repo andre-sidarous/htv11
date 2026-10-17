@@ -53,7 +53,7 @@ export async function createJam(input: CreateJamInput): Promise<{ jam: JamRow | 
     })
     .select()
     .single();
-  if (jamError || !jam) return { jam: null, error: jamError?.message ?? "Couldn't create the Jam." };
+  if (jamError || !jam) return { jam: null, error: jamError?.message ?? "Couldn't create the Huddle." };
 
   const { error: memberError } = await supabase.from("jam_members").insert({
     jam_id: jam.id,
@@ -76,14 +76,14 @@ type JoinErrorCode = "not_authenticated" | "profile_required" | "invalid_code" |
 const JOIN_ERROR_COPY: Record<JoinErrorCode, string> = {
   not_authenticated: "Sign in and try again.",
   profile_required: "Finish setting up your profile first.",
-  invalid_code: "That code doesn't match a Jam. Double check and try again.",
-  jam_ended: "This Jam has already ended.",
+  invalid_code: "That code doesn't match a Huddle. Double check and try again.",
+  jam_ended: "This Huddle has already ended.",
 };
 
 /** Maps `join_jam`'s raised exception message to calm, user-facing copy. */
 export function joinErrorMessage(code: string | null | undefined): string {
   if (code && code in JOIN_ERROR_COPY) return JOIN_ERROR_COPY[code as JoinErrorCode];
-  return "Couldn't join that Jam. Try again.";
+  return "Couldn't join that Huddle. Try again.";
 }
 
 export async function joinJamByCode(code: string): Promise<{ jamId: string | null; error: string | null }> {

@@ -71,7 +71,7 @@ export function CreateJamScreen() {
 
     setLoading(false);
     if (!jam) {
-      setError(error ?? "Couldn't create the Jam. Try again.");
+      setError(error ?? "Couldn't create the Huddle. Try again.");
       return;
     }
     router.replace(`/jam/${jam.id}/lobby`);
@@ -82,7 +82,7 @@ export function CreateJamScreen() {
       <Button label='Use the "Campus Walk" preset' variant="secondary" onPress={applyCampusWalkPreset} />
 
       <Card>
-        <TextField label="Jam name" value={name} onChangeText={setName} placeholder="Walk to the station" maxLength={80} editable={!loading} />
+        <TextField label="Huddle name" value={name} onChangeText={setName} placeholder="Walk to the station" maxLength={80} editable={!loading} />
       </Card>
 
       <Card>
@@ -130,7 +130,7 @@ export function CreateJamScreen() {
           value={String(checkinDelaySeconds)}
           onChangeText={(v) => setCheckinDelaySeconds(clampSeconds(v))}
           keyboardType="number-pad"
-          hint="How long a member can go quiet before Jam checks in."
+          hint="How long a member can go quiet before Huddle checks in."
           editable={!loading}
         />
         <TextField
@@ -138,7 +138,7 @@ export function CreateJamScreen() {
           value={String(groupResponseTimeoutSeconds)}
           onChangeText={(v) => setGroupResponseTimeoutSeconds(clampSeconds(v))}
           keyboardType="number-pad"
-          hint="How long the group has to respond before Jam escalates further."
+          hint="How long the group has to respond before Huddle escalates further."
           editable={!loading}
         />
       </Card>
@@ -148,7 +148,7 @@ export function CreateJamScreen() {
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <OptionCard
             title="AI support call"
-            description="Jam calls you with a short voice check-in before notifying anyone."
+            description="Huddle calls you with a short voice check-in before notifying anyone."
             selected={preference === "ai_support_call"}
             onPress={() => setPreference("ai_support_call")}
           />
@@ -167,7 +167,7 @@ export function CreateJamScreen() {
         </Text>
       ) : null}
 
-      <Button label="Create Jam" onPress={handleCreate} loading={loading} disabled={!name.trim() || !preference} />
+      <Button label="Create Huddle" onPress={handleCreate} loading={loading} disabled={!name.trim() || !preference} />
     </Screen>
   );
 }

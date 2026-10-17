@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { radius, space, tones, type Tone } from "@/theme";
+import { fonts, radius, space, tones, type Tone } from "@/theme";
 import { Icon, type LucideIcon } from "./Icon";
 
 export type BadgeTone = Tone;
@@ -27,5 +27,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     alignSelf: "flex-start",
   },
-  text: { fontSize: 12, fontWeight: "700", letterSpacing: 0.2 },
+  text: { fontSize: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 0.2 },
 });

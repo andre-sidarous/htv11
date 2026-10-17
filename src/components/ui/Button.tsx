@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { ActivityIndicator, Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from "react-native";
-import { colors, radius, space, TAP_TARGET } from "@/theme";
+import { fonts, colors, radius, space, TAP_TARGET } from "@/theme";
 import { Icon, type LucideIcon } from "./Icon";
 
 /**
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     gap: space(2),
   },
   large: { minHeight: 56, borderRadius: radius.lg },
-  label: { fontSize: 16, fontWeight: "600" },
+  label: { fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
   labelLarge: { fontSize: 17 },
   disabled: { opacity: 0.45 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.985 }] },

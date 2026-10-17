@@ -1,21 +1,35 @@
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, space, TAP_TARGET, type } from "@/theme";
+import { Pico } from "@/components/brand/Pico";
+import { fonts, colors, radius, space, TAP_TARGET, type } from "@/theme";
 
 /** Shared loading / empty / error states. P2 may restyle; keep the props stable. */
 
 export function LoadingState({ label = "Loading…" }: { label?: string }) {
   return (
     <View style={styles.center} accessibilityRole="progressbar" accessibilityLabel={label}>
+      <Pico mood="waiting" size={96} />
       <ActivityIndicator size="large" color={colors.navy} />
       <Text style={[type.body, styles.muted]}>{label}</Text>
     </View>
   );
 }
 
-export function EmptyState({ title, description, action }: { title: string; description?: string; action?: ReactNode }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  mascot = false,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  /** Show Pico above the title (off by default, so existing screens are unchanged). */
+  mascot?: boolean;
+}) {
   return (
     <View style={styles.card}>
+      {mascot ? <Pico mood="waiting" size={72} /> : null}
       <Text style={[type.heading, styles.centerText]}>{title}</Text>
       {description ? <Text style={[type.body, styles.muted, styles.centerText]}>{description}</Text> : null}
       {action ? <View style={styles.action}>{action}</View> : null}
@@ -59,5 +73,5 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     backgroundColor: colors.navy,
   },
-  buttonText: { color: colors.warmWhite, fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.warmWhite, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
 });

@@ -13,7 +13,7 @@ import {
   type TextInputProps,
 } from "react-native";
 import type { ConfirmationStatus } from "@/lib/types";
-import { colors, radius, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, space, TAP_TARGET, type } from "@/theme";
 import { CONFIRMATION_LABELS, validateContact, type ContactFieldErrors, type ContactFormValues, type ContactInput } from "./schema";
 
 type Props = {
@@ -72,7 +72,7 @@ export function ContactForm({ initial, title, onSubmit, onCancel }: Props) {
         />
         <Field
           label="Phone number"
-          hint="Jam calls this number if it can't reach you. Include the country code, e.g. +1 416 555 0123."
+          hint="Huddle calls this number if it can't reach you. Include the country code, e.g. +1 416 555 0123."
           error={errors.phone_number}
           value={values.phone_number}
           onChangeText={(v) => set("phone_number", v)}
@@ -82,7 +82,7 @@ export function ContactForm({ initial, title, onSubmit, onCancel }: Props) {
         />
         <Field
           label="Email"
-          hint="Optional. If they sign in to Jam with this email, they can open the incident details in the app."
+          hint="Optional. If they sign in to Huddle with this email, they can open the incident details in the app."
           error={errors.email}
           value={values.email}
           onChangeText={(v) => set("email", v)}
@@ -92,7 +92,7 @@ export function ContactForm({ initial, title, onSubmit, onCancel }: Props) {
         />
 
         <Text style={[type.heading, styles.section]}>What they can know</Text>
-        <Text style={type.caption}>Only if Jam can’t reach you. Everything is off until you turn it on.</Text>
+        <Text style={type.caption}>Only if Huddle can’t reach you. Everything is off until you turn it on.</Text>
         <ToggleRow
           label="Your location"
           description="Where you were last seen."
@@ -101,7 +101,7 @@ export function ContactForm({ initial, title, onSubmit, onCancel }: Props) {
         />
         <ToggleRow
           label="Health and activity summary"
-          description="Why Jam was concerned, e.g. running or a high heart rate."
+          description="Why Huddle was concerned, e.g. running or a high heart rate."
           value={values.receive_health_summary}
           onChange={(v) => set("receive_health_summary", v)}
         />
@@ -129,7 +129,7 @@ export function ContactForm({ initial, title, onSubmit, onCancel }: Props) {
             );
           })}
         </View>
-        <Text style={type.caption}>Jam won’t call contacts marked as declined.</Text>
+        <Text style={type.caption}>Huddle won’t call contacts marked as declined.</Text>
 
         {saveError ? (
           <Text accessibilityRole="alert" style={[type.body, styles.error]}>
@@ -183,10 +183,10 @@ const styles = StyleSheet.create({
   },
   headerButton: { minWidth: 64, minHeight: TAP_TARGET, justifyContent: "center" },
   headerAction: { color: colors.navy, fontSize: 16 },
-  bold: { fontWeight: "700", textAlign: "right" },
+  bold: { fontFamily: fonts.bold, fontWeight: "700", textAlign: "right" },
   body: { gap: space(3), padding: space(5), paddingBottom: space(12) },
   field: { gap: space(1) },
-  label: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  label: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.ink },
   input: {
     minHeight: TAP_TARGET,
     paddingHorizontal: space(4),
@@ -215,5 +215,5 @@ const styles = StyleSheet.create({
   },
   segmentSelected: { backgroundColor: colors.navy, borderColor: colors.navy },
   segmentText: { fontSize: 13, color: colors.ink, textAlign: "center" },
-  segmentTextSelected: { color: colors.warmWhite, fontWeight: "600" },
+  segmentTextSelected: { color: colors.warmWhite, fontFamily: fonts.semibold, fontWeight: "600" },
 });

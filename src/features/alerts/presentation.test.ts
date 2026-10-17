@@ -9,7 +9,7 @@ describe("responseStatus", () => {
 
 describe("escalationLine", () => {
   it("uses calm copy at each step", () => {
-    expect(escalationLine("CHECK_IN_SENT", "Alex")).toBe("Jam noticed a combination of changes and is checking in with Alex.");
+    expect(escalationLine("CHECK_IN_SENT", "Alex")).toBe("Huddle noticed a combination of changes and is checking in with Alex.");
     expect(escalationLine("GROUP_ALERT_SENT", "Alex")).toContain("Your group has been notified");
     expect(escalationLine("CONTACTS_NOTIFIED", "Alex")).toContain("trusted contacts are being called");
   });

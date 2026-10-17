@@ -37,7 +37,7 @@ export type IncidentSummary = { id: string; role: IncidentRole; personName: stri
 
 async function invoke<T>(name: string, body: Record<string, unknown>): Promise<{ data: T | null; error: string | null }> {
   const supabase = getSupabaseClient();
-  if (!supabase) return { data: null, error: "Jam isn't connected." };
+  if (!supabase) return { data: null, error: "Huddle isn't connected." };
   try {
     const { data, error } = await supabase.functions.invoke<T>(name, { body });
     if (error) return { data: null, error: await functionErrorMessage(name, error) };
@@ -68,5 +68,5 @@ export type DemoResetResult = { ok: boolean; cleared?: Record<string, number>; e
 export async function resetDemoJam(jamId: string): Promise<DemoResetResult> {
   const { data, error } = await invoke<DemoResetResult>("demo-reset", { jamId });
   if (data?.ok) return data;
-  return { ok: false, error: error === "host_only" ? "Only the Jam's host can reset the demo." : error ?? data?.error ?? "Reset failed" };
+  return { ok: false, error: error === "host_only" ? "Only the Huddle's host can reset the demo." : error ?? data?.error ?? "Reset failed" };
 }

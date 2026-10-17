@@ -33,8 +33,8 @@ const POSITION: Record<Exclude<EscalationState, "RESOLVED" | "CANCELLED">, { ind
 };
 
 const CURRENT: Record<EscalationState, string> = {
-  MONITORING: "Jam is quietly monitoring.",
-  CHECK_IN_SENT: "Jam is checking in.",
+  MONITORING: "Huddle is quietly monitoring.",
+  CHECK_IN_SENT: "Huddle is checking in.",
   USER_RESPONDED: "Answered the check-in.",
   GROUP_ALERT_SENT: "The group has been notified.",
   GROUP_MEMBER_ACKNOWLEDGED: "Someone from the group is responding.",
@@ -68,11 +68,11 @@ export function timelineFor(state: EscalationState | null, aiCallAllowed = true)
 function nextStep(state: EscalationState, aiCallAllowed: boolean): string | null {
   switch (state) {
     case "MONITORING":
-      return "Jam only checks in when several signals change together.";
+      return "Huddle only checks in when several signals change together.";
     case "CHECK_IN_SENT":
       return "If there’s no answer, the group is notified.";
     case "GROUP_ALERT_SENT":
-      return aiCallAllowed ? "If nobody responds, Jam starts a support call." : "If nobody responds, trusted contacts are notified.";
+      return aiCallAllowed ? "If nobody responds, Huddle starts a support call." : "If nobody responds, trusted contacts are notified.";
     case "AI_CALL_STARTING":
     case "AI_CALL_ACTIVE":
       return "If there’s no answer, trusted contacts are notified.";

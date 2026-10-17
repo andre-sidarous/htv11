@@ -20,7 +20,7 @@ import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { aiService } from "@/services/ai";
 import { simulatedHealth } from "@/services/health";
 import { routingService } from "@/services/routing";
-import { colors, radius, space, TAP_TARGET } from "@/theme";
+import { fonts, colors, radius, space, TAP_TARGET } from "@/theme";
 import { buildCallContext, callRoute, type CallDestination } from "./callContext";
 import { ensureIncidentPackage } from "./incidents";
 import { useCallRecording } from "./useCallRecording";
@@ -353,7 +353,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
 
   /** Ending the call yourself means you're responsive, so it closes the alert like "I'm safe". */
   function confirmEndCall() {
-    Alert.alert("End the support call?", "This tells Jam and your group you’re okay and closes the alert.", [
+    Alert.alert("End the support call?", "This tells Huddle and your group you’re okay and closes the alert.", [
       { text: "Stay on the call", style: "cancel" },
       { text: "I’m okay, end call", onPress: () => void markSafe() },
     ]);
@@ -366,10 +366,10 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   const headline =
     phase === "phone"
       ? phoneState === "AI_CALL_USER_RESPONDED"
-        ? "You're talking with Jam"
+        ? "You're talking with Huddle"
         : phoneState === "AI_CALL_USER_UNRESPONSIVE" || phoneState === "CONTACTS_NOTIFIED"
           ? "Your trusted contacts were notified"
-          : "Jam is calling your phone"
+          : "Huddle is calling your phone"
       : phase === "calling"
       ? "AI support call active"
       : phase === "responded"
@@ -415,7 +415,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           title: "Support call",
           headerStyle: { backgroundColor: colors.callBg },
           headerTintColor: colors.callInk,
-          headerTitleStyle: { color: colors.callInk, fontWeight: "600" },
+          headerTitleStyle: { color: colors.callInk, fontFamily: fonts.semibold, fontWeight: "600" },
           contentStyle: { backgroundColor: colors.callBg },
         }}
       />
@@ -447,11 +447,11 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           <View style={styles.transcript}>
             <Text style={styles.line} maxFontSizeMultiplier={1.4}>
               {phoneState === "AI_CALL_USER_RESPONDED"
-                ? "Stay on the call. Jam's AI is guiding you with your live location."
-                : "Answer the call. Jam's AI will check you're okay and guide you step by step."}
+                ? "Stay on the call. Huddle's AI is guiding you with your live location."
+                : "Answer the call. Huddle's AI will check you're okay and guide you step by step."}
             </Text>
             <Text style={styles.body}>
-              Put it on speaker and come back to Jam, so your location keeps updating and the directions stay right.
+              Put it on speaker and come back to Huddle, so your location keeps updating and the directions stay right.
             </Text>
             {phoneState === "AI_CALL_STARTING" || phoneState === "AI_CALL_ACTIVE" ? (
               <Pressable accessibilityRole="button" onPress={speakHereInstead} style={({ pressed }) => [styles.back, pressed && styles.dim]}>
@@ -471,14 +471,14 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
             {turn ? (
               <View style={styles.sourceRow}>
                 <Icon icon={AudioLines} size={14} color={colors.callInkMuted} />
-                <Text style={styles.caption}>{turn.source === "gemini" ? "Spoken by Jam (AI)" : "Spoken by Jam"}</Text>
+                <Text style={styles.caption}>{turn.source === "gemini" ? "Spoken by Huddle (AI)" : "Spoken by Huddle"}</Text>
               </View>
             ) : null}
           </View>
         )}
 
         {phase === "calling" && fallbackReason ? (
-          <Text style={styles.caption}>Couldn&apos;t ring your phone ({fallbackReason}), so Jam is speaking here.</Text>
+          <Text style={styles.caption}>Couldn&apos;t ring your phone ({fallbackReason}), so Huddle is speaking here.</Text>
         ) : null}
 
         {!noCall && phase !== "phone" && directions && (directions.guidance || directions.supportNote) ? (
@@ -522,7 +522,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
             <CallControl
               icon={muted ? VolumeX : Volume2}
               label={muted ? "Speaker off" : "Speaker"}
-              hint={muted ? "Turns Jam’s voice back on" : "Mutes Jam’s voice. The words stay on screen."}
+              hint={muted ? "Turns Huddle’s voice back on" : "Mutes Huddle’s voice. The words stay on screen."}
               active={!muted}
               onPress={toggleSpeaker}
               disabled={phase === "phone"}
@@ -542,7 +542,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
         {phase === "calling" ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityHint="Lets Jam and your group know you can hear the call"
+            accessibilityHint="Lets Huddle and your group know you can hear the call"
             onPress={() => void onResponded(false)}
             style={({ pressed }) => [styles.hear, pressed && styles.dim]}
           >
@@ -562,11 +562,11 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
 
         {phase === "done" || noCall ? (
           <Pressable accessibilityRole="button" onPress={() => router.back()} style={({ pressed }) => [styles.back, pressed && styles.dim]}>
-            <Text style={styles.backText}>Back to Jam</Text>
+            <Text style={styles.backText}>Back to Huddle</Text>
           </Pressable>
         ) : null}
 
-        <Text style={[styles.caption, styles.center]}>Jam is an automated check-in. It is not emergency services or a medical service.</Text>
+        <Text style={[styles.caption, styles.center]}>Huddle is an automated check-in. It is not emergency services or a medical service.</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -669,7 +669,7 @@ function CallHeader({
 
   const dot = tone === "ok" ? colors.sage : tone === "attention" ? colors.amber : live ? colors.callAccent : colors.callInkMuted;
   return (
-    <View style={styles.callHeader} accessibilityRole="header" accessibilityLabel={`Jam Support Call. ${status}${elapsed ? `, ${elapsed}` : ""}`}>
+    <View style={styles.callHeader} accessibilityRole="header" accessibilityLabel={`Huddle Support Call. ${status}${elapsed ? `, ${elapsed}` : ""}`}>
       <View style={styles.orbWrap}>
         {live ? (
           <Animated.View
@@ -681,10 +681,10 @@ function CallHeader({
           />
         ) : null}
         <View style={styles.orb}>
-          <Text style={styles.orbText}>Jam</Text>
+          <Text style={styles.orbText}>Huddle</Text>
         </View>
       </View>
-      <Text style={styles.callTitle}>Jam Support Call</Text>
+      <Text style={styles.callTitle}>Huddle Support Call</Text>
       <View style={styles.statusRow}>
         <View style={styles.statusPill}>
           <View style={[styles.statusDot, { backgroundColor: dot }]} />
@@ -700,7 +700,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.callBg },
   flex: { flex: 1 },
   center: { textAlign: "center" },
-  bold: { fontWeight: "700", color: colors.callInk },
+  bold: { fontFamily: fonts.bold, fontWeight: "700", color: colors.callInk },
   body: { fontSize: 16, lineHeight: 23, color: colors.callInk },
   caption: { fontSize: 13, lineHeight: 18, color: colors.callInkMuted },
   content: { gap: space(5), padding: space(5), paddingBottom: space(10) },
@@ -708,35 +708,35 @@ const styles = StyleSheet.create({
   orbWrap: { width: 96, height: 96, alignItems: "center", justifyContent: "center" },
   ring: { position: "absolute", width: 96, height: 96, borderRadius: 48, borderWidth: 2, borderColor: colors.callAccent },
   orb: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center", backgroundColor: colors.callSurfaceStrong, borderWidth: 1, borderColor: colors.callAccent },
-  orbText: { color: colors.callInk, fontSize: 20, fontWeight: "800", letterSpacing: 0.5 },
-  callTitle: { fontSize: 15, fontWeight: "600", letterSpacing: 0.4, color: colors.callInkMuted },
+  orbText: { color: colors.callInk, fontSize: 20, fontFamily: fonts.bold, fontWeight: "800", letterSpacing: 0.5 },
+  callTitle: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", letterSpacing: 0.4, color: colors.callInkMuted },
   statusRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
   statusPill: { flexDirection: "row", alignItems: "center", gap: space(1.5), paddingHorizontal: space(3), paddingVertical: space(1), borderRadius: radius.pill, backgroundColor: colors.callSurface },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { fontSize: 13, fontWeight: "700", color: colors.callInk },
-  elapsed: { fontSize: 15, fontWeight: "600", color: colors.callInk, fontVariant: ["tabular-nums"] },
+  statusText: { fontSize: 13, fontFamily: fonts.bold, fontWeight: "700", color: colors.callInk },
+  elapsed: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.callInk, fontVariant: ["tabular-nums"] },
   wave: { height: 56, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5 },
   bar: { width: 4, height: 56, borderRadius: 2, backgroundColor: colors.callAccent },
   header: { gap: space(1), alignItems: "center" },
-  headline: { fontSize: 20, fontWeight: "700", color: colors.callInk, textAlign: "center" },
+  headline: { fontSize: 20, fontFamily: fonts.bold, fontWeight: "700", color: colors.callInk, textAlign: "center" },
   transcript: { gap: space(3), padding: space(5), borderRadius: radius.lg, backgroundColor: colors.callSurface },
-  line: { fontSize: 24, lineHeight: 33, fontWeight: "600", color: colors.callInk },
+  line: { fontSize: 24, lineHeight: 33, fontFamily: fonts.semibold, fontWeight: "600", color: colors.callInk },
   sourceRow: { flexDirection: "row", alignItems: "center", gap: space(1.5) },
   directions: { gap: space(2), padding: space(5), borderRadius: radius.lg, backgroundColor: colors.callSurface, borderWidth: 1, borderColor: colors.callSurfaceStrong },
-  directionsLabel: { fontSize: 12, fontWeight: "700", color: colors.callAccent, textTransform: "uppercase", letterSpacing: 0.8 },
-  directionsText: { fontSize: 20, lineHeight: 27, fontWeight: "600", color: colors.callInk },
+  directionsLabel: { fontSize: 12, fontFamily: fonts.bold, fontWeight: "700", color: colors.callAccent, textTransform: "uppercase", letterSpacing: 0.8 },
+  directionsText: { fontSize: 20, lineHeight: 27, fontFamily: fonts.semibold, fontWeight: "600", color: colors.callInk },
   supportRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
   recording: { gap: space(1), padding: space(4), borderRadius: radius.md, backgroundColor: colors.callSurface, borderWidth: 1, borderColor: colors.amber },
   recordingRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
-  recordingText: { flex: 1, fontWeight: "600" },
-  recordingTimer: { fontSize: 14, fontWeight: "700", color: colors.callInk, fontVariant: ["tabular-nums"] },
+  recordingText: { flex: 1, fontFamily: fonts.semibold, fontWeight: "600" },
+  recordingTimer: { fontSize: 14, fontFamily: fonts.bold, fontWeight: "700", color: colors.callInk, fontVariant: ["tabular-nums"] },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.amber },
   controls: { flexDirection: "row", justifyContent: "space-evenly" },
   control: { alignItems: "center", gap: space(2), minWidth: 84 },
   controlCircle: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", backgroundColor: colors.callSurfaceStrong },
   controlActive: { backgroundColor: colors.callInk },
   controlEnd: { backgroundColor: colors.callSurface, borderWidth: 1.5, borderColor: colors.callAccent },
-  controlLabel: { fontSize: 13, fontWeight: "600", color: colors.callInkMuted },
+  controlLabel: { fontSize: 13, fontFamily: fonts.semibold, fontWeight: "600", color: colors.callInkMuted },
   hear: {
     minHeight: TAP_TARGET * 1.5,
     flexDirection: "row",
@@ -746,8 +746,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.callAccent,
   },
-  hearText: { color: colors.brandDark, fontSize: 22, fontWeight: "700" },
+  hearText: { color: colors.brandDark, fontSize: 22, fontFamily: fonts.bold, fontWeight: "700" },
   back: { minHeight: TAP_TARGET, alignItems: "center", justifyContent: "center" },
-  backText: { color: colors.callAccent, fontSize: 16, fontWeight: "600" },
+  backText: { color: colors.callAccent, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
   dim: { opacity: 0.55 },
 });

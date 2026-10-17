@@ -1,5 +1,5 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { colors, radius, shadow, space, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, type } from "@/theme";
 import { DATA_EXTRACTED_AT, DATA_SOURCES, SAFETY_DISCLAIMER } from "./dataSources";
 
 /** Every dataset behind the map: who publishes it, how fresh it is, what it adds, and its limits. */
@@ -10,7 +10,7 @@ export function DataSourcesScreen() {
       <View style={styles.intro}>
         <Text style={type.title}>Where the map data comes from</Text>
         <Text style={type.body}>
-          Jam bundles compact extracts of public data for the whole City of Toronto, so the map works without a connection.
+          Huddle bundles compact extracts of public data for the whole City of Toronto, so the map works without a connection.
           Data was extracted on {Number.isNaN(extracted.getTime()) ? "an earlier date" : extracted.toLocaleDateString()}.
         </Text>
         <View style={styles.disclaimer} accessibilityRole="text">
@@ -57,7 +57,7 @@ const styles = StyleSheet.create({
   intro: { gap: space(3) },
   disclaimer: { padding: space(4), borderRadius: radius.sm, backgroundColor: colors.amberSoft },
   card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
-  label: { fontWeight: "600", color: colors.navy },
+  label: { fontFamily: fonts.semibold, fontWeight: "600", color: colors.navy },
   link: { minHeight: 48, justifyContent: "center" },
   linkText: { color: colors.navySoft, textDecorationLine: "underline", fontSize: 14 },
 });

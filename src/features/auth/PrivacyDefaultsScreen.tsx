@@ -45,7 +45,7 @@ export function PrivacyDefaultsScreen() {
     <Screen scroll>
       <Text style={type.title}>Privacy defaults</Text>
       <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-        These are the starting choices for every new Jam. Each Jam’s Settings tab can still override them.
+        These are the starting choices for every new Huddle. Each Huddle’s Settings tab can still override them.
       </Text>
 
       <Card>
@@ -72,7 +72,7 @@ export function PrivacyDefaultsScreen() {
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <OptionCard
             title="AI support call"
-            description="Jam calls you with a short voice check-in before notifying anyone."
+            description="Huddle calls you with a short voice check-in before notifying anyone."
             selected={preference === "ai_support_call"}
             onPress={() => setPreference("ai_support_call")}
           />

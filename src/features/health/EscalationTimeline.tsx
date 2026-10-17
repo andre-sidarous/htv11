@@ -2,7 +2,7 @@ import { Activity, BellRing, Check, MessageCircleQuestionMark, Phone, Users, typ
 import { StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/ui";
 import type { EscalationState } from "@/lib/types";
-import { colors, radius, space, type } from "@/theme";
+import { fonts, colors, radius, space, type } from "@/theme";
 import { timelineFor, type StageKey, type StageStatus } from "./escalationStages";
 
 const ICONS: Record<StageKey, LucideIcon> = {
@@ -106,9 +106,9 @@ const styles = StyleSheet.create({
   line: { flex: 1, width: 2, minHeight: space(4), backgroundColor: colors.border, marginVertical: 2 },
   text: { flex: 1, paddingTop: 5, paddingBottom: space(4), gap: 2 },
   labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(2) },
-  idleText: { color: colors.inkMuted, fontWeight: "500" },
+  idleText: { color: colors.inkMuted, fontFamily: fonts.medium, fontWeight: "500" },
   skipped: { textDecorationLine: "line-through" },
-  status: { fontSize: 12, fontWeight: "700" },
+  status: { fontSize: 12, fontFamily: fonts.bold, fontWeight: "700" },
   next: { padding: space(3), borderRadius: radius.sm, backgroundColor: colors.blushSoft },
-  nextLabel: { fontWeight: "700", color: colors.brand },
+  nextLabel: { fontFamily: fonts.bold, fontWeight: "700", color: colors.brand },
 });

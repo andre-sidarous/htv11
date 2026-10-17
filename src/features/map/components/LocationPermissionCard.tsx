@@ -11,9 +11,9 @@ export function LocationPermissionCard({ sharing }: { sharing: LocationSharing }
   switch (sharing.state) {
     case "needs_permission":
       return (
-        <Card title="Share your location with this Jam">
+        <Card title="Share your location with this Huddle">
           <Text style={type.body}>
-            Jam shows your position to the members of this Jam while it is active, so you can find each other. It
+            Huddle shows your position to the members of this Huddle while it is active, so you can find each other. It
             only works while the app is open, and you can pause it at any time.
           </Text>
           <PillButton label="Share my location" onPress={() => void sharing.requestPermission()} />
@@ -32,7 +32,7 @@ export function LocationPermissionCard({ sharing }: { sharing: LocationSharing }
     case "services_off":
       return (
         <Card title="Location services are off">
-          <Text style={type.body}>Turn on Location Services in your phone’s settings, then come back to the Jam.</Text>
+          <Text style={type.body}>Turn on Location Services in your phone’s settings, then come back to the Huddle.</Text>
           <PillButton label="Open Settings" variant="secondary" onPress={sharing.openSettings} />
         </Card>
       );

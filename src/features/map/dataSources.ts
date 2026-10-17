@@ -28,7 +28,7 @@ export const DATA_SOURCES: DataSource[] = [
   },
   {
     name: "TTC service disruptions (demo feed)",
-    publisher: "Local mock feed in the Jam app (real source: TTC GTFS-Realtime)",
+    publisher: "Local mock feed in the Huddle app (real source: TTC GTFS-Realtime)",
     url: portal("ttc-gtfs-realtime-gtfs-rt"),
     refresh: "Real-time in production; static in this prototype",
     contributes: "The \"current transit disruption\" used in route recommendations.",

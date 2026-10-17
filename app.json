@@ -1,19 +1,19 @@
 {
   "expo": {
-    "name": "Jam",
+    "name": "Huddle",
     "slug": "jam",
     "version": "0.1.0",
     "scheme": "jam",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#fbf8f3",
+    "backgroundColor": "#F8F4F1",
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.htv11.jam",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Jam shares your location with your Jam while it is active. You can pause it at any time.",
-        "NSMicrophoneUsageDescription": "Jam records audio during an AI support call only if you turned on emergency recording.",
-        "NSCameraUsageDescription": "Jam uses the camera to scan a Jam QR code."
+        "NSLocationWhenInUseUsageDescription": "Huddle shares your location with your Huddle while it is active. You can pause it at any time.",
+        "NSMicrophoneUsageDescription": "Huddle records audio during an AI support call only if you turned on emergency recording.",
+        "NSCameraUsageDescription": "Huddle uses the camera to scan a Huddle QR code."
       }
     },
     "android": {
@@ -41,7 +41,11 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
         "android.permission.CAMERA"
-      ]
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
+        "backgroundColor": "#F1D8D9"
+      }
     },
     "plugins": [
       "expo-router",
@@ -50,23 +54,33 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Jam shares your location with your Jam while it is active. You can pause it at any time."
+          "locationWhenInUsePermission": "Huddle shares your location with your Huddle while it is active. You can pause it at any time."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Jam records audio during an AI support call only if you turned on emergency recording."
+          "microphonePermission": "Huddle records audio during an AI support call only if you turned on emergency recording."
         }
       ],
       [
         "expo-camera",
         {
-          "cameraPermission": "Jam uses the camera to scan a Jam QR code.",
+          "cameraPermission": "Huddle uses the camera to scan a Huddle QR code.",
           "recordAudioAndroid": false
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/pico.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#F8F4F1"
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
@@ -83,6 +97,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/a79dc90d-7e99-41e9-8939-787833576bda"
-    }
+    },
+    "icon": "./assets/brand/icon.png"
   }
 }

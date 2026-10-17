@@ -20,7 +20,7 @@ async function reverseGeocode(latitude: number, longitude: number): Promise<stri
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${latitude}&lon=${longitude}`;
     const res = await fetch(url, {
-      headers: { "User-Agent": "Jam-hackathon/0.1 (group travel safety prototype)" },
+      headers: { "User-Agent": "Huddle-hackathon/0.1 (group travel safety prototype)" },
       signal: AbortSignal.timeout(GEOCODE_TIMEOUT_MS),
     });
     return res.ok ? describePlace(await res.json()) : null;

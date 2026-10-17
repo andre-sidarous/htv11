@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { formatAgo, presenceLabel } from "@/features/location/presence";
 import { ROUTE_LEVEL_LABEL } from "@/features/location/routeStatus";
-import { colors, radius, shadow, space, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, type } from "@/theme";
 import type { MapMember } from "../useJamMapData";
 import type { MemberStore } from "../memberStore";
 import { activityLabel, initials, PRESENCE_DOT, profileColor } from "../memberAppearance";
@@ -36,7 +36,7 @@ export function MemberCard({
     return () => clearInterval(timer);
   }, []);
 
-  const name = isSelf ? "You" : (member?.displayName ?? "Jam member");
+  const name = isSelf ? "You" : (member?.displayName ?? "Huddle member");
   const presence = live?.presence ?? "unavailable";
   const status = presenceLabel(presence, live?.lastSeenAt, now);
   const activity = activityLabel(live?.activity);
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space(2) },
   text: { flex: 1, gap: space(1) },
   avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.surface, fontWeight: "700" },
+  avatarText: { color: colors.surface, fontFamily: fonts.bold, fontWeight: "700" },
   dot: { width: 8, height: 8, borderRadius: 4 },
   close: { alignSelf: "flex-end" },
 });

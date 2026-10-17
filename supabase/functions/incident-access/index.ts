@@ -65,7 +65,7 @@ async function view(admin: SupabaseClient, pkg: Pkg, role: Role, allowed: Allowe
     alertId: pkg.alert_id,
     jamId: alert?.jam_id ?? null,
     role,
-    personName: person?.display_name ?? "A Jam member",
+    personName: person?.display_name ?? "A Huddle member",
     createdAt: pkg.created_at,
     alertCreatedAt: alert?.created_at ?? null,
     expiresAt: pkg.expires_at,
@@ -111,7 +111,7 @@ serve(async (req, body) => {
     const names = Object.fromEntries((people ?? []).map((p) => [p.id, p.display_name]));
     const incidents = [...byId.values()]
       .sort((a, b) => b.pkg.created_at.localeCompare(a.pkg.created_at))
-      .map(({ pkg, role }) => ({ id: pkg.id, role, personName: names[pkg.affected_user_id] ?? "A Jam member", createdAt: pkg.created_at }));
+      .map(({ pkg, role }) => ({ id: pkg.id, role, personName: names[pkg.affected_user_id] ?? "A Huddle member", createdAt: pkg.created_at }));
     return json({ incidents });
   }
 

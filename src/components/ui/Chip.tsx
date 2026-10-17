@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text } from "react-native";
-import { colors, radius, space, type } from "@/theme";
+import { fonts, colors, radius, space, type } from "@/theme";
 
 /** A compact selectable pill, for short single-choice lists (travel mode, duration, etc.). */
 export function Chip({
@@ -45,5 +45,5 @@ const styles = StyleSheet.create({
   },
   chipSelected: { borderColor: colors.navy, backgroundColor: colors.sky },
   chipDisabled: { opacity: 0.5 },
-  chipTextSelected: { color: colors.navy, fontWeight: "700" },
+  chipTextSelected: { color: colors.navy, fontFamily: fonts.bold, fontWeight: "700" },
 });

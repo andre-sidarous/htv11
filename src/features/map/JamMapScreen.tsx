@@ -217,7 +217,7 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
           <Marker
             coordinate={toMapCoord(destination)}
             title={destination.name}
-            description="Jam destination"
+            description="Huddle destination"
             pinColor={colors.navy}
             zIndex={8}
           />
@@ -230,7 +230,7 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
             key={id}
             store={store}
             userId={id}
-            displayName={names.get(id) ?? "Jam member"}
+            displayName={names.get(id) ?? "Huddle member"}
             isSelf={id === data.selfId}
             onPress={onMarkerPress}
           />
@@ -239,14 +239,14 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
 
       <View style={styles.top} pointerEvents="box-none">
         {jamEnded ? (
-          <Banner text="This Jam has ended. Location sharing has stopped." />
+          <Banner text="This Huddle has ended. Location sharing has stopped." />
         ) : data.jam?.status === "waiting" ? (
-          <Banner text="The Jam hasn't started yet. Locations appear once the host starts it." />
+          <Banner text="The Huddle hasn't started yet. Locations appear once the host starts it." />
         ) : null}
         {!jamEnded ? <SharingBar sharing={sharing} /> : null}
         <LocationPermissionCard sharing={sharing} />
         {!jamEnded && data.members.filter((m) => m.isActive).length <= 1 ? (
-          <Banner text="It's just you in this Jam so far. Invite people from the Group tab." />
+          <Banner text="It's just you in this Huddle so far. Invite people from the Group tab." />
         ) : !jamEnded && sharingCount === 0 && sharing.state !== "live" ? (
           <Banner text="No one is sharing their location yet." />
         ) : null}

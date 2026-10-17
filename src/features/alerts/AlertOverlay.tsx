@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Badge, Button, Icon, IconBadge } from "@/components/ui";
 import { timelineFor } from "@/features/health/escalationStages";
 import type { AlertResponseKind, SafetyAlert } from "@/lib/types";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { acknowledgeAlert, getLastSeen, resolveAlert, respond, type LastSeen } from "./api";
 import { escalationLine, formatAgo, isAiCallState, responseStatus } from "./presentation";
 import { useJamAlerts } from "./useJamAlerts";
@@ -29,7 +29,7 @@ export function AlertOverlay({ jamId }: { jamId: string }) {
           key={alert.id}
           alert={alert}
           jamId={jamId}
-          name={names[alert.affectedUserId] ?? "A Jam member"}
+          name={names[alert.affectedUserId] ?? "A Huddle member"}
           kinds={responses[alert.id] ?? []}
           incidentId={incidents[alert.id]}
           onUpdated={broadcast}
@@ -248,5 +248,5 @@ const styles = StyleSheet.create({
     ...shadow.raised,
   },
   pillDot: { width: 8, height: 8, borderRadius: 4 },
-  pillText: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  pillText: { color: colors.ink, fontSize: 14, fontFamily: fonts.semibold, fontWeight: "600" },
 });

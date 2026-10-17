@@ -9,7 +9,7 @@ import { EscalationTimeline } from "@/features/health/EscalationTimeline";
 import { openAlertFor, useSafetySnapshot } from "@/features/health/safetyStore";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import type { HealthSignal } from "@/lib/types";
-import { colors, space, type, type Tone } from "@/theme";
+import { fonts, colors, space, type, type Tone } from "@/theme";
 import { useJamMembers } from "./useJamMembers";
 
 /** ~2 minutes of history at one simulated signal every 3 s. Kept in memory only, never stored here. */
@@ -88,7 +88,7 @@ export function SignalsScreen({ jamId }: { jamId: string }) {
         <Card tone="amber">
           <Text style={type.label}>Health sharing is off</Text>
           <Text style={type.caption} maxFontSizeMultiplier={1.8}>
-            Your Jam can’t see any health signal and Jam doesn’t score it. Turn it on in Settings.
+            Your Huddle can’t see any health signal and Huddle doesn’t score it. Turn it on in Settings.
           </Text>
         </Card>
       ) : null}
@@ -126,7 +126,7 @@ export function SignalsScreen({ jamId }: { jamId: string }) {
         <Tile icon={Gauge} tone="lavender" label="Movement" value={signal?.movementState ? MOVEMENT_COPY[signal.movementState] : "—"} />
       </View>
 
-      <SectionHeader title="What Jam is watching" />
+      <SectionHeader title="What Huddle is watching" />
       <Card>
         <View style={styles.heroHead}>
           <Text style={[type.label, styles.flex]}>Pulse score {evaluation ? evaluation.riskScore : 0}</Text>
@@ -139,7 +139,7 @@ export function SignalsScreen({ jamId }: { jamId: string }) {
             </Text>
           ))
         ) : (
-          <Text style={type.caption}>Nothing unusual. Jam checks in only when several signals change together.</Text>
+          <Text style={type.caption}>Nothing unusual. Huddle checks in only when several signals change together.</Text>
         )}
       </Card>
 
@@ -176,7 +176,7 @@ export function SignalsScreen({ jamId }: { jamId: string }) {
       <Card tone="neutral" style={styles.privacy}>
         <IconBadge icon={Lock} tone="brand" size={32} />
         <Text style={[type.caption, styles.flex]} maxFontSizeMultiplier={1.8}>
-          Simulated for this prototype, never a diagnosis. Shared with your Jam only while health sharing is on, and it turns off when you leave the Jam.
+          Simulated for this prototype, never a diagnosis. Shared with your Huddle only while health sharing is on, and it turns off when you leave the Huddle.
         </Text>
       </Card>
     </Screen>
@@ -201,9 +201,9 @@ const styles = StyleSheet.create({
   hero: { gap: space(3) },
   heroHead: { flexDirection: "row", alignItems: "center", gap: space(3) },
   metricRow: { flexDirection: "row", alignItems: "flex-end", gap: space(1.5) },
-  unit: { fontSize: 15, fontWeight: "600", color: colors.inkMuted, marginBottom: 7 },
+  unit: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.inkMuted, marginBottom: 7 },
   baseline: { alignItems: "flex-end", gap: 2, marginBottom: 5 },
-  baselineValue: { fontSize: 15, fontWeight: "600", color: colors.ink },
+  baselineValue: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", color: colors.ink },
   chartEmpty: { height: 96, alignItems: "center", justifyContent: "center", borderRadius: 12, backgroundColor: colors.blushSoft },
   tiles: { flexDirection: "row", gap: space(3) },
   tile: { flex: 1, gap: space(1.5) },

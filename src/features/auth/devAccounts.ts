@@ -12,7 +12,7 @@ export type DevAccount = {
 };
 
 export const DEV_ACCOUNTS: DevAccount[] = [
-  { role: "host", email: "host@jam.demo", label: "Host", description: "Created the Jam and starts it." },
+  { role: "host", email: "host@jam.demo", label: "Host", description: "Created the Huddle and starts it." },
   { role: "group_member", email: "member@jam.demo", label: "Group member", description: "Travels with the group." },
   {
     role: "affected_user",

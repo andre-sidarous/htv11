@@ -24,10 +24,10 @@ serve(async (req, body) => {
   if (!twilio) return json({ channel: "voice_call", status: "skipped", detail: "Phone calls aren't set up (Twilio secrets missing)" });
 
   const { data: profile } = await auth.supabase.from("profiles").select("display_name").eq("id", auth.user.id).maybeSingle();
-  const owner = profile?.display_name ?? "A Jam user";
+  const owner = profile?.display_name ?? "A Huddle user";
   const message =
-    `Hello ${contact.name}. This is a test call from Jam, a group travel safety app. ` +
-    `${owner} added you as a trusted contact. If ${owner} ever stops responding during a Jam, ` +
+    `Hello ${contact.name}. This is a test call from Huddle, a group travel safety app. ` +
+    `${owner} added you as a trusted contact. If ${owner} ever stops responding during a Huddle, ` +
     "you will get a call like this one, followed by a text with details. No action is needed now. Goodbye.";
 
   const call = await placeCall(twilio, to, buildTwiml(message));

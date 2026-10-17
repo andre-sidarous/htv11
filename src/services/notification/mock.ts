@@ -15,7 +15,7 @@ export const mockNotificationService: NotificationService = {
     return contactIds.map((contactId) => ({
       contactId,
       to: "(preview only)",
-      body: "Jam: someone who listed you as a trusted contact may need support. Open the link to view details.",
+      body: "Huddle: someone who listed you as a trusted contact may need support. Open the link to view details.",
     }));
   },
   async getStatus() {
