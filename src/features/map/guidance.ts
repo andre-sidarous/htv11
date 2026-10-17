@@ -1,17 +1,19 @@
 import { haversineM } from "@/lib/geo";
 import type { LatLng, Route, SupportPoint } from "@/lib/types";
-import { loadAllSupportPoints, loadCentreline, type Street } from "./civicData";
+import { boxAround, loadAllSupportPoints, pointsInBox, streetsInBox, type Street } from "./civicData";
 
 /**
  * Short spoken directions for P4's AI support call. Pure and deterministic.
  *
  *   getSpokenGuidance({ position, route, destination, supportPoints })
- *   → { guidance: "Head north on St. George Street for about 200 metres, toward Robarts Library.", nearestSupportPoint }
+ *   → { guidance: "Head north on St. George Street for about 200 metres, toward Robarts Library.", nearestSupportPoint, supportNote }
  *
  * - Within 200m of the route: look ~100m ahead along the route for the direction, and say how far the
  *   route keeps going that way (capped so the line stays short).
  * - More than 200m off: guide back to the nearest point on the route, or to the nearest public
  *   support point if that's closer.
+ * - supportNote: how much public support is around them, and how far the nearest one is
+ *   ("You're in an area with few public support points. The nearest is Robarts Library, about 400 metres to the east.").
  * Never says a place or street is "safe".
  */
 
@@ -20,13 +22,22 @@ export type SpokenGuidanceInput = {
   route: Route | null;
   destination: LatLng & { name?: string };
   supportPoints?: SupportPoint[];
-  /** Street names for "on St. George Street". Defaults to the Campus Walk centreline extract. */
+  /** Street names for "on St. George Street". Defaults to the Toronto centreline (only streets near the person are checked). */
   streets?: Street[];
 };
 
-export type SpokenGuidance = { guidance: string; nearestSupportPoint?: string };
+export type SpokenGuidance = { guidance: string; nearestSupportPoint?: string; supportNote?: string };
 
 export const GUIDANCE_OFF_ROUTE_M = 200;
+/** Spoken-category support points within this radius count as "nearby". */
+export const SUPPORT_NEARBY_M = 300;
+/** Fewer nearby support points than this → "an area with few public support points". */
+export const FEW_SUPPORT_POINTS = 2;
+/**
+ * Never name a support point farther than this. The civic data only covers the Campus Walk area
+ * (~2 km around U of T St. George), so elsewhere we say nothing rather than "25 kilometres to the north".
+ */
+export const MAX_SPOKEN_SUPPORT_M = 1_500;
 const LOOK_AHEAD_M = 100;
 /** The longest stretch spoken in one line ("for about 300 metres"). */
 const MAX_SPOKEN_RUN_M = 300;
@@ -205,20 +216,41 @@ function nearest(points: SupportPoint[], p: LatLng): { point: SupportPoint; dist
   return best;
 }
 
+/** "You're in an area with few public support points. The nearest is X, about 400 metres to the east." */
+export function describeSupportNearby(position: LatLng, supportPoints: SupportPoint[]): string | undefined {
+  const closest = nearest(supportPoints, position);
+  if (!closest || closest.distanceM > MAX_SPOKEN_SUPPORT_M) return undefined;
+  const where = `${closest.point.name}, ${spokenDistance(closest.distanceM)} to the ${compassWord(bearingDeg(position, closest.point))}`;
+  const nearby = supportPoints.filter((p) => haversineM(p, position) <= SUPPORT_NEARBY_M).length;
+  return nearby < FEW_SUPPORT_POINTS
+    ? `You're in an area with few public support points. The nearest is ${where}.`
+    : `The nearest public support point is ${where}.`;
+}
+
 const nameOf = (d: SpokenGuidanceInput["destination"]) => d.name?.trim() || "your destination";
 
 // ---------- main ----------
 
+/** Support points worth saying out loud (staffed / easy to find); all of them if none of those exist. */
+export function spokenSupportPoints(allPoints: SupportPoint[] = loadAllSupportPoints()): SupportPoint[] {
+  const preferred = allPoints.filter((p) => SPOKEN_CATEGORIES.has(p.category));
+  return preferred.length ? preferred : allPoints;
+}
+
 export function getSpokenGuidance(input: SpokenGuidanceInput): SpokenGuidance {
   const { position, destination } = input;
-  const allPoints = input.supportPoints ?? loadAllSupportPoints();
-  const preferred = allPoints.filter((p) => SPOKEN_CATEGORIES.has(p.category));
-  const supportPoints = preferred.length ? preferred : allPoints;
-  const streets = input.streets ?? loadCentreline();
-  const closest = nearest(supportPoints, position);
+  const supportPoints = spokenSupportPoints(input.supportPoints);
+  // Citywide centreline: only check the streets around the points being named.
+  const streetsNear = (points: LatLng[]) => input.streets ?? streetsInBox(boxAround(points, STREET_MATCH_M));
+  const found = nearest(supportPoints, position);
+  const closest = found && found.distanceM <= MAX_SPOKEN_SUPPORT_M ? found : null;
   const nearestSupportPoint = closest?.point.name;
-  const withNearest = (guidance: string): SpokenGuidance =>
-    nearestSupportPoint ? { guidance, nearestSupportPoint } : { guidance };
+  const supportNote = describeSupportNearby(position, supportPoints);
+  const withNearest = (guidance: string): SpokenGuidance => ({
+    guidance,
+    ...(nearestSupportPoint ? { nearestSupportPoint } : {}),
+    ...(supportNote ? { supportNote } : {}),
+  });
 
   const toDestinationM = haversineM(position, destination);
   if (toDestinationM <= ARRIVED_M) return withNearest(`You're at ${nameOf(destination)}.`);
@@ -239,7 +271,7 @@ export function getSpokenGuidance(input: SpokenGuidanceInput): SpokenGuidance {
       return withNearest(`Head ${dir} for ${spokenDistance(closest.distanceM)} to ${closest.point.name}.`);
     }
     const dir = compassWord(bearingDeg(position, onRoute.point));
-    const street = streetAlong([onRoute.point], streets);
+    const street = streetAlong([onRoute.point], streetsNear([onRoute.point]));
     const target = street ? `back to your route on ${street}` : "back to your route";
     return withNearest(`Head ${dir} for ${spokenDistance(onRoute.distanceM)} to get ${target}.`);
   }
@@ -258,13 +290,16 @@ export function getSpokenGuidance(input: SpokenGuidanceInput): SpokenGuidance {
   const runEnd = pointAlong(line, runEndM);
 
   const samples = [0.15, 0.4, 0.65, 0.9].map((f) => pointAlong(line, onRoute.alongM + runM * f));
-  const street = streetAlong(samples, streets);
+  const street = streetAlong(samples, streetsNear(samples));
 
   // "toward …": the destination if this stretch reaches it, else a support point near the end of it.
   let toward: string | null = null;
   if (remainingM - runM <= TOWARD_MATCH_M) toward = nameOf(destination);
   else {
-    const candidates = supportPoints.filter((p) => {
+    // Only support points around the stretch ahead (sampled every 50m), not the whole city.
+    const window: LatLng[] = [];
+    for (let m = onRoute.alongM; m <= runEndM + TOWARD_AHEAD_M; m += 50) window.push(pointAlong(line, m));
+    const candidates = pointsInBox(supportPoints, boxAround(window, TOWARD_MATCH_M)).filter((p) => {
       const proj = project(p, line);
       return (
         proj !== null &&

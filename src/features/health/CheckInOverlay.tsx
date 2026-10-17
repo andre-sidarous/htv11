@@ -19,15 +19,24 @@ const RESPONSES: { value: CheckInResponse; label: string }[] = [
   { value: "cannot_respond", label: "I cannot respond" },
 ];
 
-/** Seconds until an ISO deadline, re-rendering every second. */
-function useCountdown(deadlineAt: string | null | undefined): number | null {
+/**
+ * Seconds until an ISO deadline (re-rendering every second), plus the fraction of the window
+ * left (1 → 0) for a progress bar. The window starts when this deadline first appears.
+ */
+function useCountdown(deadlineAt: string | null | undefined): { secondsLeft: number | null; progress: number | null } {
   const [now, setNow] = useState(() => Date.now());
+  const [opened, setOpened] = useState<{ key: string; at: number } | null>(null);
+  if (deadlineAt && opened?.key !== deadlineAt) setOpened({ key: deadlineAt, at: now });
   useEffect(() => {
     if (!deadlineAt) return;
     const timer = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(timer);
   }, [deadlineAt]);
-  return deadlineAt ? Math.max(0, Math.ceil((Date.parse(deadlineAt) - now) / 1000)) : null;
+  if (!deadlineAt) return { secondsLeft: null, progress: null };
+  const end = Date.parse(deadlineAt);
+  const secondsLeft = Math.max(0, Math.ceil((end - now) / 1000));
+  const total = opened?.key === deadlineAt ? end - opened.at : 0;
+  return { secondsLeft, progress: total > 0 ? Math.min(1, Math.max(0, (end - now) / total)) : null };
 }
 
 /**
@@ -43,7 +52,11 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
 
   const myAlert = openAlertFor(snapshot, engine.me);
   const checkInOpen = myAlert?.escalation_state === "CHECK_IN_SENT" || (!myAlert && snapshot.manualCheckIn !== null);
-  const secondsLeft = useCountdown(myAlert?.escalation_state === "CHECK_IN_SENT" ? myAlert.next_deadline_at : snapshot.manualCheckIn?.deadlineAt);
+  const deadlineAt = myAlert?.escalation_state === "CHECK_IN_SENT" ? myAlert.next_deadline_at : snapshot.manualCheckIn?.deadlineAt;
+  const { secondsLeft, progress } = useCountdown(deadlineAt);
+  const reasons = (Array.isArray(myAlert?.reasons) ? (myAlert.reasons as unknown[]) : [])
+    .filter((r): r is string => typeof r === "string" && r.length > 0)
+    .slice(0, 3);
 
   // A calm haptic each time a check-in opens.
   const hapticFor = useRef<string | null>(null);
@@ -111,12 +124,29 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
             <Text style={[type.body, styles.muted]}>
               {myAlert ? "Jam noticed a combination of changes and is checking in." : "Your group is checking in."}
             </Text>
+            {reasons.length ? (
+              <View style={styles.reasons} accessibilityLabel={`Why Jam is checking in: ${reasons.join(". ")}`}>
+                {reasons.map((r) => (
+                  <View key={r} style={styles.reasonRow}>
+                    <View style={styles.reasonDot} />
+                    <Text style={[type.body, styles.flex]}>{r.replace(/\.$/, "")}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {secondsLeft !== null ? (
-              <Text style={type.caption} accessibilityLiveRegion="polite">
-                {secondsLeft > 0
-                  ? `If there's no answer, your group will be notified in ${secondsLeft}s.`
-                  : "Notifying your group…"}
-              </Text>
+              <View style={styles.countdown}>
+                {progress !== null ? (
+                  <View style={styles.track}>
+                    <View style={[styles.fill, { width: `${Math.round(progress * 100)}%` }]} />
+                  </View>
+                ) : null}
+                <Text style={type.caption} accessibilityLiveRegion="polite">
+                  {secondsLeft > 0
+                    ? `If there's no answer, your group will be notified in ${secondsLeft}s.`
+                    : "Notifying your group…"}
+                </Text>
+              </View>
             ) : null}
 
             <View style={styles.options}>
@@ -154,6 +184,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.warmWhite,
   },
   muted: { color: colors.inkMuted },
+  flex: { flex: 1 },
+  reasons: { gap: space(2), padding: space(4), borderRadius: radius.sm, backgroundColor: colors.amberSoft },
+  reasonRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
+  reasonDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.amber },
+  countdown: { gap: space(2) },
+  track: { height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: colors.border },
+  fill: { height: 6, borderRadius: 3, backgroundColor: colors.amber },
   options: { gap: space(2), marginTop: space(1) },
   option: {
     minHeight: TAP_TARGET,

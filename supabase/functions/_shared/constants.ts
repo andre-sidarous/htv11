@@ -16,4 +16,4 @@ export const NTFY_MESSAGE = {
 export const TERMINAL_ESCALATION_STATES = ["RESOLVED", "CANCELLED"];
 
 /** Silence on the AI support call before contacts are called. KEEP IN SYNC with AI_CALL_SILENCE_TIMEOUT_MS. */
-export const AI_CALL_SILENCE_TIMEOUT_S = 45;
+export const AI_CALL_SILENCE_TIMEOUT_S = 10;

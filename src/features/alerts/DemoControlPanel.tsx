@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DEMO_ACTION_IDS, demoActions, type DemoActionId } from "@/features/demo/demoActions";
@@ -11,23 +11,25 @@ import { currentUserId, getMemberNames } from "./api";
 import { SessionGate } from "./SessionGate";
 import { useAlertDemoActions } from "./useAlertDemoActions";
 
-/** The demo script, in order. Anything else that's registered appears under "More actions". */
-const SCRIPT: { id: DemoActionId; label: string }[] = [
+/** The demo script, in order (docs/demo.md). Anything else that's registered appears under "More actions". */
+const SCRIPT: { id: DemoActionId; label: string; hint?: string }[] = [
   { id: DEMO_ACTION_IDS.resetDemo, label: "Reset demo" },
   { id: DEMO_ACTION_IDS.moveAffectedUserAway, label: "Move affected user away" },
   { id: DEMO_ACTION_IDS.triggerRouteDeviation, label: "Trigger route deviation" },
   { id: DEMO_ACTION_IDS.triggerHeartRateSpike, label: "Trigger heart-rate spike" },
   { id: DEMO_ACTION_IDS.triggerRunning, label: "Trigger running" },
-  { id: DEMO_ACTION_IDS.triggerSuddenStop, label: "Trigger sudden stop" },
   { id: DEMO_ACTION_IDS.sendCheckIn, label: "Send check-in" },
-  { id: DEMO_ACTION_IDS.simulateNoResponse, label: "Simulate no response" },
-  { id: DEMO_ACTION_IDS.simulateNoGroupResponse, label: "Simulate no group response" },
-  { id: DEMO_ACTION_IDS.startAiCall, label: "Start AI call" },
-  { id: DEMO_ACTION_IDS.simulateAiRecording, label: "Simulate AI recording" },
-  { id: DEMO_ACTION_IDS.sendIncidentPackage, label: "Send incident package" },
+  { id: DEMO_ACTION_IDS.simulateNoResponse, label: "Simulate no response", hint: "Skips the check-in wait" },
+  { id: DEMO_ACTION_IDS.simulateNoGroupResponse, label: "Simulate no group response", hint: "The AI call starts on their phone" },
+  { id: DEMO_ACTION_IDS.simulateAiNonResponse, label: "Simulate AI non-response", hint: "Skips the 10s silence; contacts get called" },
+  { id: DEMO_ACTION_IDS.sendIncidentPackage, label: "Send incident package", hint: "Backup if the contact wasn't called" },
+  { id: DEMO_ACTION_IDS.showDisruption, label: "Show transit disruption" },
+  { id: DEMO_ACTION_IDS.showAlternativeRoute, label: "Show alternative route" },
   { id: DEMO_ACTION_IDS.resolveIncident, label: "Resolve incident" },
 ];
 const SCRIPT_IDS = new Set<string>(SCRIPT.map((s) => s.id));
+/** Same job as a script step (P4 registered its own copy); kept out of "More actions". */
+const DUPLICATES = new Set<string>([DEMO_ACTION_IDS.createIncidentPackage, DEMO_ACTION_IDS.resolveAlert]);
 
 type RunState = { status: "running" | "ok" | "error"; message?: string };
 
@@ -108,7 +110,9 @@ function Panel() {
   }
 
   const jamName = jams.find((j) => j.id === context.jamId)?.name ?? (context.jamId === SEEDED_DEMO_CONTEXT.jamId ? "Campus Walk (seeded backup)" : "Unknown Jam");
-  const extras = registered.filter((a) => !SCRIPT_IDS.has(a.id));
+  const extras = registered.filter((a) => !SCRIPT_IDS.has(a.id) && !DUPLICATES.has(a.id));
+  // Map (P3) and health (P4) actions register while that Jam's screens are mounted on this phone.
+  const missing = SCRIPT.filter((s) => !demoActions.has(s.id)).length;
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -136,10 +140,35 @@ function Panel() {
         </View>
       </View>
 
+      {missing > 0 ? (
+        <View style={[styles.card, styles.notice]}>
+          <Text style={type.heading}>Open the Jam once</Text>
+          <Text style={type.body}>
+            {missing === 1 ? "1 step is" : `${missing} steps are`} unavailable because the map and safety tools load with the Jam. Open
+            it, then come back with Settings → Demo this Jam.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: "/jam/[jamId]/map", params: { jamId: context.jamId } })}
+            style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+          >
+            <Text style={styles.actionText}>Open the Jam</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         <Text style={type.heading}>Demo script</Text>
         {SCRIPT.map((step, i) => (
-          <ActionRow key={step.id} index={i + 1} label={step.label} available={demoActions.has(step.id)} state={runs[step.id]} onPress={() => run(step.id, step.label)} />
+          <ActionRow
+            key={step.id}
+            index={i + 1}
+            label={step.label}
+            hint={step.hint}
+            available={demoActions.has(step.id)}
+            state={runs[step.id]}
+            onPress={() => run(step.id, step.label)}
+          />
         ))}
       </View>
 
@@ -155,7 +184,21 @@ function Panel() {
   );
 }
 
-function ActionRow({ index, label, available, state, onPress }: { index?: number; label: string; available: boolean; state?: RunState; onPress: () => void }) {
+function ActionRow({
+  index,
+  label,
+  hint,
+  available,
+  state,
+  onPress,
+}: {
+  index?: number;
+  label: string;
+  hint?: string;
+  available: boolean;
+  state?: RunState;
+  onPress: () => void;
+}) {
   const running = state?.status === "running";
   return (
     <View style={styles.actionRow}>
@@ -173,7 +216,11 @@ function ActionRow({ index, label, available, state, onPress }: { index?: number
         </Text>
         {running ? <ActivityIndicator color={colors.warmWhite} /> : !available ? <Text style={styles.unavailableTag}>unavailable</Text> : null}
       </Pressable>
-      {state?.message ? <Text style={[type.caption, state.status === "error" ? styles.error : styles.ok]}>{state.message}</Text> : null}
+      {state?.message ? (
+        <Text style={[type.caption, state.status === "error" ? styles.error : styles.ok]}>{state.message}</Text>
+      ) : hint ? (
+        <Text style={type.caption}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
@@ -194,6 +241,7 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 const styles = StyleSheet.create({
   content: { gap: space(4), padding: space(4), paddingBottom: space(12) },
   card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
+  notice: { borderWidth: 1, borderColor: colors.amber },
   mono: { fontFamily: "monospace", fontSize: 11, color: colors.inkMuted },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
   chip: { minHeight: 40, paddingHorizontal: space(4), justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },

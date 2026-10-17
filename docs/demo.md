@@ -44,7 +44,7 @@ Backup password: `jam-demo-1234` (needs `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
 5. **Send check-in**: presenter 3 sees "Are you okay?" and doesn't answer. Demo Mode shortens their buffer (`DEMO_CHECKIN_TIMEOUT_MS`), or tap **Simulate no response**. The unanswered check-in brings risk to 9.
 6. Presenters 1 and 2 get the in-app card "Alex may need support." (and an ntfy push). Nobody taps "I'm going to help". Tap **Simulate no group response** to skip the wait.
 7. The **AI support call starts on presenter 3's phone by itself**: "Hi, this is Jam. Your group could not reach you. Are you safe?" It guides them toward the destination. The screen shows "Recording enabled under your emergency preference."
-8. Presenter 3 stays silent for **45 seconds**, or tap **Simulate AI non-response** under More actions.
+8. Presenter 3 stays silent for **10 seconds**, or tap **Simulate AI non-response** under More actions.
 9. **Presenter 4's phone rings** (Twilio), then they get a text with the last-seen location, why Jam was concerned, and a recording link. If P4's flow didn't fire it, tap **Send incident package**.
 10. Presenters 1 and 2 see **View incident** on the alert card: map, reasons, recording, who it was shared with. Presenter 4 opens **Incidents** and sees their filtered view.
 11. Jam shows: "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."

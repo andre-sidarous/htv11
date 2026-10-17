@@ -1,4 +1,4 @@
-// The last escalation step, after 45s of silence on the AI support call (CONTACTS_NOTIFIED):
+// The last escalation step, after 10s of silence on the AI support call (CONTACTS_NOTIFIED):
 //   1. build the incident package (last-seen location, health summary, recording, recipients)
 //   2. phone each trusted contact (Twilio voice)
 //   3. text each contact the last-seen location, summary, and recording link they're allowed to get

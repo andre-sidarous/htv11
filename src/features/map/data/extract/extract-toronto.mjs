@@ -2,13 +2,13 @@
 /**
  * One-off preprocessing for the Campus Walk civic data. NOT bundled into the app.
  *
- * Pulls City of Toronto Open Data (CKAN) + OpenStreetMap hospitals, clips everything to the
- * Campus Walk area around UofT St. George, trims fields, and writes small JSON files next to
- * this folder (src/features/map/data/*.json). The app imports those statically, so nothing is
- * fetched or processed at runtime.
+ * Pulls City of Toronto Open Data (CKAN) + OpenStreetMap hospitals for the whole city, trims
+ * fields, and writes compact JSON files next to this folder (src/features/map/data/*.json). The
+ * app imports those statically, so nothing is fetched or processed at runtime.
  *
  * Usage (raw downloads go to a cache dir OUTSIDE the repo; reused if already present):
- *   node src/features/map/data/extract/extract-toronto.mjs <cache-dir>
+ *   node src/features/map/data/extract/extract-toronto.mjs <cache-dir> [out-dir]
+ *   JAM_EXTRACT_SCOPE=campus …   # the original small Campus Walk extract
  *
  * Needs Node 20+ and `unzip` on PATH (for the TTC GTFS zip).
  */
@@ -19,7 +19,7 @@ import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
+const OUT_DIR = process.argv[3] ?? join(dirname(fileURLToPath(import.meta.url)), "..");
 const CACHE_DIR = process.argv[2];
 if (!CACHE_DIR) {
   console.error("Usage: node extract-toronto.mjs <cache-dir>");
@@ -27,12 +27,15 @@ if (!CACHE_DIR) {
 }
 mkdirSync(CACHE_DIR, { recursive: true });
 
-/** Support points: UofT St. George plus Toronto Western Hospital and the Spadina/Bay stations. */
-const AREA = { south: 43.652, north: 43.672, west: -79.41, east: -79.385 };
-/** Line data (pedestrian network, centreline) stays to the walking corridor to keep files small. */
-const CORRIDOR = { south: 43.6585, north: 43.67, west: -79.406, east: -79.39 };
+/** City of Toronto limits (bounding box). */
+const TORONTO = { south: 43.581, north: 43.8555, west: -79.6393, east: -79.1152 };
+const CAMPUS = process.env.JAM_EXTRACT_SCOPE === "campus";
+/** Support points. Campus scope: UofT St. George plus Toronto Western Hospital and the Spadina/Bay stations. */
+const AREA = CAMPUS ? { south: 43.652, north: 43.672, west: -79.41, east: -79.385 } : TORONTO;
+/** Line data (pedestrian network, centreline). Campus scope: the walking corridor only. */
+const CORRIDOR = CAMPUS ? { south: 43.6585, north: 43.67, west: -79.406, east: -79.39 } : TORONTO;
 /** City community centres are sparse downtown (nearest ~1.4 km), so this category looks wider. */
-const WIDE_AREA = { south: 43.64, north: 43.682, west: -79.425, east: -79.37 };
+const WIDE_AREA = CAMPUS ? { south: 43.64, north: 43.682, west: -79.425, east: -79.37 } : TORONTO;
 
 const CKAN = "https://ckan0.cf.opendata.inter.prod-toronto.ca";
 const DOWNLOADS = {
@@ -141,6 +144,25 @@ function clipLine(box, line) {
 }
 
 const toLatLngs = (line) => line.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
+
+/**
+ * Compact line encoding for the big citywide files (decoded by civicData.ts):
+ * [lat0, lng0, dLat1, dLng1, ...] as integers in 1e-5 degrees, each pair a delta from the previous.
+ */
+function encodeLine(points) {
+  const out = [];
+  let lat = 0;
+  let lng = 0;
+  for (const p of points) {
+    const a = Math.round(p.latitude * 1e5);
+    const b = Math.round(p.longitude * 1e5);
+    out.push(a - lat, b - lng);
+    lat = a;
+    lng = b;
+  }
+  return out;
+}
+const e5 = (n) => Math.round(n * 1e5);
 
 function writeJson(name, data) {
   const path = join(OUT_DIR, name);
@@ -339,11 +361,17 @@ async function extractHospitals() {
   if (!existsSync(cached)) {
     console.log("querying OSM Overpass for hospitals…");
     const query = `[out:json][timeout:30];nwr["amenity"="hospital"](${AREA.south},${AREA.west},${AREA.north},${AREA.east});out center tags;`;
-    const response = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "jam-hackathon-preprocess/1.0" },
-      body: `data=${encodeURIComponent(query)}`,
-    });
+    // The main Overpass server often 502s/429s under load; fall back to a mirror.
+    let response;
+    for (const server of ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"]) {
+      response = await fetch(server, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "jam-hackathon-preprocess/1.0" },
+        body: `data=${encodeURIComponent(query)}`,
+      });
+      if (response.ok) break;
+      console.warn(`Overpass ${server}: HTTP ${response.status}`);
+    }
     if (!response.ok) throw new Error(`Overpass: HTTP ${response.status}`);
     writeFileSync(cached, await response.text());
   }
@@ -430,8 +458,12 @@ writeJson(
 writeJson("hospitals.json", await extractHospitals());
 
 const gtfs = await extractGtfs(paths.gtfs);
-writeJson("ttc-stops.json", gtfs.stops);
+// Compact rows: [id, name, lat e5, lng e5, 1 = subway station / 0 = surface stop].
+writeJson("ttc-stops.json", gtfs.stops.map((s) => [s.id, s.name, e5(s.latitude), e5(s.longitude), s.kind === "subway_station" ? 1 : 0]));
 writeJson("ttc-routes.json", gtfs.routes);
-writeJson("pedestrian-network.json", extractPedestrian(paths.pedestrian));
-writeJson("centreline.json", extractCentreline(paths.centreline));
-writeJson("extract-meta.json", { extractedAt: new Date().toISOString(), area: AREA, corridor: CORRIDOR });
+writeJson("pedestrian-network.json", extractPedestrian(paths.pedestrian).map(encodeLine));
+writeJson(
+  "centreline.json",
+  extractCentreline(paths.centreline).map((street) => ({ n: street.name, t: street.type, s: street.segments.map(encodeLine) })),
+);
+writeJson("extract-meta.json", { extractedAt: new Date().toISOString(), scope: CAMPUS ? "campus" : "toronto", area: AREA, corridor: CORRIDOR });

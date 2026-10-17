@@ -9,7 +9,7 @@
 //   GROUP_ALERT_SENT  + jams.group_response_timeout_seconds, nobody acknowledged             -> AI_CALL_STARTING
 //                     (contact_only_alert or no ai_call_consent skips straight to CONTACTS_NOTIFIED)
 //   AI_CALL_ACTIVE    + AI_CALL_SILENCE_TIMEOUT_S; the affected phone pushes the deadline out
-//                     whenever the person speaks or taps, so it only fires after 45s of silence  -> CONTACTS_NOTIFIED
+//                     whenever the person speaks or taps, so it only fires after 10s of silence  -> CONTACTS_NOTIFIED
 //   The person answering at any point -> USER_RESPONDED / AI_CALL_USER_RESPONDED; a member acknowledging the
 //   group alert -> GROUP_MEMBER_ACKNOWLEDGED.
 // The caller broadcasts alert_updated (and incident_created when `incidentId` is returned) on jam:{jamId}.

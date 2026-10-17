@@ -59,18 +59,18 @@ The simulated wearable comes from `healthService.stream()` and emits a `HealthSi
 
 1. **Trigger:** going off the route (P3) or a health signal such as a sudden fall or stop (P4) → "Are you okay?" check-in.
 2. **No answer within the person's buffer** (`profiles.checkin_buffer_seconds`, chosen at sign-up, e.g. 2 min) → **group alert**: in-app alert on every phone + ntfy push.
-3. **Nobody in the group acknowledges** within `jams.group_response_timeout_seconds` → **AI support call** starts by itself on the affected phone. It guides them toward the destination (P3's spoken guidance), checks in every 15s, and is **recorded** if they consented.
-4. **45 seconds of silence** on the AI call → the **emergency contact's phone rings** (Twilio).
+3. **Nobody in the group acknowledges** within `jams.group_response_timeout_seconds` → **AI support call** starts by itself on the affected phone. It guides them toward the destination (P3's spoken guidance), checks in every 5s, and is **recorded** if they consented.
+4. **10 seconds of silence** on the AI call → the **emergency contact's phone rings** (Twilio).
 5. Then the **contact gets a text** and the **group gets the incident package**: recording, last-seen location, and the relevant health/route data, each only as allowed.
 
 ```
-MONITORING → CHECK_IN_SENT ──buffer──► GROUP_ALERT_SENT ──group timeout──► AI_CALL_STARTING → AI_CALL_ACTIVE ──45s silence──► CONTACTS_NOTIFIED
+MONITORING → CHECK_IN_SENT ──buffer──► GROUP_ALERT_SENT ──group timeout──► AI_CALL_STARTING → AI_CALL_ACTIVE ──10s silence──► CONTACTS_NOTIFIED
                  ↓ answered                 ↓ acknowledged          (contact_only_alert skips the AI call)    ↓ answers
             USER_RESPONDED       GROUP_MEMBER_ACKNOWLEDGED                                          AI_CALL_USER_RESPONDED
                                                                                          any state → RESOLVED / CANCELLED
 ```
 
-Timing constants: `DEFAULT_CHECKIN_BUFFER_S` (120), `CHECKIN_BUFFER_CHOICES_S`, `AI_CALL_CHECKIN_INTERVAL_MS` (15s), `AI_CALL_SILENCE_TIMEOUT_MS` (45s). Demo Mode uses `DEMO_CHECKIN_TIMEOUT_MS` for the check-in.
+Timing constants: `DEFAULT_CHECKIN_BUFFER_S` (120), `CHECKIN_BUFFER_CHOICES_S`, `AI_CALL_CHECKIN_INTERVAL_MS` (5s), `AI_CALL_SILENCE_TIMEOUT_MS` (10s). Demo Mode uses `DEMO_CHECKIN_TIMEOUT_MS` for the check-in.
 
 - `riskService.evaluate()` is pure. When the score reaches a threshold, the app inserts an `alerts` row. The partial unique index allows **one open alert per member per Jam**, so a duplicate insert fails with `23505`. Treat that as a no-op.
 - `alerts.next_deadline_at` drives timeouts. When a deadline passes, **any** member's app calls `advanceAlert(alertId)`, which runs the `advance-alert` Edge Function. It is idempotent (compare-and-set on `escalation_state`), so escalation continues even if the affected phone closes.
@@ -98,7 +98,7 @@ ntfy is used twice: at the group alert (`notify-ntfy`) and with the incident pac
 ## AI flow (P4)
 
 - `aiService.getSupportCallTurn(context, step)` runs the `ai-support-call` Edge Function. Context is limited to: display name, location *summary*, deviation level, heart-rate summary, activity, nearest support point, whether the group responded, destination name, and the next spoken direction (P3's `getSpokenGuidance`). **Never** location history.
-- The call starts automatically, guides the person toward the destination, and checks in every 15s. Speech (mic level) or a tap pushes the 45s silence deadline out.
+- The call starts automatically, guides the person toward the destination, and checks in every 5s. Speech (mic level) or a tap pushes the 10s silence deadline out.
 - The function calls Gemini with a short timeout and **always** returns a turn, falling back to `SUPPORT_CALL_SCRIPT`. The client falls back too.
 - Speak the turn with `expo-speech` (`Speech.speak(text)`). Native apps don't need a gesture to unlock audio. Always show the text on screen as well.
 - Recording only happens if `recording_consent` is true. Use `expo-audio`. Upload to the private `recordings` bucket under `{userId}/...`. Recipients get signed URLs from an Edge Function.

@@ -51,10 +51,15 @@ Show disruption / alternative route change the map on the tapping phone only (th
 
 ## Civic data
 
-Small extracts for the Campus Walk area (UofT St. George), from the City of Toronto Open Data Portal (TTC GTFS,
-libraries, parks & recreation, washrooms, schools, police, pedestrian network, centreline) plus OpenStreetMap
-hospitals. Nothing is fetched at runtime. To regenerate (needs network, Node 20+, `unzip`; downloads ~170 MB
-into the cache dir you pass, which should be outside the repo):
+Citywide extracts for all of Toronto, from the City of Toronto Open Data Portal (TTC GTFS, libraries, parks &
+recreation, washrooms, schools, police, pedestrian network, centreline) plus OpenStreetMap hospitals: ~4.5k support
+points, ~7k TTC stops, ~60k sidewalk segments, ~10k named streets (~4.6 MB of JSON). Nothing is fetched at runtime.
+The big files (pedestrian network, centreline, TTC stops) are delta-encoded and decoded once on first use
+(`civicData.ts`). Because the lists are citywide, per-call code filters by area first (`boxAround` /
+`pointsInBox` / `streetsInBox`), and the map draws only the markers in view (`visibleMarkers.ts`).
+
+To regenerate (needs network, Node 20+, `unzip`; downloads ~170 MB into the cache dir you pass, which should be
+outside the repo). `JAM_EXTRACT_SCOPE=campus` gives the old small Campus Walk extract instead:
 
 ```bash
 node src/features/map/data/extract/extract-toronto.mjs /path/to/cache

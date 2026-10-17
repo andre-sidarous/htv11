@@ -78,7 +78,9 @@ export const DEFAULT_ESCALATION_CONFIG: EscalationConfig = {
   checkInTimeoutMs: 12_000,
   groupResponseTimeoutMs: 15_000,
   aiCallConnectTimeoutMs: 10_000,
-  aiCallResponseTimeoutMs: 45_000,
+  // Backup only (the phone escalates itself after AI_CALL_SILENCE_TIMEOUT_MS of silence): long enough
+  // for the three spoken lines plus that silence, so the server never cuts in mid-call.
+  aiCallResponseTimeoutMs: 30_000,
   incidentGraceMs: 8_000,
   userRespondedGraceMs: 8_000,
   aiCallAllowed: true,

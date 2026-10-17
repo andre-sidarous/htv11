@@ -2,10 +2,13 @@ import { campusWalk, toDemoRoute } from "@/lib/demo/campusWalk";
 import { distanceToPolylineM, haversineM, polylineLengthM } from "@/lib/geo";
 import type { LatLng, Route, RouteRecommendation, SupportPoint } from "@/lib/types";
 import {
+  boxAround,
+  linesInBox,
   loadAllSupportPoints,
   loadPedestrianNetwork,
   loadTransitDisruption,
   loadTransitStops,
+  pointsInBox,
   type TransitDisruption,
 } from "./civicData";
 
@@ -97,11 +100,14 @@ export function describeRoute(
 ): RouteContext {
   const line = route.coordinates;
   const near = (p: LatLng, m: number) => distanceToPolylineM(p, line) <= m;
+  // Citywide data: a cheap bounding-box pass first, so only what's around the route is measured.
+  const box = boxAround(line, Math.max(SUPPORT_NEAR_ROUTE_M, TRANSIT_NEAR_ROUTE_M, SIDEWALK_MATCH_M));
+  const localSupport = pointsInBox(data.supportPoints, box);
 
-  const supportPoints = data.supportPoints.filter((p) => p.category !== "transit" && near(p, SUPPORT_NEAR_ROUTE_M));
+  const supportPoints = localSupport.filter((p) => p.category !== "transit" && near(p, SUPPORT_NEAR_ROUTE_M));
   const transitNearby = [
-    ...data.transitStops,
-    ...data.supportPoints.filter((p) => p.category === "transit"),
+    ...pointsInBox(data.transitStops, box),
+    ...localSupport.filter((p) => p.category === "transit"),
   ].filter((p) => near(p, TRANSIT_NEAR_ROUTE_M));
 
   // A disruption matters when the disrupted station is the route's only nearby subway station.
@@ -114,7 +120,7 @@ export function describeRoute(
   const disrupted = disruptionNear && !otherStation;
   const hasTransitAccess = transitNearby.length > 0;
 
-  const coverage = sidewalkCoverage(line, data.pedestrianNetwork);
+  const coverage = sidewalkCoverage(line, linesInBox(data.pedestrianNetwork, box));
   const nearGroup = data.groupPositions.length > 0 && data.groupPositions.some((p) => near(p, GROUP_NEAR_ROUTE_M));
 
   const score =

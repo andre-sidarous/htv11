@@ -1,5 +1,6 @@
+import { dispatchAlertEvent, refreshAlert } from "@/features/health/alertActions";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { AlertResponseKind, AlertRow, EscalationState, SafetyAlert } from "@/lib/types";
+import type { AlertResponseKind, AlertRow, SafetyAlert } from "@/lib/types";
 
 /** Data access for alert cards. Everything goes through RLS as the signed-in member. */
 
@@ -91,42 +92,29 @@ export async function respond(alertId: string, kind: AlertResponseKind): Promise
   return null;
 }
 
-/** States where a group member acknowledging pauses escalation. */
-const ACKNOWLEDGEABLE: EscalationState[] = ["CHECK_IN_SENT", "GROUP_ALERT_SENT"];
-
 /**
- * "I'm going to help": records acknowledged + responding and, if the alert is still at the group
- * step, moves it to GROUP_MEMBER_ACKNOWLEDGED (compare-and-set, so it never rewinds a later step).
- * TODO(P4 merge): swap the update for P4's transition function if it adds side effects.
+ * "I'm going to help": records acknowledged + responding and, while the alert is at the group step,
+ * applies P4's GROUP_ACK transition (compare-and-set, so it never rewinds a later step; P4 broadcasts
+ * alert_updated and pauses escalation).
  */
 export async function acknowledgeAlert(alert: SafetyAlert): Promise<{ error: string | null; updated: SafetyAlert | null }> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return { error: "Jam isn't connected.", updated: null };
+  if (!getSupabaseClient()) return { error: "Jam isn't connected.", updated: null };
   const error = (await respond(alert.id, "acknowledged")) ?? (await respond(alert.id, "responding"));
   if (error) return { error, updated: null };
-  if (!ACKNOWLEDGEABLE.includes(alert.escalationState)) return { error: null, updated: null };
-  const { data } = await supabase
-    .from("alerts")
-    .update({ escalation_state: "GROUP_MEMBER_ACKNOWLEDGED", acknowledged_at: new Date().toISOString(), next_deadline_at: null })
-    .eq("id", alert.id)
-    .in("escalation_state", ACKNOWLEDGEABLE)
-    .select(ALERT_COLUMNS)
-    .maybeSingle();
-  return { error: null, updated: data ? toSafetyAlert(data as AlertRow) : null };
+  const row = await refreshAlert(alert.id);
+  if (!row || row.escalation_state !== "GROUP_ALERT_SENT") return { error: null, updated: row ? toSafetyAlert(row) : null };
+  const updated = (await dispatchAlertEvent(row, { type: "GROUP_ACK" })) ?? (await refreshAlert(alert.id));
+  return { error: null, updated: updated ? toSafetyAlert(updated) : null };
 }
 
-/** "Mark safe": resolves the alert for everyone. */
+/** "Mark safe": resolves the alert for everyone through P4's RESOLVE transition. */
 export async function resolveAlert(alertId: string): Promise<{ error: string | null; updated: SafetyAlert | null }> {
-  const supabase = getSupabaseClient();
-  if (!supabase) return { error: "Jam isn't connected.", updated: null };
+  if (!getSupabaseClient()) return { error: "Jam isn't connected.", updated: null };
   await respond(alertId, "safe");
-  const { data, error } = await supabase
-    .from("alerts")
-    .update({ escalation_state: "RESOLVED", status: "resolved", resolved_at: new Date().toISOString(), next_deadline_at: null })
-    .eq("id", alertId)
-    .is("resolved_at", null)
-    .select(ALERT_COLUMNS)
-    .maybeSingle();
-  if (error) return { error: "Couldn't resolve the alert. Try again.", updated: null };
-  return { error: null, updated: data ? toSafetyAlert(data as AlertRow) : null };
+  const row = await refreshAlert(alertId);
+  if (!row) return { error: "Couldn't find this alert. Pull to refresh and try again.", updated: null };
+  if (row.resolved_at) return { error: null, updated: toSafetyAlert(row) };
+  const updated = (await dispatchAlertEvent(row, { type: "RESOLVE" })) ?? (await refreshAlert(alertId));
+  if (!updated?.resolved_at) return { error: "Couldn't resolve the alert. Try again.", updated: null };
+  return { error: null, updated: toSafetyAlert(updated) };
 }

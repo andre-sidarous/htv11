@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.demo-reset]
 verify_jwt = true
+
+[functions.incident-token]
+verify_jwt = true

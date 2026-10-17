@@ -15,7 +15,7 @@ The team switched from a web app to a **native Expo app running in Expo Go**. Th
 | `NEXT_PUBLIC_*` env | `EXPO_PUBLIC_*` env (public). Secrets in Supabase function secrets |
 | Google OAuth web redirect | Demo accounts + email 6-digit code first. Google optional |
 | iOS audio unlock, Wake Lock API | Not needed / `expo-keep-awake` |
-| SMS preview only | Order: check-in → (per-person buffer) group alert → AI call that guides + records → (45s silence) **Twilio call + text** to trusted contacts + incident package to the group (`call-contacts`) |
+| SMS preview only | Order: check-in → (per-person buffer) group alert → AI call that guides + records → (10s silence) **Twilio call + text** to trusted contacts + incident package to the group (`call-contacts`) |
 | HTTPS URL on phones, Vercel | Expo Go (`npm start` / `--tunnel`), EAS Update for demo day |
 
 | Person | Prompt | Branch |

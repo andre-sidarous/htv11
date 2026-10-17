@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { StyleSheet, Text, View } from "react-native";
 import type MapView from "react-native-maps";
 import { Marker, Polyline } from "react-native-maps";
-import { JamMapView, toMapCoord } from "@/components/map/JamMapView";
+import { JamMapView, regionAround, toMapCoord } from "@/components/map/JamMapView";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { useLocationSharing } from "@/features/location/useLocationSharing";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
@@ -23,6 +23,7 @@ import { createMemberStore } from "./memberStore";
 import { getRouteRecommendation } from "./recommendation";
 import { useJamMapData } from "./useJamMapData";
 import { useMapDemoActions } from "./useMapDemoActions";
+import { visibleStops, visibleSupportPoints, type MapRegion } from "./visibleMarkers";
 
 /**
  * OWNER: P3. The Map tab renders <JamMapScreen jamId />. Keep the export name and props stable.
@@ -35,6 +36,7 @@ import { useMapDemoActions } from "./useMapDemoActions";
 const PRESENCE_TICK_MS = 5_000;
 /** The recommendation reads group positions; refresh it at this pace instead of on every update. */
 const RECOMMENDATION_REFRESH_MS = 10_000;
+const INITIAL_SPAN = 0.015;
 
 const SUPPORT_POINTS = loadAllSupportPoints();
 const TRANSIT_LINES = loadTransitLines();
@@ -150,6 +152,15 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
     [recommendation],
   );
 
+  // Citywide civic data: draw only the markers in view (see visibleMarkers.ts).
+  const [region, setRegion] = useState<MapRegion | null>(null);
+  const viewRegion = useMemo(
+    () => region ?? regionAround(data.jam?.destination ?? campusWalk.start, INITIAL_SPAN),
+    [region, data.jam?.destination],
+  );
+  const shownSupport = useMemo(() => visibleSupportPoints(SUPPORT_POINTS, viewRegion, highlightedIds), [viewRegion, highlightedIds]);
+  const shownStops = useMemo(() => visibleStops(SURFACE_STOPS, viewRegion), [viewRegion]);
+
   // Frame the route once it arrives.
   const framedRoute = useRef<string | null>(null);
   useEffect(() => {
@@ -186,8 +197,8 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
 
   return (
     <View style={styles.screen}>
-      <JamMapView ref={mapRef} center={center} span={0.015}>
-        <TransitLayer lines={TRANSIT_LINES} surfaceStops={SURFACE_STOPS} />
+      <JamMapView ref={mapRef} center={center} span={INITIAL_SPAN} onRegionChangeComplete={setRegion}>
+        <TransitLayer lines={TRANSIT_LINES} surfaceStops={shownStops} />
         {data.route ? (
           <Polyline coordinates={data.route.coordinates.map(toMapCoord)} strokeColor={colors.navy} strokeWidth={5} zIndex={5} />
         ) : null}
@@ -200,7 +211,7 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
             zIndex={5}
           />
         ) : null}
-        <SupportPointLayer points={SUPPORT_POINTS} highlightedIds={highlightedIds} />
+        <SupportPointLayer points={shownSupport} highlightedIds={highlightedIds} />
         {ui.showDisruption ? <DisruptionLayer disruption={DISRUPTION} /> : null}
         {destination ? (
           <Marker

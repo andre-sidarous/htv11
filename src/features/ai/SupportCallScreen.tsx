@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import * as Speech from "expo-speech";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LoadingState } from "@/components/ui/States";
 import { dispatchAlertEvent, refreshAlert, refreshOpenAlerts } from "@/features/health/alertActions";
@@ -9,18 +9,20 @@ import { alertRepository, type MemberPolicy } from "@/features/health/alertRepos
 import { openAlertFor, safetyStore, useSafetySnapshot } from "@/features/health/safetyStore";
 import { SafetyControls, STATE_COPY } from "@/features/health/SafetyControls";
 import { useCurrentUserId } from "@/features/health/useCurrentUserId";
+import { useJam } from "@/features/jams/useJam";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
-import { SUPPORT_CALL_SCRIPT } from "@/lib/constants";
-import type { AiCallState, AiCallTurn, AlertRow } from "@/lib/types";
+import { AI_CALL_SILENCE_TIMEOUT_MS, SUPPORT_CALL_SCRIPT } from "@/lib/constants";
+import type { AiCallContext, AiCallState, AiCallTurn, AlertRow } from "@/lib/types";
 import { aiService } from "@/services/ai";
 import { simulatedHealth } from "@/services/health";
+import { routingService } from "@/services/routing";
 import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
-import { buildCallContext } from "./callContext";
+import { buildCallContext, callRoute, type CallDestination } from "./callContext";
 import { ensureIncidentPackage } from "./incidents";
 import { useCallRecording } from "./useCallRecording";
 
-/** How long Jam waits for a tap after each question. */
-const LISTEN_MS = 6_000;
+/** How long Jam waits for a tap after each question: the silence budget split over the two pauses. */
+const LISTEN_MS = AI_CALL_SILENCE_TIMEOUT_MS / (SUPPORT_CALL_SCRIPT.length - 1);
 const THANKS = "Thank you. Your group can see that you responded.";
 
 type Phase = "loading" | "idle" | "calling" | "responded" | "unresponsive" | "done";
@@ -55,9 +57,19 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   const [now, setNow] = useState(() => Date.now());
 
   const alert = openAlertFor(snapshot, me);
+  // The Jam's destination, for spoken directions (read when the call starts).
+  const { jam } = useJam(jamId);
+  const jamRef = useRef(jam);
+  useEffect(() => {
+    jamRef.current = jam;
+  }, [jam]);
   // The alert we're calling about. Kept after it resolves (for the closing message).
   const callAlert = useRef<AlertRow | null>(null);
   const [alertId, setAlertId] = useState<string | null>(null);
+  // Shown on screen while the call runs: call timer, "Listening… 4s", and the directions card.
+  const [callStartedAt, setCallStartedAt] = useState<number | null>(null);
+  const [listeningUntil, setListeningUntil] = useState<number | null>(null);
+  const [directions, setDirections] = useState<Pick<AiCallContext, "guidance" | "nearestSupportPoint" | "supportNote" | "destinationName"> | null>(null);
 
   const recording = useCallRecording({ userId: me });
   const recordingRef = useRef(recording);
@@ -92,7 +104,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   }, [jamId, me]);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    const timer = setInterval(() => setNow(Date.now()), 500);
     return () => {
       clearInterval(timer);
       void Speech.stop();
@@ -119,10 +131,15 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   /** Wait for a tap (or a state change from another phone), up to `ms`. */
   const listen = (ms: number) =>
     new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, ms);
+      setListeningUntil(Date.now() + ms);
+      const done = () => {
+        setListeningUntil(null);
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
       wake.current = () => {
         clearTimeout(timer);
-        resolve();
+        done();
       };
     });
 
@@ -176,15 +193,34 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     let current: AlertRow = initial;
     if (current.escalation_state === "AI_CALL_STARTING") current = (await dispatchAlertEvent(current, { type: "AI_CALL_CONNECTED" })) ?? current;
     sendState("active");
+    setCallStartedAt(Date.now());
     void recordingRef.current.start(initial.id, p.consents.recording);
 
     const s = safetyStore.get();
+    const location = s.locations[userId] ?? null;
+    const j = jamRef.current;
+    const destination: CallDestination | null =
+      j?.destination_lat != null && j.destination_lng != null
+        ? { latitude: Number(j.destination_lat), longitude: Number(j.destination_lng), name: j.destination_name ?? undefined }
+        : null;
+    const [displayName, route] = await Promise.all([
+      alertRepository.displayName(userId).catch(() => null),
+      location && destination ? callRoute(routingService, location, destination, j?.travel_mode) : Promise.resolve(null),
+    ]);
     const context = buildCallContext({
-      displayName: await alertRepository.displayName(userId).catch(() => null),
-      location: s.locations[userId] ?? null,
+      displayName,
+      location,
       routeStatus: s.routeStatus[userId],
       signal: p.consents.health ? s.lastSignal : null,
       groupResponded: Boolean(current.acknowledged_at),
+      destination,
+      route,
+    });
+    setDirections({
+      guidance: context.guidance,
+      nearestSupportPoint: context.nearestSupportPoint,
+      supportNote: context.supportNote,
+      destinationName: context.destinationName,
     });
 
     for (let step = 0; step < SUPPORT_CALL_SCRIPT.length && stillCalling(); step++) {
@@ -281,9 +317,32 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
             ? STATE_COPY[alert.escalation_state]
             : "Support call ended";
 
+  const listeningFor = listeningUntil ? Math.max(1, Math.ceil((listeningUntil - now) / 1000)) : null;
+  const callStatus =
+    phase === "calling"
+      ? listeningFor
+        ? `Listening… ${listeningFor}s`
+        : turn
+          ? "Speaking"
+          : "Connecting"
+      : phase === "responded"
+        ? "You responded"
+        : phase === "unresponsive"
+          ? "No response"
+          : "Call ended";
+
   return (
     <SafeAreaView style={styles.screen} edges={["bottom"]}>
       <ScrollView contentContainerStyle={styles.content}>
+        {noCall ? null : (
+          <CallHeader
+            live={phase === "calling"}
+            listening={Boolean(listeningFor)}
+            status={callStatus}
+            elapsed={callStartedAt ? formatTimer(now - callStartedAt) : null}
+            tone={phase === "responded" ? "ok" : phase === "unresponsive" ? "attention" : "calm"}
+          />
+        )}
         <View style={styles.header}>
           <Text style={type.title}>{noCall ? "No active support call" : headline}</Text>
           <Text style={type.caption}>Jam is an automated check-in. It is not emergency services or a medical service.</Text>
@@ -295,10 +354,32 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           </Text>
         ) : (
           <View style={styles.transcript} accessibilityLiveRegion="polite">
-            <Text style={styles.line}>{turn?.text ?? "Connecting…"}</Text>
+            <Text style={styles.line} maxFontSizeMultiplier={1.4}>
+              {turn?.text ?? "Connecting…"}
+            </Text>
             {turn ? <Text style={type.caption}>{turn.source === "gemini" ? "Spoken by Jam (AI)" : "Spoken by Jam"}</Text> : null}
           </View>
         )}
+
+        {!noCall && directions && (directions.guidance || directions.supportNote) ? (
+          <View style={styles.directions} accessibilityRole="summary">
+            <Text style={styles.directionsLabel}>{directions.destinationName ? `Toward ${directions.destinationName}` : "Where to go"}</Text>
+            {directions.guidance ? <Text style={styles.directionsText}>{directions.guidance}</Text> : null}
+            {directions.nearestSupportPoint ? (
+              <View style={styles.supportRow}>
+                <View style={styles.supportGlyph}>
+                  <Text style={styles.supportGlyphText}>+</Text>
+                </View>
+                <Text style={[type.body, styles.flex]}>
+                  Nearest public place: <Text style={styles.bold}>{directions.nearestSupportPoint}</Text>
+                </Text>
+              </View>
+            ) : null}
+            {directions.supportNote && /few public support/i.test(directions.supportNote) ? (
+              <Text style={type.caption}>Few public support points are mapped around you.</Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {recording.mode !== "off" ? (
           <View style={styles.recording}>
@@ -349,12 +430,89 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   );
 }
 
+/** "Jam is calling" badge: a softly pulsing ring while the call is live, plus status and call timer. */
+function CallHeader({
+  live,
+  listening,
+  status,
+  elapsed,
+  tone,
+}: {
+  live: boolean;
+  listening: boolean;
+  status: string;
+  elapsed: string | null;
+  tone: "calm" | "ok" | "attention";
+}) {
+  const [pulse] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    if (!live) {
+      pulse.stopAnimation();
+      pulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.timing(pulse, { toValue: 1, duration: listening ? 1_100 : 1_600, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [live, listening, pulse]);
+
+  const color = tone === "ok" ? colors.ok : tone === "attention" ? colors.amber : colors.navy;
+  return (
+    <View style={styles.callHeader} accessibilityRole="header" accessibilityLabel={`Jam support call. ${status}${elapsed ? `, ${elapsed}` : ""}`}>
+      <View style={styles.badgeWrap}>
+        {live ? (
+          <Animated.View
+            style={[
+              styles.ring,
+              { borderColor: color, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }) },
+              { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }) }] },
+            ]}
+          />
+        ) : null}
+        <View style={[styles.badge, { backgroundColor: color }]}>
+          <Text style={styles.badgeText}>Jam</Text>
+        </View>
+      </View>
+      <View style={styles.flex}>
+        <Text style={type.heading}>Jam support call</Text>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusPill, listening && styles.statusPillListening]}>
+            <Text style={[styles.statusText, listening && styles.statusTextListening]}>{status}</Text>
+          </View>
+          {elapsed ? <Text style={styles.elapsed}>{elapsed}</Text> : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.warmWhite },
+  flex: { flex: 1 },
+  bold: { fontWeight: "700", color: colors.navy },
+  callHeader: { flexDirection: "row", alignItems: "center", gap: space(4), paddingTop: space(2) },
+  badgeWrap: { width: 72, height: 72, alignItems: "center", justifyContent: "center" },
+  ring: { position: "absolute", width: 72, height: 72, borderRadius: 36, borderWidth: 3 },
+  badge: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  badgeText: { color: colors.warmWhite, fontSize: 18, fontWeight: "800", letterSpacing: 0.5 },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: space(2), marginTop: space(1) },
+  statusPill: { paddingHorizontal: space(3), paddingVertical: space(1), borderRadius: radius.pill, backgroundColor: colors.sky },
+  statusPillListening: { backgroundColor: colors.amberSoft },
+  statusText: { fontSize: 13, fontWeight: "700", color: colors.navy },
+  statusTextListening: { color: "#8a5a00" },
+  elapsed: { fontSize: 13, color: colors.inkMuted, fontVariant: ["tabular-nums"] },
+  directions: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.sky },
+  directionsLabel: { fontSize: 13, fontWeight: "700", color: colors.navySoft, textTransform: "uppercase", letterSpacing: 0.6 },
+  directionsText: { fontSize: 20, lineHeight: 27, fontWeight: "600", color: colors.navy },
+  supportRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
+  supportGlyph: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.navy },
+  supportGlyphText: { color: colors.warmWhite, fontSize: 16, fontWeight: "800", lineHeight: 18 },
   content: { gap: space(5), padding: space(5), paddingBottom: space(10) },
   header: { gap: space(1) },
   transcript: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
-  line: { fontSize: 28, lineHeight: 36, fontWeight: "600", color: colors.navy },
+  line: { fontSize: 22, lineHeight: 30, fontWeight: "600", color: colors.navy },
   recording: { gap: space(2), padding: space(4), borderRadius: radius.card, backgroundColor: colors.amberSoft },
   recordingRow: { flexDirection: "row", alignItems: "center", gap: space(2) },
   recordingText: { flex: 1, fontWeight: "600" },

@@ -59,7 +59,7 @@ Flow, with the deadline that moves each step on (`next_deadline_at`):
 |---|---|---|
 | CHECK_IN_SENT | the person's `profiles.checkin_buffer_seconds` (e.g. 2 min) | GROUP_ALERT_SENT: in-app alert on every phone + ntfy push (`notificationService.notifyGroup`) |
 | GROUP_ALERT_SENT | `jams.group_response_timeout_seconds`, nobody acknowledged | AI_CALL_STARTING (skip to CONTACTS_NOTIFIED if `contact_only_alert` or no `ai_call_consent`) |
-| AI_CALL_ACTIVE | `AI_CALL_SILENCE_TIMEOUT_MS` (45s) of silence, pushed out every time they speak or tap | AI_CALL_USER_UNRESPONSIVE, then CONTACTS_NOTIFIED |
+| AI_CALL_ACTIVE | `AI_CALL_SILENCE_TIMEOUT_MS` (10s) of silence, pushed out every time they speak or tap | AI_CALL_USER_UNRESPONSIVE, then CONTACTS_NOTIFIED |
 | CONTACTS_NOTIFIED | (last step) | the server calls the contacts, texts them, and sends the incident package to the group and contacts |
 
 Answering the check-in → USER_RESPONDED. A member acknowledging the group alert → GROUP_MEMBER_ACKNOWLEDGED (they're handling it, so escalation pauses). Answering the AI → AI_CALL_USER_RESPONDED (the AI keeps guiding them). "I'm safe" → RESOLVED from anywhere.
@@ -76,24 +76,24 @@ Answering the check-in → USER_RESPONDED. A member acknowledging the group aler
 
 **It starts automatically.** When the alert reaches `AI_CALL_STARTING`, the affected user's app navigates straight to `/jam/[jamId]/support-call` and starts speaking. No "do you want to start?" prompt: the person may not be able to answer. Consent and OS permissions were granted at sign-up (P2).
 
-**The AI guides them to the destination.** Each turn, get `getSpokenGuidance(...)` from P3 (`src/features/map/guidance.ts`) and pass `destinationName`, `guidance` (e.g. "Head north on St. George Street for about 200 metres"), and `nearestSupportPoint` in the `AiCallContext`. The AI says where to go, step by step, and mentions the nearest open public place if they'd rather stop somewhere.
+**The AI guides them to the destination.** Each turn, get `getSpokenGuidance(...)` from P3 (`src/features/map/guidance.ts`) and pass `destinationName`, `guidance` (e.g. "Head north on St. George Street for about 200 metres"), `nearestSupportPoint`, and `supportNote` (e.g. "You're in an area with few public support points. The nearest is Robarts Library, about 400 metres to the east.") in the `AiCallContext`: `{ ...getSpokenGuidance(...), destinationName, ... }`. The AI says where to go, step by step, and mentions the nearest open public place if they'd rather stop somewhere.
 
-**It keeps checking in.** Every `AI_CALL_CHECKIN_INTERVAL_MS` (15s) it asks again ("Are you still with me? Say something or tap the screen."). It listens with the recorder's mic level (`isMeteringEnabled: true`, `useAudioRecorderState(recorder, 250).metering`; speech is roughly above -40 dB) and big **"I can hear you"** and **"I'm safe"** buttons. Any speech or tap pushes the deadline out by 45s (update `next_deadline_at`, keep the state at AI_CALL_ACTIVE). **45 seconds of silence** (`AI_CALL_SILENCE_TIMEOUT_MS`) → AI_CALL_USER_UNRESPONSIVE → CONTACTS_NOTIFIED. Mic level only shows they're responding, not what they said; that's fine for the demo.
+**It keeps checking in.** Every `AI_CALL_CHECKIN_INTERVAL_MS` (5s) it asks again ("Are you still with me? Say something or tap the screen."). It listens with the recorder's mic level (`isMeteringEnabled: true`, `useAudioRecorderState(recorder, 250).metering`; speech is roughly above -40 dB) and big **"I can hear you"** and **"I'm safe"** buttons. Any speech or tap pushes the deadline out by 10s (update `next_deadline_at`, keep the state at AI_CALL_ACTIVE). **10 seconds of silence** (`AI_CALL_SILENCE_TIMEOUT_MS`) → AI_CALL_USER_UNRESPONSIVE → CONTACTS_NOTIFIED. Mic level only shows they're responding, not what they said; that's fine for the demo.
 
-Implement the Gemini call in `supabase/functions/ai-support-call/index.ts` (see its TODO): validate the context, ~4s timeout, short outputs, rate-limit per user (e.g. keep a timestamp in the alert row or a simple in-memory map), and fall back to the script on any failure. The app side is already wired: `aiService.getSupportCallTurn(context, step)` never throws.
+**Done:** the Gemini call in `supabase/functions/ai-support-call/index.ts` (`gemini-3.5-flash-lite`, ~0.6s; 4s timeout; only the AiCallContext fields are sent; the last step is always the fixed script line; any failure returns the script). Still open if you want it: a per-user rate limit. The app side is already wired: `aiService.getSupportCallTurn(context, step)` never throws.
 
 Script:
 1. "Hi, this is Jam. Your group could not reach you. Are you safe?"
 2. "Can you tap the button if you can hear me?"
 3. "I have not received a response. Your authorized contacts may be notified with your location and safety information."
 
-The scripted fallback should also speak `guidance` when it's set, so guidance works without Gemini.
+**Done:** the scripted fallback (`src/lib/ai/supportCallLine.ts`, server copy in `supabase/functions/_shared/supportCallLine.ts`) speaks `supportNote` on the first line and `guidance` on each check-in, so guidance works without Gemini.
 
 Speak with **`expo-speech`** (`Speech.speak(text, { rate: 0.95 })`), and **always** show the text large on screen too. The AI is not emergency services and never claims to be medical. Context sent: display name, location *summary*, route deviation level, heart-rate summary, activity, nearest support point, whether the group responded, destination name, and the next direction. **Never** location history.
 
 ## Recording
 
-If `recording_consent` is true, recording **starts automatically** with the call (the microphone permission was granted at sign-up). Never record silently: show "AI support call active", "Recording enabled under your emergency preference", a timer, and a stop control. If `recording_consent` is false, don't record. Use **`expo-audio`** (`useAudioRecorder` + `RecordingPresets.HIGH_QUALITY`, after `requestRecordingPermissionsAsync`). If permission is denied or recording fails, use a simulated recording reference. Upload real recordings to the private `recordings` bucket at `{userId}/{alertId}.m4a`: read the file with `fetch(uri)` → `arrayBuffer()`, then `supabase.storage.from(RECORDINGS_BUCKET).upload(...)`. Upload when the 45s of silence hits (stop first), then pass the path to `notifyContacts`. If the upload fails, call `notifyContacts` without it: contacts still get called. Never start recording silently.
+If `recording_consent` is true, recording **starts automatically** with the call (the microphone permission was granted at sign-up). Never record silently: show "AI support call active", "Recording enabled under your emergency preference", a timer, and a stop control. If `recording_consent` is false, don't record. Use **`expo-audio`** (`useAudioRecorder` + `RecordingPresets.HIGH_QUALITY`, after `requestRecordingPermissionsAsync`). If permission is denied or recording fails, use a simulated recording reference. Upload real recordings to the private `recordings` bucket at `{userId}/{alertId}.m4a`: read the file with `fetch(uri)` → `arrayBuffer()`, then `supabase.storage.from(RECORDINGS_BUCKET).upload(...)`. Upload when the 10s of silence hits (stop first), then pass the path to `notifyContacts`. If the upload fails, call `notifyContacts` without it: contacts still get called. Never start recording silently.
 
 ## Incident package
 
@@ -105,12 +105,12 @@ You don't build it: `notifyContacts` / `escalateToContacts` creates it on the se
 
 ## Demo actions (register in `demoActions`, owner `"health"`)
 
-`triggerHeartRateSpike`, `triggerRunning`, `triggerRouteDeviation` (call `demoActions.run(DEMO_ACTION_IDS.triggerRouteDeviation)` only if P3 registered it), `triggerSuddenStop`, `sendCheckIn`, `simulateNoResponse`, `simulateNoGroupResponse`, `startAiCall`, `simulateAiResponse`, `simulateAiNonResponse` (skips the 45s wait), `simulateAiRecording`, `createIncidentPackage` (calls `notifyContacts`), `resolveAlert`.
+`triggerHeartRateSpike`, `triggerRunning`, `triggerRouteDeviation` (call `demoActions.run(DEMO_ACTION_IDS.triggerRouteDeviation)` only if P3 registered it), `triggerSuddenStop`, `sendCheckIn`, `simulateNoResponse`, `simulateNoGroupResponse`, `startAiCall`, `simulateAiResponse`, `simulateAiNonResponse` (skips the 10s wait), `simulateAiRecording`, `createIncidentPackage` (calls `notifyContacts`), `resolveAlert`.
 
 ## Done when
 
 - [ ] `npm run check` and `npm run doctor` pass
 - [ ] vitest unit tests for every risk threshold, the 6 → 9 sanity case, and every state transition (valid + invalid)
 - [ ] Edge Functions deploy (`npx supabase functions deploy advance-alert ai-support-call`) and work with Gemini **unset** (scripted lines)
-- [ ] On real phones: off-route or fall → check-in → no answer within the buffer → group alert → nobody acknowledges → AI call starts by itself, guides toward the destination, records → 45s silence → the contact's phone rings and gets a text → the group sees the incident; closing the affected phone mid-flow still advances via `advance-alert`
+- [ ] On real phones: off-route or fall → check-in → no answer within the buffer → group alert → nobody acknowledges → AI call starts by itself, guides toward the destination, records → 10s silence → the contact's phone rings and gets a text → the group sees the incident; closing the affected phone mid-flow still advances via `advance-alert`
 - [ ] The PR says what changed and how to test it. No secrets. No changes outside your area.

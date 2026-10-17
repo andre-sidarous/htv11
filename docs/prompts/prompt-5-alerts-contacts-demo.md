@@ -33,8 +33,8 @@ Implement `NotificationService` in `src/services/notification/supabase.ts` (`not
 
 1. **Trigger:** going off the route (P3) or a health signal such as a sudden fall or stop (P4) → "Are you okay?" check-in.
 2. **No answer within the person's buffer** (`profiles.checkin_buffer_seconds`, chosen at sign-up, e.g. 2 min) → **group alert**: in-app alert on every phone + ntfy push.
-3. **Nobody in the group acknowledges** within `jams.group_response_timeout_seconds` → **AI support call** starts by itself on the affected phone. It guides them toward the destination (P3's spoken guidance), checks in every 15s, and is **recorded** if they consented.
-4. **45 seconds of silence** on the AI call → the **emergency contact's phone rings** (Twilio).
+3. **Nobody in the group acknowledges** within `jams.group_response_timeout_seconds` → **AI support call** starts by itself on the affected phone. It guides them toward the destination (P3's spoken guidance), checks in every 5s, and is **recorded** if they consented.
+4. **10 seconds of silence** on the AI call → the **emergency contact's phone rings** (Twilio).
 5. Then the **contact gets a text** and the **group gets the incident package**: recording, last-seen location, and the relevant health/route data, each only as allowed.
 
 ## Last step: call + text + incident package (Twilio, built)
@@ -73,7 +73,7 @@ Presenter roles: Host (P1), Group member (P2), Affected user (P3), Emergency con
 6. Jam shows "Are you okay?" Presenter 3 doesn't respond within their buffer (Demo Mode shortens it).
 7. All members receive the in-app alert and the ntfy push. Nobody acknowledges.
 8. The AI support-call screen starts by itself and speaks "Hi, this is Jam. Your group could not reach you. Are you safe?", then guides them toward the destination. The screen shows "Recording enabled under your emergency preference."
-9. Presenter 3 stays silent for 45 seconds. **Presenter 4's phone rings** and they get a text with the last-seen location and the recording link.
+9. Presenter 3 stays silent for 10 seconds. **Presenter 4's phone rings** and they get a text with the last-seen location and the recording link.
 10. The group sees the incident package in-app (and via ntfy). The map shows the last known location.
 11. Jam shows: "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."
 12. A presenter marks the user safe. The alert resolves, and the recording/data deletion status appears.
