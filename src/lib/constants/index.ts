@@ -70,6 +70,12 @@ export const DEFAULT_CONSENTS: Record<ConsentKey, boolean> = {
   contact_notify_consent: false,
 };
 
+// ---------- Check-in buffer (profiles.checkin_buffer_seconds) ----------
+
+/** How long an unanswered check-in waits before Jam alerts the group. Chosen in profile setup. */
+export const CHECKIN_BUFFER_CHOICES_S = [60, 120, 300, 600] as const;
+export const DEFAULT_CHECKIN_BUFFER_S = 120;
+
 // ---------- AI support call ----------
 
 /** Scripted fallback. Must always work, even with no Gemini key. */

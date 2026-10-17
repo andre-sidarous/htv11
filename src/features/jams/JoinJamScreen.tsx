@@ -1,0 +1,207 @@
+import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
+import { CameraView, useCameraPermissions } from "expo-camera";
+import { StyleSheet, Text, View } from "react-native";
+import { Button, Card, OptionCard, Screen, TextField, Toggle } from "@/components/ui";
+import { useSession } from "@/features/auth/SessionProvider";
+import { joinCodeSchema } from "@/lib/validation";
+import type { EmergencyPreference } from "@/lib/types";
+import { colors, space, type } from "@/theme";
+import { joinJamByCode, updateMyMembership } from "./jamsApi";
+
+/** Join by code or QR. `initialCode` prefills from a Share deep link (`jam://join/<code>`). */
+export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
+  const router = useRouter();
+  const { session, profile, onboardingDraft } = useSession();
+
+  const [step, setStep] = useState<"code" | "confirm">("code");
+  const [code, setCode] = useState(initialCode ?? "");
+  const [scanning, setScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [jamId, setJamId] = useState<string | null>(null);
+
+  const [locationConsent, setLocationConsent] = useState(onboardingDraft.consents.location_consent);
+  const [healthConsent, setHealthConsent] = useState(onboardingDraft.consents.health_consent);
+  const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
+
+  useEffect(() => {
+    if (initialCode) void handleJoin(initialCode);
+  }, [initialCode]);
+
+  async function handleJoin(rawCode: string) {
+    const parsed = joinCodeSchema.safeParse(rawCode);
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Enter a valid join code.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const result = await joinJamByCode(parsed.data);
+    setLoading(false);
+    if (!result.jamId) {
+      setError(result.error ?? "Couldn't join that Jam.");
+      return;
+    }
+    setJamId(result.jamId);
+    setStep("confirm");
+  }
+
+  async function handleConfirm() {
+    if (!session || !jamId || !preference) return;
+    setLoading(true);
+    setError(null);
+    const { error } = await updateMyMembership(jamId, session.user.id, {
+      location_consent: locationConsent,
+      health_consent: healthConsent,
+      ai_call_consent: onboardingDraft.consents.ai_call_consent,
+      recording_consent: onboardingDraft.consents.recording_consent,
+      contact_notify_consent: onboardingDraft.consents.contact_notify_consent,
+      emergency_preference: preference,
+    });
+    setLoading(false);
+    if (error) {
+      setError(error);
+      return;
+    }
+    router.replace(`/jam/${jamId}/lobby`);
+  }
+
+  async function handleScanPress() {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) return; // Camera denied — manual entry below still works.
+    }
+    setScanning(true);
+  }
+
+  function handleBarcodeScanned(result: { data: string }) {
+    setScanning(false);
+    const raw = result.data.startsWith("JAM:") ? result.data.slice(4) : result.data;
+    setCode(raw);
+    void handleJoin(raw);
+  }
+
+  if (scanning) {
+    return (
+      <View style={styles.cameraScreen}>
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+          onBarcodeScanned={handleBarcodeScanned}
+        />
+        <View style={styles.cameraOverlay}>
+          <Text style={styles.cameraHint} maxFontSizeMultiplier={1.6}>
+            Point your camera at the Jam’s QR code.
+          </Text>
+          <Button label="Cancel" variant="secondary" onPress={() => setScanning(false)} />
+        </View>
+      </View>
+    );
+  }
+
+  if (step === "confirm" && jamId) {
+    return (
+      <Screen scroll>
+        <Text style={type.title}>You’re joining as {profile?.display_name ?? "yourself"}</Text>
+        <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
+          Confirm what you’ll share with this Jam. You can change this anytime in Settings.
+        </Text>
+
+        <Card>
+          <Toggle
+            label="Location sharing"
+            description="Lets this Jam see where you are while it's active."
+            value={locationConsent}
+            onValueChange={setLocationConsent}
+          />
+          <Toggle
+            label="Health signals"
+            description="Shares a simulated heart-rate signal with this Jam."
+            value={healthConsent}
+            onValueChange={setHealthConsent}
+          />
+        </Card>
+
+        <Card>
+          <Text style={type.heading}>If you can’t be reached</Text>
+          <View style={{ gap: space(3), marginTop: space(2) }}>
+            <OptionCard
+              title="AI support call"
+              description="Jam calls you with a short voice check-in before notifying anyone."
+              selected={preference === "ai_support_call"}
+              onPress={() => setPreference("ai_support_call")}
+            />
+            <OptionCard
+              title="Notify contacts only"
+              description="Skip the call and go straight to your trusted contacts."
+              selected={preference === "contact_only_alert"}
+              onPress={() => setPreference("contact_only_alert")}
+            />
+          </View>
+        </Card>
+
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: colors.escalation }}>
+            {error}
+          </Text>
+        ) : null}
+
+        <Button label="Join Jam" onPress={handleConfirm} loading={loading} disabled={!preference} />
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen scroll>
+      <Text style={type.title}>Join a Jam</Text>
+      <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
+        Enter the 6-character code a Jam member shared with you, or scan their QR code.
+      </Text>
+
+      <Card>
+        <TextField
+          label="Join code"
+          value={code}
+          onChangeText={setCode}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={6}
+          placeholder="CAMPUS"
+          editable={!loading}
+        />
+        {error ? (
+          <Text accessibilityRole="alert" style={{ color: colors.escalation }}>
+            {error}
+          </Text>
+        ) : null}
+        <Button label="Join with code" onPress={() => handleJoin(code)} loading={loading} disabled={!code.trim()} />
+      </Card>
+
+      <Button
+        label="Scan QR code"
+        variant="secondary"
+        onPress={handleScanPress}
+        disabled={loading}
+        accessibilityHint={permission?.canAskAgain === false ? "Camera access is off. You can still enter the code manually." : undefined}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  cameraScreen: { flex: 1, backgroundColor: colors.ink },
+  camera: { flex: 1 },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: space(6),
+    gap: space(3),
+    backgroundColor: colors.overlay,
+  },
+  cameraHint: { color: colors.warmWhite, fontSize: 16, textAlign: "center" },
+});

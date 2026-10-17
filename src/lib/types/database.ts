@@ -26,6 +26,8 @@ export type ProfileRow = {
   display_name: string;
   phone_number: string | null;
   avatar_url: string | null;
+  /** Seconds an unanswered check-in waits before Jam alerts the group. See CHECKIN_BUFFER_CHOICES_S. */
+  checkin_buffer_seconds: number;
   created_at: string;
   updated_at: string;
 };
