@@ -1,5 +1,6 @@
 // Minimal Twilio REST client (calls + texts). Secrets: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER.
 // Never log phone numbers: callers log the contact id and the Twilio sid only.
+import { messageUrl } from "./callUrls.ts";
 
 const TWILIO_TIMEOUT_MS = 8_000;
 
@@ -21,7 +22,11 @@ function normalizeFrom(raw: string | undefined): string | null {
 }
 
 /** Friendly copy for the Twilio errors teams hit most. */
-export function twilioError(code: number | undefined): string {
+export function twilioError(code: number | undefined, message?: string): string {
+  if (code === 572002 || code === 573002 || code === 572006 || code === 573006) {
+    return "Twilio trial: add this number as a Verified Caller ID in the Twilio console first";
+  }
+  if (/limited parameter access/i.test(message ?? "")) return "Twilio trial blocked a call setting (upgrade Twilio, or update Huddle)";
   if (code === 21219 || code === 21608) return "Twilio trial: verify this number in the Twilio console first";
   if (code === 21210 || code === 21606) {
     return "TWILIO_FROM_NUMBER isn't a Twilio number on this account (buy one under Phone Numbers, then set it)";
@@ -48,11 +53,16 @@ async function post(config: TwilioConfig, resource: "Calls" | "Messages", params
     if (res.ok) return { ok: true, sid: String(body.sid ?? "?") };
     // Code + HTTP status only (never the numbers), so failures show up in the function logs.
     console.warn(`[twilio] ${resource} failed: HTTP ${res.status}, code ${body.code ?? "?"}`);
-    return { ok: false, detail: twilioError(body.code) };
+    return { ok: false, detail: twilioError(body.code, body.message) };
   } catch {
     return { ok: false, detail: "Couldn't reach Twilio" };
   }
 }
 
-export const placeCall = (config: TwilioConfig, to: string, twiml: string) => post(config, "Calls", { To: to, Twiml: twiml });
+/**
+ * Rings `to` and reads `message`. Twilio fetches the words from our signed webhook URL: trial
+ * accounts reject inline `Twiml` ("trial accounts have limited parameter access").
+ */
+export const placeCall = async (config: TwilioConfig, to: string, message: string) =>
+  post(config, "Calls", { To: to, Url: await messageUrl(message) });
 export const sendSms = (config: TwilioConfig, to: string, body: string) => post(config, "Messages", { To: to, Body: body });

@@ -1,24 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { Button, Card, Chip, OptionCard, Screen, TextField } from "@/components/ui";
+import { Clock } from "lucide-react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { Button, Card, Chip, Icon, OptionCard, Screen, TextField } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
+import { routeOrigin } from "@/features/map/useJamMapData";
 import type { EmergencyPreference, TravelMode } from "@/lib/types";
-import { colors, space, type } from "@/theme";
-import { CAMPUS_WALK_DESTINATION, DESTINATION_PRESETS, type DestinationPreset } from "./destinations";
+import { routingService } from "@/services";
+import { colors, radius, space, type } from "@/theme";
+import { CAMPUS_WALK_PLACE, DestinationPicker } from "./DestinationPicker";
 import { createJam } from "./jamsApi";
+import type { Place } from "./placeSearch";
+import { arrivalTime, describeTrip, estimateTrip, type TripEstimate } from "./tripEstimate";
+import { useCurrentPosition } from "./useCurrentPosition";
 
 const TRAVEL_MODES: { value: TravelMode; label: string }[] = [
   { value: "walking", label: "Walking" },
   { value: "transit", label: "Transit" },
   { value: "mixed", label: "Mixed" },
-];
-
-const ARRIVAL_CHOICES = [
-  { label: "15 min", minutes: 15 },
-  { label: "30 min", minutes: 30 },
-  { label: "45 min", minutes: 45 },
-  { label: "1 hour", minutes: 60 },
 ];
 
 const CAMPUS_WALK_CHECKIN_DELAY = 12;
@@ -31,9 +30,31 @@ export function CreateJamScreen() {
   const { onboardingDraft } = useSession();
 
   const [name, setName] = useState("");
-  const [destination, setDestination] = useState<DestinationPreset | null>(null);
+  const [destination, setDestination] = useState<Place | null>(null);
   const [travelMode, setTravelMode] = useState<TravelMode>("walking");
-  const [arrivalMinutes, setArrivalMinutes] = useState<number | null>(30);
+  const here = useCurrentPosition();
+  // Expected arrival is worked out from the real route, never asked for.
+  const [trip, setTrip] = useState<{ key: string; trip: TripEstimate } | null>(null);
+  const origin = destination ? routeOrigin(destination, here.position) : null;
+  const tripKey = destination && origin ? `${origin.latitude},${origin.longitude}>${destination.latitude},${destination.longitude}:${travelMode}` : null;
+  const currentTrip = trip && trip.key === tripKey ? trip.trip : null;
+  const tripLoading = tripKey !== null && !currentTrip;
+
+  useEffect(() => {
+    if (!tripKey || !destination || !origin) return;
+    let cancelled = false;
+    void routingService
+      .getRoute(origin, destination, travelMode)
+      .catch(() => null)
+      .then((route) => {
+        if (!cancelled) setTrip({ key: tripKey, trip: estimateTrip(origin, destination, travelMode, route) });
+      });
+    return () => {
+      cancelled = true;
+    };
+    // tripKey captures origin, destination and mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tripKey]);
   const [checkinDelaySeconds, setCheckinDelaySeconds] = useState(DEFAULT_CHECKIN_DELAY);
   const [groupResponseTimeoutSeconds, setGroupResponseTimeoutSeconds] = useState(DEFAULT_GROUP_TIMEOUT);
   const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
@@ -42,7 +63,7 @@ export function CreateJamScreen() {
 
   function applyCampusWalkPreset() {
     setName("Campus Walk");
-    setDestination(CAMPUS_WALK_DESTINATION);
+    setDestination(CAMPUS_WALK_PLACE);
     setTravelMode("walking");
     setCheckinDelaySeconds(CAMPUS_WALK_CHECKIN_DELAY);
     setGroupResponseTimeoutSeconds(CAMPUS_WALK_GROUP_TIMEOUT);
@@ -53,8 +74,7 @@ export function CreateJamScreen() {
     setLoading(true);
     setError(null);
 
-    const expectedArrival =
-      arrivalMinutes !== null ? new Date(Date.now() + arrivalMinutes * 60_000).toISOString() : null;
+    const expectedArrival = currentTrip ? arrivalTime(currentTrip).toISOString() : null;
 
     const { jam, error } = await createJam({
       name,
@@ -87,17 +107,7 @@ export function CreateJamScreen() {
 
       <Card>
         <Text style={type.label}>Destination</Text>
-        <View style={styles.chipWrap}>
-          {DESTINATION_PRESETS.map((preset) => (
-            <Chip
-              key={preset.name}
-              label={preset.name}
-              selected={destination?.name === preset.name}
-              onPress={() => setDestination(preset)}
-            />
-          ))}
-        </View>
-        <Text style={type.caption}>A map pick for custom destinations is on P3’s map tab.</Text>
+        <DestinationPicker value={destination} onChange={setDestination} near={here.position} disabled={loading} />
       </Card>
 
       <Card>
@@ -109,20 +119,36 @@ export function CreateJamScreen() {
         </View>
       </Card>
 
-      <Card>
-        <Text style={type.label}>Expected arrival</Text>
-        <View style={styles.chipWrap}>
-          {ARRIVAL_CHOICES.map((choice) => (
-            <Chip
-              key={choice.minutes}
-              label={choice.label}
-              selected={arrivalMinutes === choice.minutes}
-              onPress={() => setArrivalMinutes(choice.minutes)}
-            />
-          ))}
-          <Chip label="No estimate" selected={arrivalMinutes === null} onPress={() => setArrivalMinutes(null)} />
+      {destination ? (
+        <View style={styles.trip} accessibilityLiveRegion="polite">
+          <Icon icon={Clock} size={20} color={colors.brand} />
+          {tripLoading ? (
+            <View style={styles.tripText}>
+              <ActivityIndicator color={colors.brand} />
+            </View>
+          ) : currentTrip ? (
+            <View style={styles.tripText}>
+              <Text style={type.heading}>{describeTrip(currentTrip, travelMode)}</Text>
+              <Text style={type.caption}>
+                Arrive around {arrivalTime(currentTrip).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                {currentTrip.source === "route" ? " · real walking route" : " · rough estimate"}
+                {origin && here.position && origin !== here.position ? " · from the Campus Walk start" : ""}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.tripText}>
+              <Text style={type.body}>Turn on location to estimate when you’ll arrive.</Text>
+              {here.status !== "denied" ? (
+                <Pressable accessibilityRole="button" onPress={() => void here.request()} hitSlop={8}>
+                  <Text style={styles.link}>Use my location</Text>
+                </Pressable>
+              ) : (
+                <Text style={type.caption}>Location is off for Huddle in Settings. The Huddle still works without an estimate.</Text>
+              )}
+            </View>
+          )}
         </View>
-      </Card>
+      ) : null}
 
       <Card>
         <TextField
@@ -179,4 +205,7 @@ function clampSeconds(value: string): number {
 
 const styles = StyleSheet.create({
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
+  trip: { flexDirection: "row", alignItems: "center", gap: space(3), padding: space(4), borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  tripText: { flex: 1, gap: space(1) },
+  link: { ...type.label, color: colors.brand },
 });

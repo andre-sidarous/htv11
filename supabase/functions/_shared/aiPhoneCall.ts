@@ -18,6 +18,7 @@ import { escalateToContacts } from "./contactEscalation.ts";
 import { escalationConfigFor, transition, type EscalationEvent, type EscalationState } from "./escalation.ts";
 import { toE164 } from "./callScript.ts";
 import supportPointsRaw from "./support-points.json" with { type: "json" };
+import { webhookUrl } from "./callUrls.ts";
 import { twilioConfig, twilioError, type TwilioConfig } from "./twilio.ts";
 
 export const VOICE = "Polly.Joanna-Neural";
@@ -42,32 +43,9 @@ export type AlertRowLite = {
   resolved_at: string | null;
 };
 
-// ---------- auth for Twilio's requests (they can't send a user JWT) ----------
+// ---------- auth for Twilio's requests (signed URLs; see callUrls.ts) ----------
 
-async function hmacHex(message: string): Promise<string> {
-  // A dedicated secret if set (rotatable on its own), else the service key the function already has.
-  const secret = Deno.env.get("AI_CALL_SIGNING_SECRET") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`ai-call:${message}`)));
-  return [...sig].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 40);
-}
-
-export const callSignature = (alertId: string) => hmacHex(alertId);
-
-export async function verifyCallSignature(alertId: string, sig: string | null): Promise<boolean> {
-  if (!sig) return false;
-  const expected = await hmacHex(alertId);
-  if (expected.length !== sig.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ sig.charCodeAt(i);
-  return diff === 0;
-}
-
-export async function webhookUrl(alertId: string, params: Record<string, string | number> = {}): Promise<string> {
-  const base = `${Deno.env.get("SUPABASE_URL")}/functions/v1/ai-call-webhook`;
-  const qs = new URLSearchParams({ alertId, sig: await callSignature(alertId), ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) });
-  return `${base}?${qs}`;
-}
+export { callSignature, verifyCallSignature, webhookUrl } from "./callUrls.ts";
 
 // ---------- escalation from the server ----------
 
@@ -149,15 +127,14 @@ async function placeUrlCall(config: TwilioConfig, to: string, url: string, statu
         Authorization: `Basic ${btoa(`${config.sid}:${config.token}`)}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
+      // Only parameters trial accounts accept (no Method / Timeout / StatusCallbackMethod: the
+      // defaults are POST and ~60s ringing anyway).
       body: new URLSearchParams({
         From: config.from,
         To: to,
         Url: url,
-        Method: "POST",
         StatusCallback: statusCallback,
-        StatusCallbackMethod: "POST",
         StatusCallbackEvent: "completed",
-        Timeout: "30",
       }),
       signal: AbortSignal.timeout(8_000),
     });

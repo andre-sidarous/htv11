@@ -6,7 +6,7 @@
 // Used by call-contacts (the affected phone, with its recording) and advance-alert (server fallback,
 // e.g. the affected phone died). Idempotent: one package per alert, each contact called/texted once.
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
-import { buildCallMessage, buildSmsMessage, buildTwiml, describePlace, toE164 } from "./callScript.ts";
+import { buildCallMessage, buildSmsMessage, describePlace, toE164 } from "./callScript.ts";
 import { publishNtfy } from "./ntfy.ts";
 import { placeCall, sendSms, twilioConfig } from "./twilio.ts";
 
@@ -177,10 +177,8 @@ export async function escalateToContacts(
       if (already.has(`voice_call:${contact.id}`)) {
         results.push({ channel: "voice_call", status: "skipped", detail: `Already called ${contact.name}` });
       } else {
-        const twiml = buildTwiml(
-          buildCallMessage({ contactName: contact.name, personName, placeDescription: allowed.place, reasons: allowed.reasons, textFollows: true }),
-        );
-        const call = await placeCall(twilio, to, twiml);
+        const message = buildCallMessage({ contactName: contact.name, personName, placeDescription: allowed.place, reasons: allowed.reasons, textFollows: true });
+        const call = await placeCall(twilio, to, message);
         // Log the contact id and Twilio sid only: never the phone number.
         await log("voice_call", call.ok ? "sent" : "failed", `contact:${contact.id} ${call.ok ? `call:${call.sid}` : call.detail}`);
         results.push(call.ok ? { channel: "voice_call", status: "sent", detail: `Calling ${contact.name}` } : { channel: "voice_call", status: "failed", detail: call.detail });

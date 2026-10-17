@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Text, View } from "react-native";
-import { Button, Card, Chip, OptionCard, Screen, TextField } from "@/components/ui";
+import { Button, Card, OptionCard, Screen, TextField } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { useTrustedContacts } from "@/features/contacts/useTrustedContacts";
 import type { EmergencyPreference } from "@/lib/types";
 import { colors, space, type } from "@/theme";
-import { DESTINATION_PRESETS, type DestinationPreset } from "./destinations";
+import { DestinationPicker } from "./DestinationPicker";
 import { createJam, startJam } from "./jamsApi";
+import type { Place } from "./placeSearch";
+import { useCurrentPosition } from "./useCurrentPosition";
 
 /**
  * A Jam with just you in it. Skips the lobby (nobody to wait for) and starts right away. Pulse
@@ -21,15 +23,16 @@ export function SoloJamScreen() {
 
   const [name, setName] = useState("Solo Huddle");
   const [nameEdited, setNameEdited] = useState(false);
-  const [destination, setDestination] = useState<DestinationPreset | null>(null);
+  const [destination, setDestination] = useState<Place | null>(null);
+  const here = useCurrentPosition();
   const [preference, setPreference] = useState<EmergencyPreference | null>(onboardingDraft.emergencyPreference);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /** Suggests a name from the destination, unless the person already typed their own. */
-  function handleSelectDestination(preset: DestinationPreset | null) {
-    setDestination(preset);
-    if (!nameEdited) setName(preset ? `Solo: ${preset.name}` : "Solo Huddle");
+  function handleSelectDestination(place: Place | null) {
+    setDestination(place);
+    if (!nameEdited) setName(place && place.name !== "Dropped pin" ? `Solo: ${place.name}`.slice(0, 80) : "Solo Huddle");
   }
 
   async function handleStart() {
@@ -86,17 +89,7 @@ export function SoloJamScreen() {
 
       <Card>
         <Text style={type.label}>Destination (optional)</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2) }}>
-          {DESTINATION_PRESETS.map((preset) => (
-            <Chip
-              key={preset.name}
-              label={preset.name}
-              selected={destination?.name === preset.name}
-              onPress={() => handleSelectDestination(destination?.name === preset.name ? null : preset)}
-              disabled={loading}
-            />
-          ))}
-        </View>
+        <DestinationPicker value={destination} onChange={handleSelectDestination} near={here.position} disabled={loading} />
       </Card>
 
       <Card>

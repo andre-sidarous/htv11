@@ -24,6 +24,11 @@ export type JamMapViewProps = {
   showsUserLocation?: boolean;
   /** Fires after the user pans or zooms (e.g. to draw only the markers in view). */
   onRegionChangeComplete?: (region: Region) => void;
+  /** Tap on the map (not on a marker): e.g. drop a destination pin. */
+  onPress?: (point: LatLng) => void;
+  /** Show the platform's points of interest (shops, stations) — useful when picking a place. */
+  showsPointsOfInterest?: boolean;
+  accessibilityLabel?: string;
   children?: ReactNode;
 };
 
@@ -37,7 +42,17 @@ export const regionAround = (center: LatLng, span = 0.012): Region => ({
 });
 
 export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapView(
-  { center, span, style, showsUserLocation = false, onRegionChangeComplete, children },
+  {
+    center,
+    span,
+    style,
+    showsUserLocation = false,
+    onRegionChangeComplete,
+    onPress,
+    showsPointsOfInterest = false,
+    accessibilityLabel = "Huddle map",
+    children,
+  },
   ref,
 ) {
   return (
@@ -47,9 +62,10 @@ export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapVi
       initialRegion={regionAround(center, span)}
       showsUserLocation={showsUserLocation}
       onRegionChangeComplete={onRegionChangeComplete}
-      showsPointsOfInterests={false}
+      onPress={onPress ? (e) => onPress(toMapCoord(e.nativeEvent.coordinate)) : undefined}
+      showsPointsOfInterests={showsPointsOfInterest}
       toolbarEnabled={false}
-      accessibilityLabel="Huddle map"
+      accessibilityLabel={accessibilityLabel}
     >
       {children}
     </MapView>

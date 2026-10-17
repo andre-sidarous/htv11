@@ -3,7 +3,7 @@
 // Places a short "this is a test" call to one of the caller's own trusted contacts, so people can
 // check Twilio and the contact's number before a real Jam. RLS on trusted_contacts means you can
 // only test your own contacts. Nothing about any alert, location, or health is said.
-import { buildTwiml, toE164 } from "../_shared/callScript.ts";
+import { toE164 } from "../_shared/callScript.ts";
 import { isUuid, json, requireUser, serve } from "../_shared/supabase.ts";
 import { placeCall, twilioConfig } from "../_shared/twilio.ts";
 
@@ -30,7 +30,7 @@ serve(async (req, body) => {
     `${owner} added you as a trusted contact. If ${owner} ever stops responding during a Huddle, ` +
     "you will get a call like this one, followed by a text with details. No action is needed now. Goodbye.";
 
-  const call = await placeCall(twilio, to, buildTwiml(message));
+  const call = await placeCall(twilio, to, message);
   return json(
     call.ok
       ? { channel: "voice_call", status: "sent", detail: `Calling ${contact.name} now` }

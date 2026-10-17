@@ -23,6 +23,8 @@ import {
   type AlertRowLite,
   type Intent,
 } from "../_shared/aiPhoneCall.ts";
+import { verifyMessageSignature } from "../_shared/callUrls.ts";
+import { buildTwiml } from "../_shared/callScript.ts";
 import { escalateToContacts } from "../_shared/contactEscalation.ts";
 import { adminClient, isUuid } from "../_shared/supabase.ts";
 
@@ -41,6 +43,14 @@ const hangup = (text: string) => twiml(`${say(text)}<Hangup/>`);
 Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method_not_allowed", { status: 405 });
   const query = new URL(req.url).searchParams;
+
+  // A fixed message (trusted-contact call, test call): read it out, signed so nobody else can use us.
+  if (query.get("mode") === "say") {
+    const message = query.get("msg") ?? "";
+    if (!message || !(await verifyMessageSignature(message, query.get("sig")))) return new Response("forbidden", { status: 403 });
+    return new Response(buildTwiml(message), { headers: { "Content-Type": "text/xml; charset=utf-8" } });
+  }
+
   const alertId = query.get("alertId");
   if (!isUuid(alertId) || !(await verifyCallSignature(alertId, query.get("sig")))) {
     return new Response("forbidden", { status: 403 });
