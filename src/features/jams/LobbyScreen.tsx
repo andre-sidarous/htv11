@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
-import * as Linking from "expo-linking";
-import QRCode from "react-native-qrcode-svg";
-import { Share, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Badge, Button, Card, ErrorState, LoadingState, Screen } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { colors, space, type } from "@/theme";
+import { InviteCard } from "./InviteCard";
 import { startJam } from "./jamsApi";
 import { memberReadiness, memberReadinessLabel } from "./memberStatus";
 import { useJam } from "./useJam";
@@ -35,17 +34,6 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
     // Navigation happens via the effect above once the realtime "jams" update lands.
   }
 
-  async function handleShare(joinCode: string, name: string) {
-    const link = Linking.createURL(`join/${joinCode}`);
-    try {
-      await Share.share({
-        message: `Join my Jam "${name}" on Jam.\nCode: ${joinCode}\n${link}`,
-      });
-    } catch {
-      // The user dismissed the share sheet — nothing to do.
-    }
-  }
-
   if (jamLoading) return <LoadingState label="Loading lobby…" />;
   if (jamError || !jam) {
     return (
@@ -66,13 +54,11 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
         </Text>
       </View>
 
-      <Card style={styles.qrCard}>
-        <QRCode value={`JAM:${jam.join_code}`} size={160} color={colors.navy} backgroundColor={colors.surface} />
-        <Text style={styles.code} accessibilityLabel={`Join code ${jam.join_code.split("").join(" ")}`}>
-          {jam.join_code}
-        </Text>
-        <Button label="Share" variant="secondary" onPress={() => handleShare(jam.join_code, jam.name)} />
-      </Card>
+      <InviteCard
+        joinCode={jam.join_code}
+        jamName={jam.name}
+        note="People can join now or after the Jam starts. The code is also in the Group tab."
+      />
 
       <Card>
         <Text style={type.heading}>Host</Text>
@@ -118,8 +104,6 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", backgroundColor: colors.warmWhite },
-  qrCard: { alignItems: "center", gap: space(3) },
-  code: { fontSize: 24, fontWeight: "700", letterSpacing: 4, color: colors.navy },
   section: { gap: space(2) },
   memberRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
 });

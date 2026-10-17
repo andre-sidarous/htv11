@@ -245,7 +245,9 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
         ) : null}
         {!jamEnded ? <SharingBar sharing={sharing} /> : null}
         <LocationPermissionCard sharing={sharing} />
-        {!jamEnded && sharingCount === 0 && sharing.state !== "live" ? (
+        {!jamEnded && data.members.filter((m) => m.isActive).length <= 1 ? (
+          <Banner text="It's just you in this Jam so far. Invite people from the Group tab." />
+        ) : !jamEnded && sharingCount === 0 && sharing.state !== "live" ? (
           <Banner text="No one is sharing their location yet." />
         ) : null}
       </View>
