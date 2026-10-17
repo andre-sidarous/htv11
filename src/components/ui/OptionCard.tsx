@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import * as Haptics from "expo-haptics";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { colors, radius, space, type } from "@/theme";
+import { fonts, colors, radius, space, type } from "@/theme";
 
 /** A selectable card for single-choice pickers (travel mode, emergency preference, demo role). */
 export function OptionCard({
@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.9 },
   icon: { width: 28, alignItems: "center" },
   text: { flex: 1, gap: space(1) },
-  selectedTitle: { color: colors.navy, fontWeight: "700" },
+  selectedTitle: { color: colors.navy, fontFamily: fonts.bold, fontWeight: "700" },
   radioOuter: {
     width: 22,
     height: 22,

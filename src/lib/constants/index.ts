@@ -1,6 +1,7 @@
 import type { ConsentKey, EscalationState, RealtimeEventName } from "@/lib/types";
 
-export const APP_NAME = "Jam";
+export const APP_NAME = "Huddle";
+export const APP_TAGLINE = "Your journey, connected.";
 
 // ---------- Realtime ----------
 
@@ -88,7 +89,7 @@ export const DEFAULT_CONSENTS: Record<ConsentKey, boolean> = {
 
 /** Scripted fallback. Must always work, even with no Gemini key. */
 export const SUPPORT_CALL_SCRIPT = [
-  "Hi, this is Jam. Your group could not reach you. Are you safe?",
+  "Hi, this is Huddle. Your group could not reach you. Are you safe?",
   "Can you tap the button if you can hear me?",
   "I have not received a response. Your authorized contacts may be notified with your location and safety information.",
 ] as const;
@@ -97,8 +98,8 @@ export const SUPPORT_CALL_SCRIPT = [
 
 /** The only content ever published to ntfy. No health data, location, phone numbers, or recordings. */
 export const NTFY_MESSAGE = {
-  title: "Jam safety alert",
-  message: "A Jam member may need support. Open the Jam app to view details.",
+  title: "Huddle safety alert",
+  message: "A Huddle member may need support. Open the Huddle app to view details.",
 } as const;
 
 // ---------- Incidents ----------

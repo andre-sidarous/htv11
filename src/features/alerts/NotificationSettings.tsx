@@ -6,7 +6,7 @@ import { EmptyState, LoadingState } from "@/components/ui/States";
 import { getDemoContext } from "@/features/demo/demoContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { NotificationChannel, NotificationStatus } from "@/lib/types";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { formatAgo } from "./presentation";
 import { SessionGate } from "./SessionGate";
 
@@ -71,7 +71,7 @@ function Body({ jamId }: { jamId: string }) {
   if (info === null) {
     return (
       <View style={styles.center}>
-        <EmptyState title="No Jam selected" description="Open this from a Jam you're in." />
+        <EmptyState title="No Huddle selected" description="Open this from a Huddle you're in." />
       </View>
     );
   }
@@ -90,7 +90,7 @@ function Body({ jamId }: { jamId: string }) {
       <View style={styles.card}>
         <Text style={type.heading}>Push notifications (ntfy)</Text>
         <Text style={type.body}>
-          Get a push even when Jam is closed: install the free <Text style={styles.bold}>ntfy</Text> app and subscribe to this Jam’s private topic.
+          Get a push even when Huddle is closed: install the free <Text style={styles.bold}>ntfy</Text> app and subscribe to this Huddle’s private topic.
         </Text>
         <Text selectable style={styles.topic}>
           {info.topic}
@@ -106,12 +106,12 @@ function Body({ jamId }: { jamId: string }) {
           <Action label="Open in ntfy" onPress={() => void Linking.openURL(`${NTFY_BASE}/${info.topic}`)} />
         </View>
         <Text style={type.caption}>Status: {ntfyState}</Text>
-        <Text style={type.caption}>ntfy only ever says “A Jam member may need support. Open the Jam app to view details.” No names, locations, or health data.</Text>
+        <Text style={type.caption}>ntfy only ever says “A Huddle member may need support. Open the Huddle app to view details.” No names, locations, or health data.</Text>
       </View>
 
       <View style={styles.card}>
         <Text style={type.heading}>Trusted-contact calls and texts</Text>
-        <Text style={type.body}>If someone stays silent on Jam’s support call, Jam phones and texts the trusted contacts they chose.</Text>
+        <Text style={type.body}>If someone stays silent on Huddle’s support call, Huddle phones and texts the trusted contacts they chose.</Text>
         <Text style={type.caption}>Status: {callState}</Text>
       </View>
 
@@ -147,13 +147,13 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", padding: space(6), backgroundColor: colors.warmWhite },
   content: { gap: space(4), padding: space(4), paddingBottom: space(12) },
   card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
-  bold: { fontWeight: "700" },
+  bold: { fontFamily: fonts.bold, fontWeight: "700" },
   topic: { fontFamily: "monospace", fontSize: 14, color: colors.navy, padding: space(3), borderRadius: radius.sm, backgroundColor: colors.sky },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
   action: { minHeight: TAP_TARGET, paddingHorizontal: space(5), justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
-  actionText: { color: colors.navy, fontSize: 15, fontWeight: "600" },
+  actionText: { color: colors.navy, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
   pressed: { opacity: 0.85 },
   event: { gap: 2, paddingVertical: space(1), borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  ok: { color: colors.ok, fontWeight: "600" },
+  ok: { color: colors.ok, fontFamily: fonts.semibold, fontWeight: "600" },
   muted: { color: colors.inkMuted },
 });

@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from "react-native";
-import { colors, radius } from "@/theme";
+import { fonts, colors, radius } from "@/theme";
 
 /** A simple initials avatar. `ring` draws a colored ring (e.g. for "currently live"). */
 export function Avatar({ name, size = 44, ring }: { name: string; size?: number; ring?: "ok" | "amber" | "escalation" | "brand" }) {
@@ -25,5 +25,5 @@ export function Avatar({ name, size = 44, ring }: { name: string; size?: number;
 const styles = StyleSheet.create({
   outer: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
   inner: { backgroundColor: colors.blush, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
-  text: { color: colors.brand, fontWeight: "700" },
+  text: { color: colors.brand, fontFamily: fonts.bold, fontWeight: "700" },
 });

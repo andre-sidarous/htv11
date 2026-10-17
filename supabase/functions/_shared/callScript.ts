@@ -14,17 +14,17 @@ export type CallScriptInput = {
 /** What the contact hears. Never includes recordings, phone numbers, or anything they weren't allowed. */
 export function buildCallMessage({ contactName, personName, placeDescription, reasons, textFollows }: CallScriptInput): string {
   const parts = [
-    `Hello ${contactName}. This is an automated call from Jam, a group travel safety app.`,
-    `${personName} listed you as a trusted contact. ${personName} may need support. They stopped responding to their group and to Jam's support call.`,
+    `Hello ${contactName}. This is an automated call from Huddle, a group travel safety app.`,
+    `${personName} listed you as a trusted contact. ${personName} may need support. They stopped responding to their group and to Huddle's support call.`,
   ];
   if (placeDescription) parts.push(`Their last known location was ${placeDescription}.`);
   const shown = (reasons ?? []).filter(Boolean).slice(0, 2);
-  if (shown.length) parts.push(`Jam noticed: ${shown.map((r) => r.replace(/\.$/, "")).join(", and ")}.`);
+  if (shown.length) parts.push(`Huddle noticed: ${shown.map((r) => r.replace(/\.$/, "")).join(", and ")}.`);
   if (textFollows) parts.push("We are also sending you a text message with the details.");
   parts.push(
     `Please try to reach ${personName} directly.`,
     "If you believe they are in immediate danger, call 9 1 1.",
-    "Jam is not an emergency service.",
+    "Huddle is not an emergency service.",
   );
   return parts.join(" ");
 }
@@ -41,16 +41,16 @@ export type SmsInput = {
 
 /** The follow-up text. Same rules as the call: only what this contact is allowed to receive. */
 export function buildSmsMessage({ personName, location, reasons, recordingUrl }: SmsInput): string {
-  const lines = [`Jam alert: ${personName} may need support. They stopped responding to their group and to Jam's support call.`];
+  const lines = [`Huddle alert: ${personName} may need support. They stopped responding to their group and to Huddle's support call.`];
   if (location) {
     const where = location.placeDescription ? `Last seen ${location.placeDescription}` : "Last seen location";
     const when = location.minutesAgo != null ? ` (${location.minutesAgo < 1 ? "just now" : `${location.minutesAgo} min ago`})` : "";
     lines.push(`${where}${when}: ${mapsLink(location.latitude, location.longitude)}`);
   }
   const shown = (reasons ?? []).filter(Boolean).slice(0, 3);
-  if (shown.length) lines.push(`Jam noticed: ${shown.map((r) => r.replace(/\.$/, "")).join("; ")}.`);
+  if (shown.length) lines.push(`Huddle noticed: ${shown.map((r) => r.replace(/\.$/, "")).join("; ")}.`);
   if (recordingUrl) lines.push(`Support call recording (link expires in 24 hours): ${recordingUrl}`);
-  lines.push(`Try to reach ${personName}. If they are in immediate danger, call 911. Jam is not an emergency service.`);
+  lines.push(`Try to reach ${personName}. If they are in immediate danger, call 911. Huddle is not an emergency service.`);
   return lines.join("\n");
 }
 

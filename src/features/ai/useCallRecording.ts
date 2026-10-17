@@ -55,7 +55,7 @@ export function useCallRecording(input: { userId: string | null }) {
     try {
       const permission = await requestRecordingPermissionsAsync();
       if (!permission.granted) {
-        setNote("Microphone permission is off, so Jam is using a simulated recording.");
+        setNote("Microphone permission is off, so Huddle is using a simulated recording.");
         begin("simulated", alertId);
         return;
       }
@@ -65,7 +65,7 @@ export function useCallRecording(input: { userId: string | null }) {
       begin("real", alertId);
     } catch (error) {
       console.warn("[recording] start failed", error);
-      setNote("Recording isn't available on this phone, so Jam is using a simulated recording.");
+      setNote("Recording isn't available on this phone, so Huddle is using a simulated recording.");
       begin("simulated", alertId);
     }
   }, [recorder, begin]);

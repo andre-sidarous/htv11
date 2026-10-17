@@ -29,7 +29,7 @@ export function useJam(jamId: string | undefined) {
         setError(null);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load this Jam.");
+      setError(e instanceof Error ? e.message : "Couldn't load this Huddle.");
     } finally {
       setLoading(false);
     }

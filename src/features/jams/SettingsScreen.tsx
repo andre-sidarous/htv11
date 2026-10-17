@@ -126,7 +126,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
     if (membersLoading) return <LoadingState label="Loading settings…" />;
     return (
       <ErrorState
-        description={membersError ?? "Couldn't find your membership in this Jam."}
+        description={membersError ?? "Couldn't find your membership in this Huddle."}
         onRetry={() => void refreshMembers()}
       />
     );
@@ -153,7 +153,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
         />
         <Toggle
           label="AI support call"
-          description="Lets Jam call you with a voice check-in before notifying contacts."
+          description="Lets Huddle call you with a voice check-in before notifying contacts."
           value={self.ai_call_consent}
           onValueChange={(v) => handleToggle("ai_call_consent", v)}
           disabled={saving === "ai_call_consent"}
@@ -167,7 +167,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
         />
         <Toggle
           label="Trusted-contact notifications"
-          description="If you stop responding to your group and to Jam's support call, Jam calls and texts your trusted contacts."
+          description="If you stop responding to your group and to Huddle's support call, Huddle calls and texts your trusted contacts."
           value={self.contact_notify_consent}
           onValueChange={(v) => handleToggle("contact_notify_consent", v)}
           disabled={saving === "contact_notify_consent"}
@@ -177,7 +177,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
       <Card>
         <Text style={type.heading}>Check-in buffer</Text>
         <Text style={type.caption}>
-          If Jam checks on you and you don’t answer, how long should it wait before alerting your group?
+          If Huddle checks on you and you don’t answer, how long should it wait before alerting your group?
         </Text>
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(2) }}>
           {CHECKIN_BUFFER_CHOICES_S.map((seconds) => (
@@ -200,7 +200,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
         <View style={{ gap: space(3), marginTop: space(2) }}>
           <OptionCard
             title="AI support call"
-            description="Jam calls you with a short voice check-in before notifying anyone."
+            description="Huddle calls you with a short voice check-in before notifying anyone."
             selected={self.emergency_preference === "ai_support_call"}
             onPress={() => handlePreference("ai_support_call")}
           />
@@ -218,8 +218,8 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
 
       <Card>
         <Text style={type.heading}>Demo</Text>
-        <Button label="Demo this Jam" variant="secondary" onPress={handleDemoThisJam} />
-        <Text style={type.caption}>Opens the presenter’s Demo Control panel for this live Jam.</Text>
+        <Button label="Demo this Huddle" variant="secondary" onPress={handleDemoThisJam} />
+        <Text style={type.caption}>Opens the presenter’s Demo Control panel for this live Huddle.</Text>
       </Card>
 
       <Card>
@@ -235,23 +235,23 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
       {notice ? <Text accessibilityLiveRegion="polite" style={type.caption}>{notice}</Text> : null}
 
       <Card>
-        <Text style={type.heading}>Leave or end this Jam</Text>
+        <Text style={type.heading}>Leave or end this Huddle</Text>
         {isHost ? (
           <Button
-            label="Stop Jam"
+            label="Stop Huddle"
             variant="destructive"
             loading={saving === "stop"}
             onPress={() =>
-              confirmDestructive("Stop Jam", "This ends the Jam for everyone. It can't be restarted.", handleStopJam)
+              confirmDestructive("Stop Huddle", "This ends the Huddle for everyone. It can't be restarted.", handleStopJam)
             }
           />
         ) : null}
         <Button
-          label="Leave Jam"
+          label="Leave Huddle"
           variant="destructive"
           loading={saving === "leave"}
           onPress={() =>
-            confirmDestructive("Leave Jam", "You'll stop sharing your location and health signals with this Jam.", handleLeaveJam)
+            confirmDestructive("Leave Huddle", "You'll stop sharing your location and health signals with this Huddle.", handleLeaveJam)
           }
         />
       </Card>
@@ -266,7 +266,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
           onPress={() =>
             confirmDestructive(
               "Delete account",
-              "This leaves your Jams on this device and signs you out. Removing your account itself needs an admin step — contact the team to finish that part.",
+              "This leaves your Huddles on this device and signs you out. Removing your account itself needs an admin step — contact the team to finish that part.",
               handleDeleteAccount,
             )
           }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
+import { Pico } from "@/components/brand";
 import { Badge, Button, Card, ErrorState, LoadingState, Screen } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { colors, space, type } from "@/theme";
@@ -38,7 +39,7 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
   if (jamError || !jam) {
     return (
       <View style={styles.center}>
-        <ErrorState description={jamError ?? "This Jam could not be found."} onRetry={() => void refresh()} />
+        <ErrorState description={jamError ?? "This Huddle could not be found."} onRetry={() => void refresh()} />
       </View>
     );
   }
@@ -57,7 +58,7 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
       <InviteCard
         joinCode={jam.join_code}
         jamName={jam.name}
-        note="People can join now or after the Jam starts. The code is also in the Group tab."
+        note="People can join now or after the Huddle starts. The code is also in the Group tab."
       />
 
       <Card>
@@ -92,11 +93,14 @@ export function LobbyScreen({ jamId }: { jamId: string }) {
       ) : null}
 
       {isHost ? (
-        <Button label="Start Jam" onPress={handleStart} loading={starting} />
+        <Button label="Start Huddle" onPress={handleStart} loading={starting} />
       ) : (
-        <Text style={type.caption} accessibilityLiveRegion="polite">
-          Waiting for the host to start the Jam…
-        </Text>
+        <View style={styles.waiting}>
+          <Pico mood="waiting" size={88} />
+          <Text style={type.caption} accessibilityLiveRegion="polite">
+            Waiting for the host to start the Huddle…
+          </Text>
+        </View>
       )}
     </Screen>
   );
@@ -106,4 +110,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", backgroundColor: colors.warmWhite },
   section: { gap: space(2) },
   memberRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  waiting: { alignItems: "center", gap: space(2) },
 });

@@ -17,6 +17,7 @@
     "publish:demo": "npx eas-cli update --branch demo --environment preview --message \"demo\" --platform ios && npx eas-cli update --branch demo --environment preview --message \"demo\" --platform android"
   },
   "dependencies": {
+    "@expo-google-fonts/inter": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "2.117.2",
     "expo": "~57.0.30",
@@ -26,12 +27,14 @@
     "expo-clipboard": "~57.0.2",
     "expo-constants": "~57.0.22",
     "expo-crypto": "~57.0.4",
+    "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
     "expo-keep-awake": "~57.0.2",
     "expo-linking": "~57.0.13",
     "expo-location": "~57.0.21",
     "expo-router": "~57.0.28",
     "expo-speech": "~57.0.3",
+    "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "expo-updates": "~57.0.26",

@@ -6,15 +6,15 @@ import { colors, space, type } from "@/theme";
 
 /** Calm, short status lines for the affected user. No "danger" language, no fake precision. */
 export const STATE_COPY: Record<EscalationState, string> = {
-  MONITORING: "Jam is keeping an eye on things.",
-  CHECK_IN_SENT: "Jam noticed a combination of changes and is checking in.",
+  MONITORING: "Huddle is keeping an eye on things.",
+  CHECK_IN_SENT: "Huddle noticed a combination of changes and is checking in.",
   USER_RESPONDED: "Thanks for letting us know.",
   GROUP_ALERT_SENT: "Your group has been notified.",
   GROUP_MEMBER_ACKNOWLEDGED: "Someone from your group is responding.",
-  AI_CALL_STARTING: "Jam is starting a support call.",
+  AI_CALL_STARTING: "Huddle is starting a support call.",
   AI_CALL_ACTIVE: "AI support call active.",
   AI_CALL_USER_RESPONDED: "You responded. Your group can see that.",
-  AI_CALL_USER_UNRESPONSIVE: "Jam is preparing an incident package for your group.",
+  AI_CALL_USER_UNRESPONSIVE: "Huddle is preparing an incident package for your group.",
   CONTACTS_NOTIFIED: "Your group and authorized contacts have been notified.",
   RESOLVED: "Marked safe.",
   CANCELLED: "Escalation cancelled.",

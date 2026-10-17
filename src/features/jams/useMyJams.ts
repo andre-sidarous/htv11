@@ -44,7 +44,7 @@ export function useMyJams(userId: string | undefined) {
       setPast(pairs.filter((pair) => !pair.membership.is_active || pair.jam.status === "ended"));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't load your Jams.");
+      setError(e instanceof Error ? e.message : "Couldn't load your Huddles.");
     } finally {
       setLoading(false);
     }

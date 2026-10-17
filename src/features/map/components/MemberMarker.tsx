@@ -2,7 +2,7 @@ import { memo, useEffect, useState, useSyncExternalStore } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
 import { toMapCoord } from "@/components/map/JamMapView";
-import { colors } from "@/theme";
+import { fonts, colors } from "@/theme";
 import type { MemberStore } from "../memberStore";
 import { initials, PRESENCE_OPACITY, profileColor } from "../memberAppearance";
 
@@ -73,5 +73,5 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
   },
   self: { borderColor: colors.navy, borderWidth: 3 },
-  initials: { color: colors.surface, fontWeight: "700", fontSize: 14 },
+  initials: { color: colors.surface, fontFamily: fonts.bold, fontWeight: "700", fontSize: 14 },
 });

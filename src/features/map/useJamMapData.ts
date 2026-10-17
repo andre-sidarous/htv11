@@ -125,7 +125,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
       try {
         const { data: auth } = await supabase.auth.getUser();
         const selfId = auth.user?.id ?? null;
-        if (!selfId) throw new Error("Sign in to see your Jam's map.");
+        if (!selfId) throw new Error("Sign in to see your Huddle's map.");
 
         const [jamRes, membersRes, locationsRes, alertsRes] = await Promise.all([
           supabase
@@ -145,7 +145,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             .is("resolved_at", null),
         ]);
         if (jamRes.error) throw jamRes.error;
-        if (!jamRes.data) throw new Error("This Jam isn't available. You may not be a member.");
+        if (!jamRes.data) throw new Error("This Huddle isn't available. You may not be a member.");
         if (membersRes.error) throw membersRes.error;
 
         const rows = membersRes.data ?? [];
@@ -172,7 +172,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
           },
           members: rows.map((r) => ({
             userId: r.user_id,
-            displayName: names.get(r.user_id) ?? "Jam member",
+            displayName: names.get(r.user_id) ?? "Huddle member",
             role: r.role,
             isActive: r.is_active,
             locationConsent: r.location_consent,

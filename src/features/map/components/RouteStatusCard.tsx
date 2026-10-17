@@ -55,7 +55,7 @@ export function RouteStatusCard(props: Props) {
                 ? `${(route.distanceM / 1000).toFixed(1)} km · about ${minutes(route.durationS)} min walk`
                 : destinationName
                   ? "Route unavailable"
-                  : "The host can add a destination to the Jam"}
+                  : "The host can add a destination to the Huddle"}
           </Text>
         </View>
         <View style={styles.badges}>

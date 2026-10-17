@@ -13,8 +13,8 @@ const REQUESTERS: Partial<Record<ConsentKey, () => Promise<boolean>>> = {
 };
 
 const DENIED_COPY: Partial<Record<ConsentKey, string>> = {
-  location_consent: "Location access is off, so this stays off too. Turn it on for Jam in your phone's Settings app, then try again.",
-  recording_consent: "Microphone access is off, so this stays off too. Turn it on for Jam in your phone's Settings app, then try again.",
+  location_consent: "Location access is off, so this stays off too. Turn it on for Huddle in your phone's Settings app, then try again.",
+  recording_consent: "Microphone access is off, so this stays off too. Turn it on for Huddle in your phone's Settings app, then try again.",
 };
 
 /**

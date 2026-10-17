@@ -15,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Avatar, ErrorState, Icon, LoadingState } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import type { ChatMessageRow } from "@/lib/types";
-import { colors, radius, space, type } from "@/theme";
+import { fonts, colors, radius, space, type } from "@/theme";
 import { useChatMessages } from "./useChatMessages";
 import { useJamMembers } from "./useJamMembers";
 
@@ -95,7 +95,7 @@ export function ChatScreen({ jamId }: { jamId: string }) {
           <View style={styles.empty}>
             <Text style={type.heading}>No messages yet</Text>
             <Text style={type.caption} maxFontSizeMultiplier={1.6}>
-              Say hi to your Jam.
+              Say hi to your Huddle.
             </Text>
           </View>
         ) : (
@@ -114,7 +114,7 @@ export function ChatScreen({ jamId }: { jamId: string }) {
             <TextInput
               value={draft}
               onChangeText={setDraft}
-              placeholder="Message your Jam"
+              placeholder="Message your Huddle"
               placeholderTextColor={colors.inkFaint}
               multiline
               maxLength={1000}
@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   rowOther: { justifyContent: "flex-start" },
   avatarSlot: { width: 28 },
   bubbleColumn: { maxWidth: "78%", gap: space(1) },
-  sender: { fontSize: 12, fontWeight: "600", color: colors.inkMuted, marginLeft: space(1) },
+  sender: { fontSize: 12, fontFamily: fonts.semibold, fontWeight: "600", color: colors.inkMuted, marginLeft: space(1) },
   bubble: { paddingHorizontal: space(4), paddingVertical: space(2.5), borderRadius: radius.lg },
   bubbleSelf: { backgroundColor: colors.brand, borderBottomRightRadius: space(1) },
   bubbleOther: {

@@ -69,7 +69,7 @@ export function buildCallContext(input: {
     locationSummary: nearest
       ? `About ${Math.round(nearest.distanceM / 10) * 10} m from ${nearest.point.name}`
       : input.location
-        ? "Location shared with the Jam"
+        ? "Location shared with the Huddle"
         : "Location not available",
     routeDeviationLevel: input.routeStatus?.level,
     heartRateSummary: pct !== null ? `${pct > 0 ? `${pct}% above` : "near"} personal baseline (simulated)` : undefined,

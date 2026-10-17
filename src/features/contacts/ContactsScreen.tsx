@@ -5,7 +5,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { SessionGate } from "@/features/alerts/SessionGate";
 import { testContactCall } from "@/lib/supabase/functions";
 import type { TrustedContactRow } from "@/lib/types";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { ContactForm } from "./ContactForm";
 import { CONFIRMATION_LABELS, describeSharing, emptyContactForm, toFormValues } from "./schema";
 import { useTrustedContacts } from "./useTrustedContacts";
@@ -27,7 +27,7 @@ function ContactsList() {
   const [editing, setEditing] = useState<TrustedContactRow | "new" | null>(null);
 
   function confirmRemove(contact: TrustedContactRow) {
-    Alert.alert(`Remove ${contact.name}?`, "Jam will no longer contact them.", [
+    Alert.alert(`Remove ${contact.name}?`, "Huddle will no longer contact them.", [
       { text: "Keep", style: "cancel" },
       {
         text: "Remove",
@@ -59,7 +59,7 @@ function ContactsList() {
         onRefresh={reload}
         ListHeaderComponent={
           <Text style={[type.body, styles.intro]}>
-            If you stop responding to your group and to Jam’s support call, Jam calls and texts these people and shares only what you allow. Only you can see their details.
+            If you stop responding to your group and to Huddle’s support call, Huddle calls and texts these people and shares only what you allow. Only you can see their details.
           </Text>
         }
         ListEmptyComponent={
@@ -124,7 +124,7 @@ function ContactCard({ contact, onEdit, onRemove }: { contact: TrustedContactRow
         </View>
       </View>
 
-      {contact.phone_number ? <Text style={type.body}>{contact.phone_number}</Text> : <Text style={[type.caption, styles.warn]}>No phone number, so Jam can’t call them.</Text>}
+      {contact.phone_number ? <Text style={type.body}>{contact.phone_number}</Text> : <Text style={[type.caption, styles.warn]}>No phone number, so Huddle can’t call them.</Text>}
       {contact.email ? <Text style={type.caption}>{contact.email}</Text> : null}
       <Text style={[type.caption, styles.sharing]}>{describeSharing(contact)}</Text>
 
@@ -162,12 +162,12 @@ const styles = StyleSheet.create({
   card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
   cardTop: { flexDirection: "row", alignItems: "center", gap: space(3) },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: colors.sky },
-  avatarText: { fontSize: 18, fontWeight: "700", color: colors.navy },
+  avatarText: { fontSize: 18, fontFamily: fonts.bold, fontWeight: "700", color: colors.navy },
   badge: { paddingHorizontal: space(3), paddingVertical: space(1), borderRadius: radius.pill },
   badgeOk: { backgroundColor: colors.okSoft },
   badgeWait: { backgroundColor: colors.amberSoft },
   badgeMuted: { backgroundColor: colors.border },
-  badgeText: { fontSize: 12, fontWeight: "600", color: colors.ink },
+  badgeText: { fontSize: 12, fontFamily: fonts.semibold, fontWeight: "600", color: colors.ink },
   warn: { color: colors.ink },
   sharing: { color: colors.navySoft },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space(3), marginTop: space(1) },
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  secondaryText: { color: colors.navy, fontSize: 15, fontWeight: "600" },
+  secondaryText: { color: colors.navy, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
   footer: {
     position: "absolute",
     left: 0,
@@ -193,5 +193,5 @@ const styles = StyleSheet.create({
   },
   primary: { minHeight: TAP_TARGET, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.navy },
   pressed: { opacity: 0.85 },
-  primaryText: { color: colors.warmWhite, fontSize: 16, fontWeight: "600" },
+  primaryText: { color: colors.warmWhite, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
 });

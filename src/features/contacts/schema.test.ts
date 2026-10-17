@@ -13,7 +13,7 @@ describe("validateContact", () => {
   it("requires a phone or an email", () => {
     const result = validateContact(base);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.errors.phone_number).toMatch(/phone number so Jam can call them/);
+    if (!result.ok) expect(result.errors.phone_number).toMatch(/phone number so Huddle can call them/);
   });
 
   it("turns blank optional fields into null and trims", () => {
@@ -70,12 +70,12 @@ describe("describeSharing", () => {
   });
 
   it("lists one, two, or three items naturally", () => {
-    expect(describeSharing({ ...none, receive_location: true })).toBe("If Jam can't reach you, they can see your location.");
+    expect(describeSharing({ ...none, receive_location: true })).toBe("If Huddle can't reach you, they can see your location.");
     expect(describeSharing({ ...none, receive_location: true, receive_recording: true })).toBe(
-      "If Jam can't reach you, they can see your location and recording.",
+      "If Huddle can't reach you, they can see your location and recording.",
     );
     expect(describeSharing({ receive_location: true, receive_health_summary: true, receive_recording: true })).toBe(
-      "If Jam can't reach you, they can see your location, health summary and recording.",
+      "If Huddle can't reach you, they can see your location, health summary and recording.",
     );
   });
 });

@@ -3,7 +3,7 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleShee
 import { EmptyState, LoadingState } from "@/components/ui/States";
 import { sendEmailCode, verifyEmailCode } from "@/lib/supabase/auth";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { colors, radius, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, space, TAP_TARGET, type } from "@/theme";
 
 /**
  * Renders children only for a signed-in user with a profile. Used by P5's screens.
@@ -42,7 +42,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
   if (status === "unconfigured") {
     return (
       <View style={styles.screen}>
-        <EmptyState title="Jam isn't connected yet" description="Add the Supabase values to .env and restart the app." />
+        <EmptyState title="Huddle isn't connected yet" description="Add the Supabase values to .env and restart the app." />
       </View>
     );
   }
@@ -77,7 +77,7 @@ function EmailSignIn() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.screen}>
-      <Text style={type.title}>Sign in to Jam</Text>
+      <Text style={type.title}>Sign in to Huddle</Text>
       {step === "email" ? (
         <>
           <Text style={[type.body, styles.muted]}>We’ll email you a 6-digit code. New here? This creates your account.</Text>
@@ -126,7 +126,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
   async function save() {
     const supabase = getSupabaseClient();
     const trimmed = name.trim();
-    if (!supabase || !trimmed) return setMessage("Add the name your Jam will see.");
+    if (!supabase || !trimmed) return setMessage("Add the name your Huddle will see.");
     setBusy(true);
     const { data: auth } = await supabase.auth.getUser();
     const { error } = auth.user
@@ -139,7 +139,7 @@ function ProfileStep({ onDone }: { onDone: () => void }) {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.screen}>
-      <Text style={type.title}>Let’s set up your Jam profile</Text>
+      <Text style={type.title}>Let’s set up your Huddle profile</Text>
       <Text style={[type.body, styles.muted]}>You can change this later.</Text>
       <TextInput
         value={name}
@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
   },
   dim: { opacity: 0.6 },
-  buttonText: { color: colors.warmWhite, fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.warmWhite, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
   link: { alignSelf: "center", minHeight: TAP_TARGET, justifyContent: "center" },
-  linkText: { color: colors.navy, fontSize: 15, fontWeight: "600", textDecorationLine: "underline" },
+  linkText: { color: colors.navy, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600", textDecorationLine: "underline" },
   error: { color: colors.escalation },
 });

@@ -331,7 +331,7 @@ export async function osrmDirections(from: { lat: number; lng: number }, to: { l
   try {
     const res = await fetch(`${base}/route/v1/foot/${from.lng},${from.lat};${to.lng},${to.lat}?steps=true&overview=false`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "User-Agent": "Jam-hackathon/0.1" },
+      headers: { "User-Agent": "Huddle-hackathon/0.1" },
     });
     if (!res.ok) return null;
     const body = await res.json();
@@ -373,7 +373,7 @@ async function overpassPlaces(at: { lat: number; lng: number }): Promise<Place[]
   try {
     const res = await fetch("https://overpass-api.de/api/interpreter", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Jam-hackathon/0.1" },
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Huddle-hackathon/0.1" },
       body: `data=${encodeURIComponent(query)}`,
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
@@ -461,8 +461,8 @@ export type Intent = "continue" | "safe" | "help" | "arrived" | "end";
 export type Turn = { say: string; intent: Intent };
 
 const SYSTEM_PROMPT = [
-  "You are Jam's automated support caller, speaking on a live PHONE CALL with someone whose travel group lost track of them.",
-  "Jam is a group travel safety app. You are NOT emergency services or a medical service: never diagnose, never say help is on the way,",
+  "You are Huddle's automated support caller, speaking on a live PHONE CALL with someone whose travel group lost track of them.",
+  "Huddle is a group travel safety app. You are NOT emergency services or a medical service: never diagnose, never say help is on the way,",
   "never claim to have called anyone except their trusted contacts when told so. If they say they are in danger, tell them to call 9 1 1.",
   "Goals: confirm they're okay, then guide them step by step to their destination using ONLY the directions given (never invent streets),",
   "mention the nearest public places when useful, answer their questions (where am I, how far, what's nearby), and keep them talking.",
@@ -481,7 +481,7 @@ function knowledgeLines(k: CallKnowledge): string {
     k.remaining ? `Remaining: ${k.remaining}` : null,
     k.places.length ? `Nearby public places: ${k.places.join("; ")}` : "Nearby public places: none found",
     k.fewPlaces ? "Note: few public support points are close to them." : null,
-    k.reasons.length ? `Why Jam checked in: ${k.reasons.join("; ")}` : null,
+    k.reasons.length ? `Why Huddle checked in: ${k.reasons.join("; ")}` : null,
   ]
     .filter(Boolean)
     .join("\n");
@@ -503,7 +503,7 @@ export function scriptedTurn(k: CallKnowledge, kind: "greeting" | "reply" | "sil
   const dir = k.directions ? ` ${k.directions}` : "";
   const near = k.places[0] ? ` The nearest public place is ${k.places[0]}.` : "";
   if (kind === "greeting") {
-    return `Hi ${k.name}, this is Jam, calling because your group couldn't reach you. Are you okay? You can just say yes, or press any key.${dir}`;
+    return `Hi ${k.name}, this is Huddle, calling because your group couldn't reach you. Are you okay? You can just say yes, or press any key.${dir}`;
   }
   if (kind === "silence") return `${k.name}, are you still there? Say anything or press a key if you can hear me.${dir}`;
   if (intent === "help") return `I'm letting your trusted contacts know right now, and I'll stay with you.${near} If you're in immediate danger, call 9 1 1.`;

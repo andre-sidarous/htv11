@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { HuddleLogo, Pico } from "@/components/brand";
 import { Avatar, Badge, Button, Card, Icon, IconBadge, ListRow, Screen, SectionHeader } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import { signOut } from "@/lib/supabase/auth";
 import type { JamRow } from "@/lib/types";
-import { colors, radius, shadow, space, type, type Tone } from "@/theme";
+import { fonts, colors, radius, shadow, space, type, type Tone } from "@/theme";
 import { useJamMembers } from "./useJamMembers";
 import { useMyJams, type MyJam } from "./useMyJams";
 
@@ -30,9 +31,10 @@ export function HomeScreen() {
   return (
     <Screen scroll>
       <View style={styles.brandRow}>
-        <Text style={styles.wordmark} accessibilityRole="header">
-          Jam
-        </Text>
+        <View style={styles.brandMark}>
+          <Pico size={40} />
+          <HuddleLogo size={28} align="left" />
+        </View>
         <Avatar name={name} size={36} />
       </View>
 
@@ -41,30 +43,30 @@ export function HomeScreen() {
           Hi, {name}
         </Text>
         <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-          Travel together. Jam quietly looks out for your group.
+          Travel together. Huddle quietly looks out for your group.
         </Text>
       </View>
 
       {featured ? <StatusHero pair={featured} onOpen={() => openJam(featured)} /> : null}
 
       <View style={styles.quickRow}>
-        <QuickAction icon={Plus} label="Create a Jam" onPress={() => router.push("/create")} primary />
-        <QuickAction icon={QrCode} label="Join a Jam" onPress={() => router.push("/join")} />
+        <QuickAction icon={Plus} label="Create a Huddle" onPress={() => router.push("/create")} primary />
+        <QuickAction icon={QrCode} label="Join a Huddle" onPress={() => router.push("/join")} />
       </View>
 
-      <Button label="Travelling alone? Start a Solo Jam" icon={User} variant="outline" onPress={() => router.push("/solo")} />
+      <Button label="Travelling alone? Start a Solo Huddle" icon={User} variant="outline" onPress={() => router.push("/solo")} />
 
-      <SectionHeader title="Active Jams" />
+      <SectionHeader title="Active Huddles" />
       {loading ? (
         <Text style={type.caption}>Loading…</Text>
       ) : error ? (
         <Card>
-          <Text style={type.body}>Couldn’t load your Jams.</Text>
+          <Text style={type.body}>Couldn’t load your Huddles.</Text>
           <Button label="Try again" variant="ghost" onPress={() => void refresh()} />
         </Card>
       ) : active.length === 0 ? (
         <Card tone="neutral">
-          <Text style={type.label}>No active Jam yet</Text>
+          <Text style={type.label}>No active Huddle yet</Text>
           <Text style={type.caption}>Create one, or join with a code from a friend.</Text>
         </Card>
       ) : (
@@ -91,7 +93,7 @@ export function HomeScreen() {
 
       {past.length > 0 ? (
         <>
-          <SectionHeader title="Past Jams" />
+          <SectionHeader title="Past Huddles" />
           <Card padded={false}>
             {past.slice(0, 5).map((pair, i, list) => (
               <View key={pair.jam.id} style={[styles.pastRow, i < list.length - 1 && styles.pastBorder]}>
@@ -137,15 +139,15 @@ function StatusHero({ pair, onOpen }: { pair: MyJam; onOpen: () => void }) {
         {pair.jam.destination_name ? `Heading to ${pair.jam.destination_name}` : "No destination set"}
       </Text>
       <View style={styles.statusFoot}>
-        <View style={styles.avatars} accessibilityLabel={`${people.length} ${people.length === 1 ? "person" : "people"} in this Jam`}>
+        <View style={styles.avatars} accessibilityLabel={`${people.length} ${people.length === 1 ? "person" : "people"} in this Huddle`}>
           {people.slice(0, 5).map((m, i) => (
             <View key={m.id} style={[styles.avatarSlot, i > 0 && styles.avatarOverlap]}>
               <Avatar name={m.profile?.display_name ?? "?"} size={30} />
             </View>
           ))}
-          <Text style={styles.statusCount}>{people.length > 5 ? `+${people.length - 5}` : `${people.length} in Jam`}</Text>
+          <Text style={styles.statusCount}>{people.length > 5 ? `+${people.length - 5}` : `${people.length} in Huddle`}</Text>
         </View>
-        <Button label={waiting ? "Open lobby" : "Open Jam"} onPress={onOpen} variant="secondary" tint={colors.brandDark} style={styles.statusButton} />
+        <Button label={waiting ? "Open lobby" : "Open Huddle"} onPress={onOpen} variant="secondary" tint={colors.brandDark} style={styles.statusButton} />
       </View>
     </View>
   );
@@ -164,19 +166,19 @@ function QuickAction({ icon, label, onPress, primary }: { icon: LucideIcon; labe
 
 const styles = StyleSheet.create({
   brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  wordmark: { fontSize: 28, fontWeight: "800", letterSpacing: -0.8, color: colors.brand },
+  brandMark: { flexDirection: "row", alignItems: "center", gap: space(2) },
   hero: { gap: space(1) },
   statusCard: { gap: space(2), padding: space(5), borderRadius: radius.lg, backgroundColor: colors.brand, ...shadow.raised },
   statusHead: { flexDirection: "row", alignItems: "center", gap: space(2) },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sage },
-  statusOverline: { fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: colors.blush },
-  statusTitle: { fontSize: 22, fontWeight: "700", color: colors.surface },
+  statusOverline: { fontSize: 12, fontFamily: fonts.bold, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: colors.blush },
+  statusTitle: { fontSize: 22, fontFamily: fonts.bold, fontWeight: "700", color: colors.surface },
   statusBody: { fontSize: 15, color: colors.blush },
   statusFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(3), marginTop: space(2) },
   avatars: { flexDirection: "row", alignItems: "center", flexShrink: 1 },
   avatarSlot: { borderRadius: radius.pill, backgroundColor: colors.brand },
   avatarOverlap: { marginLeft: -10 },
-  statusCount: { marginLeft: space(2), fontSize: 13, fontWeight: "600", color: colors.blush },
+  statusCount: { marginLeft: space(2), fontSize: 13, fontFamily: fonts.semibold, fontWeight: "600", color: colors.blush },
   statusButton: { backgroundColor: colors.surface, paddingHorizontal: space(4) },
   quickRow: { flexDirection: "row", gap: space(3) },
   quick: {

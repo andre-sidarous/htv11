@@ -42,7 +42,7 @@ export const contactFormSchema = z
     confirmation_status: z.enum(["pending", "confirmed", "declined"]),
   })
   .refine((v) => v.phone_number !== null || v.email !== null, {
-    message: "Add a phone number so Jam can call them (or at least an email).",
+    message: "Add a phone number so Huddle can call them (or at least an email).",
     path: ["phone_number"],
   });
 
@@ -97,7 +97,7 @@ export function describeSharing(contact: Pick<TrustedContactRow, "receive_locati
   ].filter(Boolean) as string[];
   if (parts.length === 0) return "Nothing is shared with them yet.";
   const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
-  return `If Jam can't reach you, they can see your ${list}.`;
+  return `If Huddle can't reach you, they can see your ${list}.`;
 }
 
 export const CONFIRMATION_LABELS: Record<ConfirmationStatus, string> = {

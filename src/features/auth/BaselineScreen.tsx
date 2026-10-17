@@ -34,7 +34,7 @@ export function BaselineScreen() {
 
   return (
     <Screen scroll>
-      <Text style={type.title}>Stay still for a moment while Jam establishes a demo heart-rate baseline.</Text>
+      <Text style={type.title}>Stay still for a moment while Huddle establishes a demo heart-rate baseline.</Text>
       <Badge label="Simulated wearable data for prototype" tone="neutral" />
 
       <Card style={styles.measureCard}>

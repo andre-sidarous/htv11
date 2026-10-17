@@ -82,18 +82,30 @@ export const radius = { sm: 10, md: 14, card: 16, lg: 18, pill: 999 } as const;
 /** Minimum comfortable tap target (iOS HIG 44pt, Material 48dp). */
 export const TAP_TARGET = 48;
 
+/**
+ * Inter (brand typeface), loaded in src/app/_layout.tsx. One family per weight: Android ignores
+ * `fontWeight` for custom fonts, so pair each weight with its family (as `type` does below).
+ * Until the fonts load, or if loading fails, these fall back to the system font.
+ */
+export const fonts = {
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+  bold: "Inter_700Bold",
+} as const;
+
 export const type = {
-  display: { fontSize: 34, fontWeight: "700", letterSpacing: -0.6, color: colors.ink },
-  title: { fontSize: 24, fontWeight: "700", letterSpacing: -0.3, color: colors.ink },
-  heading: { fontSize: 17, fontWeight: "600", color: colors.ink },
-  body: { fontSize: 16, lineHeight: 22, color: colors.ink },
-  bodyMuted: { fontSize: 16, lineHeight: 22, color: colors.inkMuted },
-  label: { fontSize: 14, fontWeight: "600", color: colors.ink },
-  caption: { fontSize: 13, lineHeight: 18, color: colors.inkMuted },
-  /** Small uppercase section label ("ACTIVE JAM"). */
-  overline: { fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: colors.inkMuted },
+  display: { fontFamily: fonts.bold, fontSize: 34, fontWeight: "700", letterSpacing: -0.6, color: colors.ink },
+  title: { fontFamily: fonts.bold, fontSize: 24, fontWeight: "700", letterSpacing: -0.3, color: colors.ink },
+  heading: { fontFamily: fonts.semibold, fontSize: 17, fontWeight: "600", color: colors.ink },
+  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22, color: colors.ink },
+  bodyMuted: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22, color: colors.inkMuted },
+  label: { fontFamily: fonts.semibold, fontSize: 14, fontWeight: "600", color: colors.ink },
+  caption: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18, color: colors.inkMuted },
+  /** Small uppercase section label ("ACTIVE HUDDLE"). */
+  overline: { fontFamily: fonts.bold, fontSize: 12, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", color: colors.inkMuted },
   /** Big numbers (BPM, timers). */
-  metric: { fontSize: 40, fontWeight: "700", letterSpacing: -1, color: colors.ink, fontVariant: ["tabular-nums"] as TextStyle["fontVariant"] },
+  metric: { fontFamily: fonts.bold, fontSize: 40, fontWeight: "700", letterSpacing: -1, color: colors.ink, fontVariant: ["tabular-nums"] as TextStyle["fontVariant"] },
 } as const;
 
 export const shadow = {

@@ -49,7 +49,7 @@ export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapVi
       onRegionChangeComplete={onRegionChangeComplete}
       showsPointsOfInterests={false}
       toolbarEnabled={false}
-      accessibilityLabel="Jam map"
+      accessibilityLabel="Huddle map"
     >
       {children}
     </MapView>

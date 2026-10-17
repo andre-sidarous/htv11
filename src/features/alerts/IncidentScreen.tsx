@@ -10,7 +10,7 @@ import { JamMapView } from "@/components/map/JamMapView";
 import { Badge, Button, IconBadge } from "@/components/ui";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { getRouteRecommendation } from "@/features/map/recommendation";
-import { colors, radius, shadow, space, type, type Tone } from "@/theme";
+import { fonts, colors, radius, shadow, space, type, type Tone } from "@/theme";
 import { resolveAlert } from "./api";
 import { deleteIncident, getIncident, type IncidentView } from "./incidentApi";
 import { formatAgo, formatRemaining, mapsUrl } from "./presentation";
@@ -164,7 +164,7 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
       )}
 
       {incident.reasons?.length || incident.health ? (
-        <Section icon={HeartPulse} title="Why Jam flagged this" tone="lavender">
+        <Section icon={HeartPulse} title="Why Huddle flagged this" tone="lavender">
           {(incident.reasons ?? []).map((r) => (
             <Text key={r} style={type.body}>
               · {r}
@@ -184,7 +184,7 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
       ) : null}
 
       <Section icon={ListChecks} title="What happened">
-        {incident.alertCreatedAt ? <HistoryRow label="Jam checked in, no response" time={clock(incident.alertCreatedAt)} /> : null}
+        {incident.alertCreatedAt ? <HistoryRow label="Huddle checked in, no response" time={clock(incident.alertCreatedAt)} /> : null}
         <HistoryRow label="Incident package created" time={clock(incident.createdAt)} />
         {resolved ? <HistoryRow label="Marked safe" time="" done /> : null}
         {incident.destinationName ? (
@@ -205,7 +205,7 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
 
       <Section icon={Users} title="Shared with">
         <Text style={type.body}>
-          {incident.sharedWith.members.length ? incident.sharedWith.members.join(", ") : "No Jam members"}
+          {incident.sharedWith.members.length ? incident.sharedWith.members.join(", ") : "No Huddle members"}
           {incident.sharedWith.contacts ? ` and ${incident.sharedWith.contacts} trusted contact${incident.sharedWith.contacts === 1 ? "" : "s"}` : ""}
         </Text>
       </Section>
@@ -225,11 +225,11 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
       <View style={styles.footerActions}>
         {incident.canResolve && !resolved ? <Button label="Mark resolved" icon={CircleCheck} size="lg" loading={busy === "resolve"} onPress={markResolved} /> : null}
         {incident.jamId && incident.role !== "contact" ? (
-          <Button label="Back to Jam" icon={ArrowLeft} variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
+          <Button label="Back to Huddle" icon={ArrowLeft} variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
         ) : null}
         {incident.canDelete ? <Button label="Delete package" icon={Trash2} variant="ghost" tint={colors.escalation} loading={busy === "delete"} onPress={confirmDelete} /> : null}
       </View>
-      <Text style={[type.caption, styles.footnote]}>Jam is not an emergency service. If someone is in immediate danger, call 911.</Text>
+      <Text style={[type.caption, styles.footnote]}>Huddle is not an emergency service. If someone is in immediate danger, call 911.</Text>
     </ScrollView>
   );
 }
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   mapFooter: { gap: space(1.5), padding: space(4) },
   inline: { flexDirection: "row", alignItems: "center", gap: space(2) },
   healthRow: { flexDirection: "row", alignItems: "baseline", gap: space(2) },
-  metric: { fontSize: 28, fontWeight: "700", color: colors.ink, fontVariant: ["tabular-nums"] },
+  metric: { fontSize: 28, fontFamily: fonts.bold, fontWeight: "700", color: colors.ink, fontVariant: ["tabular-nums"] },
   historyRow: { flexDirection: "row", alignItems: "center", gap: space(3), minHeight: 32 },
   historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand },
   actions: { flexDirection: "row", gap: space(2), marginTop: space(1) },

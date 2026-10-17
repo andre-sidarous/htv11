@@ -92,14 +92,14 @@ export function GroupScreen({ jamId }: { jamId: string }) {
         onPress={handleCheckIn}
         loading={sending}
         disabled={sent || !channel}
-        accessibilityHint="Asks everyone in the Jam to confirm they're okay."
+        accessibilityHint="Asks everyone in the Huddle to confirm they're okay."
       />
       <Button
         label="Open chat"
         icon={MessageCircle}
         variant="secondary"
         onPress={() => router.push({ pathname: "/jam/[jamId]/chat", params: { jamId } })}
-        accessibilityHint="Opens the group chat for this Jam"
+        accessibilityHint="Opens the group chat for this Huddle"
       />
 
       {canInvite && jam ? (
@@ -107,7 +107,7 @@ export function GroupScreen({ jamId }: { jamId: string }) {
           <View style={styles.invite}>
             <Text style={type.heading}>Invite your group</Text>
             <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
-              {"It's just you so far. Friends can join with this code or QR, even though the Jam has started."}
+              {"It's just you so far. Friends can join with this code or QR, even though the Huddle has started."}
             </Text>
             <InviteCard joinCode={jam.join_code} jamName={jam.name} />
           </View>

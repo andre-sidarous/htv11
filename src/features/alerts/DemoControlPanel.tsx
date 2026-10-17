@@ -6,7 +6,7 @@ import { getDemoContext, SEEDED_DEMO_CONTEXT, setDemoContext, subscribeDemoConte
 import { useDemoActions } from "@/hooks/useDemoActions";
 import { useJamChannel } from "@/hooks/useJamChannel";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { currentUserId, getMemberNames } from "./api";
 import { SessionGate } from "./SessionGate";
 import { useAlertDemoActions } from "./useAlertDemoActions";
@@ -93,7 +93,7 @@ function Panel() {
   async function run(id: string, label: string) {
     if (id === DEMO_ACTION_IDS.resetDemo) {
       const ok = await new Promise<boolean>((resolve) =>
-        Alert.alert("Reset the demo?", "Clears alerts, incidents, notifications, health signals, and live locations for this Jam. Accounts, members, and contacts stay.", [
+        Alert.alert("Reset the demo?", "Clears alerts, incidents, notifications, health signals, and live locations for this Huddle. Accounts, members, and contacts stay.", [
           { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
           { text: "Reset", style: "destructive", onPress: () => resolve(true) },
         ]),
@@ -109,7 +109,7 @@ function Panel() {
     }
   }
 
-  const jamName = jams.find((j) => j.id === context.jamId)?.name ?? (context.jamId === SEEDED_DEMO_CONTEXT.jamId ? "Campus Walk (seeded backup)" : "Unknown Jam");
+  const jamName = jams.find((j) => j.id === context.jamId)?.name ?? (context.jamId === SEEDED_DEMO_CONTEXT.jamId ? "Campus Walk (seeded backup)" : "Unknown Huddle");
   const extras = registered.filter((a) => !SCRIPT_IDS.has(a.id) && !DUPLICATES.has(a.id));
   // Map (P3) and health (P4) actions register while that Jam's screens are mounted on this phone.
   const missing = SCRIPT.filter((s) => !demoActions.has(s.id)).length;
@@ -117,7 +117,7 @@ function Panel() {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={type.heading}>Jam being demoed</Text>
+        <Text style={type.heading}>Huddle being demoed</Text>
         <Text style={type.body}>{jamName}</Text>
         <Text style={styles.mono}>{context.jamId}</Text>
         {jams.length > 0 ? (
@@ -133,7 +133,7 @@ function Panel() {
         <Text style={type.heading}>Affected user</Text>
         <Text style={type.caption}>Every demo action targets this person.</Text>
         <View style={styles.chips}>
-          {members.length === 0 ? <Text style={type.caption}>No members found for this Jam.</Text> : null}
+          {members.length === 0 ? <Text style={type.caption}>No members found for this Huddle.</Text> : null}
           {members.map((m) => (
             <Chip key={m.id} label={m.name} selected={m.id === context.affectedUserId} onPress={() => setDemoContext({ affectedUserId: m.id })} />
           ))}
@@ -142,17 +142,17 @@ function Panel() {
 
       {missing > 0 ? (
         <View style={[styles.card, styles.notice]}>
-          <Text style={type.heading}>Open the Jam once</Text>
+          <Text style={type.heading}>Open the Huddle once</Text>
           <Text style={type.body}>
-            {missing === 1 ? "1 step is" : `${missing} steps are`} unavailable because the map and safety tools load with the Jam. Open
-            it, then come back with Settings → Demo this Jam.
+            {missing === 1 ? "1 step is" : `${missing} steps are`} unavailable because the map and safety tools load with the Huddle. Open
+            it, then come back with Settings → Demo this Huddle.
           </Text>
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push({ pathname: "/jam/[jamId]/map", params: { jamId: context.jamId } })}
             style={({ pressed }) => [styles.action, pressed && styles.pressed]}
           >
-            <Text style={styles.actionText}>Open the Jam</Text>
+            <Text style={styles.actionText}>Open the Huddle</Text>
           </Pressable>
         </View>
       ) : null}
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
   chip: { minHeight: 40, paddingHorizontal: space(4), justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border },
   chipSelected: { backgroundColor: colors.navy, borderColor: colors.navy },
   chipText: { color: colors.ink, fontSize: 14 },
-  chipTextSelected: { color: colors.warmWhite, fontWeight: "600" },
+  chipTextSelected: { color: colors.warmWhite, fontFamily: fonts.semibold, fontWeight: "600" },
   actionRow: { gap: space(1) },
   action: {
     minHeight: TAP_TARGET,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: colors.navy,
   },
-  actionText: { color: colors.warmWhite, fontSize: 15, fontWeight: "600" },
+  actionText: { color: colors.warmWhite, fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
   unavailable: { backgroundColor: colors.border },
   unavailableText: { color: colors.inkMuted },
   unavailableTag: { fontSize: 12, color: colors.inkMuted },

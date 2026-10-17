@@ -4,7 +4,7 @@ import { Activity, Map as MapIcon, Settings, Users, type LucideIcon } from "luci
 import { StyleSheet, View, type ColorValue } from "react-native";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
 import { JamIdProvider } from "@/features/jams/JamIdContext";
-import { colors } from "@/theme";
+import { fonts, colors } from "@/theme";
 
 function tabIcon(Glyph: LucideIcon) {
   return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
@@ -29,11 +29,11 @@ export default function JamTabsLayout() {
             headerStyle: { backgroundColor: colors.warmWhite },
             headerShadowVisible: false,
             headerTintColor: colors.brand,
-            headerTitleStyle: { color: colors.ink, fontWeight: "600" },
+            headerTitleStyle: { color: colors.ink, fontFamily: fonts.semibold, fontWeight: "600" },
             tabBarActiveTintColor: colors.brand,
             tabBarInactiveTintColor: colors.inkFaint,
             tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-            tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+            tabBarLabelStyle: { fontSize: 11, fontFamily: fonts.semibold, fontWeight: "600" },
           }}
         >
           <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: tabIcon(MapIcon) }} />

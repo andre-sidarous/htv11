@@ -98,7 +98,7 @@ export async function respond(alertId: string, kind: AlertResponseKind): Promise
  * alert_updated and pauses escalation).
  */
 export async function acknowledgeAlert(alert: SafetyAlert): Promise<{ error: string | null; updated: SafetyAlert | null }> {
-  if (!getSupabaseClient()) return { error: "Jam isn't connected.", updated: null };
+  if (!getSupabaseClient()) return { error: "Huddle isn't connected.", updated: null };
   const error = (await respond(alert.id, "acknowledged")) ?? (await respond(alert.id, "responding"));
   if (error) return { error, updated: null };
   const row = await refreshAlert(alert.id);
@@ -109,7 +109,7 @@ export async function acknowledgeAlert(alert: SafetyAlert): Promise<{ error: str
 
 /** "Mark safe": resolves the alert for everyone through P4's RESOLVE transition. */
 export async function resolveAlert(alertId: string): Promise<{ error: string | null; updated: SafetyAlert | null }> {
-  if (!getSupabaseClient()) return { error: "Jam isn't connected.", updated: null };
+  if (!getSupabaseClient()) return { error: "Huddle isn't connected.", updated: null };
   await respond(alertId, "safe");
   const row = await refreshAlert(alertId);
   if (!row) return { error: "Couldn't find this alert. Pull to refresh and try again.", updated: null };

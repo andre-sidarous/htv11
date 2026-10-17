@@ -18,14 +18,14 @@ export function escalationLine(state: EscalationState, name: string): string {
   switch (state) {
     case "MONITORING":
     case "CHECK_IN_SENT":
-      return `Jam noticed a combination of changes and is checking in with ${name}.`;
+      return `Huddle noticed a combination of changes and is checking in with ${name}.`;
     case "GROUP_ALERT_SENT":
-      return `${name} hasn't answered Jam's check-in. Your group has been notified.`;
+      return `${name} hasn't answered Huddle's check-in. Your group has been notified.`;
     case "GROUP_MEMBER_ACKNOWLEDGED":
       return "Someone in your group is helping.";
     case "AI_CALL_STARTING":
     case "AI_CALL_ACTIVE":
-      return `Jam's support call with ${name} is active.`;
+      return `Huddle's support call with ${name} is active.`;
     case "AI_CALL_USER_RESPONDED":
     case "USER_RESPONDED":
       return `${name} responded.`;

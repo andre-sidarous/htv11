@@ -10,7 +10,7 @@ import { campusWalk } from "@/lib/demo/campusWalk";
 import { isSupabaseConfigured, mockServicesEnabled } from "@/lib/env";
 import type { LocationUpdate } from "@/lib/types";
 import { realtimeService } from "@/services";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 
 /**
  * Developer check screen: verifies realtime, the map, and the demo registry.
@@ -123,8 +123,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
   },
   dim: { opacity: 0.6 },
-  buttonText: { color: colors.warmWhite, fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.warmWhite, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
   mono: { fontFamily: "monospace", fontSize: 12, color: colors.ink },
   link: { minHeight: TAP_TARGET, justifyContent: "center" },
-  linkText: { color: colors.navy, fontSize: 16, fontWeight: "600", textDecorationLine: "underline" },
+  linkText: { color: colors.navy, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600", textDecorationLine: "underline" },
 });

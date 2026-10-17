@@ -1,6 +1,8 @@
-# Jam
+# Huddle
 
-A native mobile app for students, tourists, and friends travelling together. Create or join a private Jam, share live location, set a destination, and get support if someone becomes lost, separated, or unresponsive.
+*Your journey, connected.* A native mobile app for students, tourists, and friends travelling together. Create or join a private Huddle, share live location, set a destination, and get support if someone becomes lost, separated, or unresponsive.
+
+> Formerly **Jam**: code, routes, tables, and ids still use `jam` (see "Naming" in CLAUDE.md).
 
 **Stack:** Expo SDK 57 (React Native, Expo Router), run in **Expo Go** · TypeScript · Supabase (Auth, Postgres + RLS, Realtime, Storage, Edge Functions) · react-native-maps · expo-location / speech / audio / camera · Zod · Vitest
 

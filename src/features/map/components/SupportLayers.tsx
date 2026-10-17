@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Circle, Marker, Polyline } from "react-native-maps";
 import { toMapCoord } from "@/components/map/JamMapView";
 import type { SupportPoint } from "@/lib/types";
-import { colors } from "@/theme";
+import { fonts, colors } from "@/theme";
 import type { TransitDisruption, TransitLine, TransitStop } from "../civicData";
 
 export const CATEGORY_STYLE: Record<SupportPoint["category"], { glyph: string; color: string; label: string }> = {
@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   pinHighlighted: { width: 28, height: 28, borderRadius: 14, borderColor: colors.amber },
   closed: { opacity: 0.55 },
-  glyph: { color: colors.surface, fontSize: 11, fontWeight: "700" },
+  glyph: { color: colors.surface, fontSize: 11, fontFamily: fonts.bold, fontWeight: "700" },
   stopDot: {
     width: 8,
     height: 8,
@@ -154,5 +154,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.surface,
   },
-  disruptionGlyph: { color: colors.navy, fontWeight: "800", fontSize: 14 },
+  disruptionGlyph: { color: colors.navy, fontFamily: fonts.bold, fontWeight: "800", fontSize: 14 },
 });

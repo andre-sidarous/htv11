@@ -28,16 +28,16 @@ export function SharingBar({ sharing }: { sharing: LocationSharing }) {
       label = "Finding your location…";
       break;
     case "background":
-      label = "Sharing stops while Jam is in the background";
+      label = "Sharing stops while Huddle is in the background";
       break;
     case "jam_not_active":
-      label = "Sharing starts when the Jam starts";
+      label = "Sharing starts when the Huddle starts";
       break;
     case "no_consent":
-      label = "Location sharing is off for this Jam";
+      label = "Location sharing is off for this Huddle";
       break;
     case "left":
-      label = "You left this Jam · not sharing";
+      label = "You left this Huddle · not sharing";
       break;
     case "checking":
       label = "Checking location permission…";
@@ -60,7 +60,7 @@ export function SharingBar({ sharing }: { sharing: LocationSharing }) {
         ) : null}
       </View>
       {state === "paused" ? (
-        <Text style={type.caption}>Your location is paused. Other Jam members cannot see your current position.</Text>
+        <Text style={type.caption}>Your location is paused. Other Huddle members cannot see your current position.</Text>
       ) : null}
       {live && lastAccuracy !== null && lastAccuracy > POOR_ACCURACY_M ? (
         <Text style={type.caption}>Low GPS accuracy (about {Math.round(lastAccuracy)} m). Your marker may be approximate.</Text>

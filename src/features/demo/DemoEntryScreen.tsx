@@ -48,14 +48,14 @@ export function DemoEntryScreen() {
       <Text style={type.title}>Demo Mode</Text>
 
       <Card>
-        <Text style={type.heading}>Demo this Jam</Text>
+        <Text style={type.heading}>Demo this Huddle</Text>
         <Text style={type.caption}>
-          Pick the Jam you’re running live, then choose who’s “affected” in the Demo Control panel.
+          Pick the Huddle you’re running live, then choose who’s “affected” in the Demo Control panel.
         </Text>
         {jamsLoading ? (
-          <Text style={type.body}>Loading your Jams…</Text>
+          <Text style={type.body}>Loading your Huddles…</Text>
         ) : active.length === 0 ? (
-          <Text style={type.body}>No active Jam yet — create or join one first.</Text>
+          <Text style={type.body}>No active Huddle yet — create or join one first.</Text>
         ) : (
           active.map((pair) => (
             <Button

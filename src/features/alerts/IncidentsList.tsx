@@ -9,7 +9,7 @@ import { SessionGate } from "./SessionGate";
 
 const ROLE_LABEL: Record<IncidentSummary["role"], string> = {
   self: "About you",
-  member: "From your Jam",
+  member: "From your Huddle",
   contact: "You're their trusted contact",
 };
 

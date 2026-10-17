@@ -32,11 +32,11 @@ export const supabaseNotificationService: NotificationService = {
       contactId: c.id,
       to: c.phone_number ?? "(no phone number)",
       body: [
-        `Jam alert: ${name} may need support. They stopped responding to their group and to Jam's support call.`,
+        `Huddle alert: ${name} may need support. They stopped responding to their group and to Huddle's support call.`,
         c.receive_location ? "Last seen: <place> (<n> min ago): <map link>" : null,
-        c.receive_health_summary ? "Jam noticed: <reasons>." : null,
+        c.receive_health_summary ? "Huddle noticed: <reasons>." : null,
         c.receive_recording ? "Support call recording (link expires in 24 hours): <link>" : null,
-        `Try to reach ${name}. If they are in immediate danger, call 911. Jam is not an emergency service.`,
+        `Try to reach ${name}. If they are in immediate danger, call 911. Huddle is not an emergency service.`,
       ]
         .filter(Boolean)
         .join("\n"),

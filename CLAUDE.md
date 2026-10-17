@@ -1,12 +1,14 @@
 # CLAUDE.md
 
-## What Jam is
+## What Huddle is
 
-Jam is a native mobile app (**Expo SDK 57 + Expo Router**, run in **Expo Go**) for students, tourists, and friends travelling together. A group creates or joins a private **Jam**, shares live location while it's active, and sets a destination. If someone may need support, Jam responds calmly and in steps: it checks in with them, then tells the group, then calls them, and only then reaches their trusted contacts.
+Huddle is a native mobile app (**Expo SDK 57 + Expo Router**, run in **Expo Go**) for students, tourists, and friends travelling together. A group creates or joins a private **Huddle**, shares live location while it's active, and sets a destination. If someone may need support, Huddle responds calmly and in steps: it checks in with them, then tells the group, then calls them, and only then reaches their trusted contacts.
 
-The core promise is **consent-first, calm support**. Nothing is shared, recorded, or sent to a contact without that person's consent. Jam never diagnoses, never labels places as safe or unsafe, and never pretends to be emergency services. The backend is Supabase (Auth, Postgres + RLS, Realtime Broadcast, Storage, Edge Functions on Deno). The demo scenario is the **Campus Walk** (UofT Bahen Centre → St. George Station). It's a 36-hour hackathon build by five people (P1–P5), so keep changes small and mergeable.
+The core promise is **consent-first, calm support**. Nothing is shared, recorded, or sent to a contact without that person's consent. Huddle never diagnoses, never labels places as safe or unsafe, and never pretends to be emergency services. The backend is Supabase (Auth, Postgres + RLS, Realtime Broadcast, Storage, Edge Functions on Deno). The demo scenario is the **Campus Walk** (UofT Bahen Centre → St. George Station). It's a 36-hour hackathon build by five people (P1–P5), so keep changes small and mergeable.
 
-The product is built around three core features. Everything else (onboarding, Jams, the map) supports them.
+**Naming:** the app was called **Jam** during the hackathon and is now **Huddle**. Only user-facing copy changed. Code identifiers, file names, routes (`/jam/[jamId]`), tables (`jams`, `jam_members`), realtime channels (`jam:{jamId}`), the deep-link scheme (`jam://`), the app slug, the bundle/package ids (`com.htv11.jam`), and the demo emails (`*@jam.demo`) still say `jam` on purpose: renaming them would break the database, existing links and QR codes, installs, and EAS Update. In code, "a Jam" and "a Huddle" mean the same thing. Write "Huddle" in any text a person sees or hears, including Edge Function call and text copy.
+
+The product is built around three core features. Everything else (onboarding, Huddles, the map) supports them.
 
 | Feature | One line | Owner |
 |---|---|---|
@@ -18,12 +20,12 @@ The product is built around three core features. Everything else (onboarding, Ja
 
 ## Lifeline: automatic AI support
 
-**Purpose:** when a member may need support and their group hasn't answered, Jam calls them by itself. The call keeps them company, tells them how to get to their destination or the nearest public place, and listens for any sign they're okay. If they stay silent, it brings in their trusted contacts.
+**Purpose:** when a member may need support and their group hasn't answered, Huddle calls them by itself. The call keeps them company, tells them how to get to their destination or the nearest public place, and listens for any sign they're okay. If they stay silent, it brings in their trusted contacts.
 
 **Use cases**
-- *Unresponsive after a group alert:* Alex's heart rate spiked and he drifted 400 m off route. He didn't answer the check-in and nobody in the group acknowledged, so Jam rings his phone.
+- *Unresponsive after a group alert:* Alex's heart rate spiked and he drifted 400 m off route. He didn't answer the check-in and nobody in the group acknowledged, so Huddle rings his phone.
 - *Lost:* the person answers "I'm lost" or "where am I?". Lifeline gives the next walking direction ("Head east for about 400 metres to Robarts Library") and names nearby public places.
-- *Twilio phone call vs. in-app call:* with Twilio configured and a phone number on their profile, Jam places a **real phone call**. Otherwise (no number, Twilio unset, or the call fails) the person's app runs the **in-app spoken call**, with the same script and guidance read aloud and shown on screen.
+- *Twilio phone call vs. in-app call:* with Twilio configured and a phone number on their profile, Huddle places a **real phone call**. Otherwise (no number, Twilio unset, or the call fails) the person's app runs the **in-app spoken call**, with the same script and guidance read aloud and shown on screen.
 - *Contact-only preference:* people who chose `contact_only_alert`, or didn't give `ai_call_consent`, never get the call. The escalation goes straight to their contacts.
 
 **How it works**
@@ -59,7 +61,7 @@ The product is built around three core features. Everything else (onboarding, Ja
 **Use cases**
 - *Drifting or a health change:* Pulse's score reaches the check-in threshold, and the affected person sees **"Are you okay?"** (`CheckInOverlay.tsx`, with haptics). The options are *I'm okay*, *I changed my destination*, *I'm lost*, *I need help*, and *I cannot respond*. "I'm okay" and "I changed my destination" end it; any other answer alerts the group straight away.
 - *Manual check-in:* anyone taps **Check in with group** on the Group tab, which broadcasts `checkin_requested` with reason `group_manual`.
-- *No answer:* every other member gets an in-app card, **"Alex may need support."**, with reasons, last known location, and buttons: *I'm going to help*, *Open map*, *Join call*, *View incident*, *Mark safe*. The Jam's ntfy topic gets a fixed push message.
+- *No answer:* every other member gets an in-app card, **"Alex may need support."**, with reasons, last known location, and buttons: *I'm going to help*, *Open map*, *Join call*, *View incident*, *Mark safe*. The Huddle's ntfy topic gets a fixed push message.
 - *Nobody acknowledges:* Lifeline calls the person. If they stay silent, their **trusted contacts are phoned and texted** and an **incident package** is created.
 - *Every phone closed:* deadlines live in the database, and the `advance-alert` Edge Function plus `escalateToContacts` finish the job on the server.
 - *Contact-only preference:* the AI call is skipped and the escalation goes group → contacts.
@@ -75,18 +77,18 @@ MONITORING → CHECK_IN_SENT ──check-in timeout──► GROUP_ALERT_SENT �
 ```
 
 **Timers**
-- **Check-in timeout:** the Jam's `checkin_delay_seconds`.
-- **Group timeout:** the Jam's `group_response_timeout_seconds`.
+- **Check-in timeout:** the Huddle's `checkin_delay_seconds`.
+- **Group timeout:** the Huddle's `group_response_timeout_seconds`.
 - **AI call silence:** `AI_CALL_SILENCE_TIMEOUT_MS` = 10 s.
 - **Demo Mode check-in:** `DEMO_CHECKIN_TIMEOUT_MS` = 12 s.
-- **Known gap:** people also pick a personal `profiles.checkin_buffer_seconds` (30–1800 s, default 120) at sign-up and in Settings, and the docs say it drives the check-in timeout. The escalation code doesn't read it yet; it uses the Jam's `checkin_delay_seconds`.
+- **Known gap:** people also pick a personal `profiles.checkin_buffer_seconds` (30–1800 s, default 120) at sign-up and in Settings, and the docs say it drives the check-in timeout. The escalation code doesn't read it yet; it uses the Huddle's `checkin_delay_seconds`.
 
 **What runs where**
-- **On the affected phone:** `useSafetyEngine` (mounted by `CheckInOverlay` on every Jam tab) scores risk and opens the alert with `createCheckInAlert`. Only **one open alert per member per Jam** is allowed; a duplicate insert returns `23505`, which counts as a no-op.
+- **On the affected phone:** `useSafetyEngine` (mounted by `CheckInOverlay` on every Huddle tab) scores risk and opens the alert with `createCheckInAlert`. Only **one open alert per member per Huddle** is allowed; a duplicate insert returns `23505`, which counts as a no-op.
 - **Changing an alert:** every change goes through `alertActions.ts` (`dispatchAlertEvent`, compare-and-set on `escalation_state`). The phone that wins broadcasts `alert_updated` and runs that step's side effects (`notifyGroup`, `startAiPhoneCall`, `notifyContacts`). P5 acknowledges with `dispatchAlertEvent(alert, { type: "GROUP_ACK" })`.
 - **Timers:** any member's phone calls `advance-alert` when `alerts.next_deadline_at` passes. It's idempotent: it only advances when the deadline is due, and only once.
 - **Group alert cards:** `src/features/alerts/AlertOverlay.tsx`. Statuses go New → Seen → Acknowledged → Responding → Resolved, backed by `alert_responses` (unique per user/kind). The cards re-read open alerts on load, so a reloaded app recovers. Broadcasts carry ids and states only (`reasons: []`); reasons are re-read through RLS.
-- **ntfy** (`notify-ntfy`): only the fixed `NTFY_MESSAGE` ("A Jam member may need support…") goes to the Jam's random `ntfy_topic`. Every attempt is logged in `notification_events`, and the in-app alert is the fallback.
+- **ntfy** (`notify-ntfy`): only the fixed `NTFY_MESSAGE` ("A Huddle member may need support…") goes to the Huddle's random `ntfy_topic`. Every attempt is logged in `notification_events`, and the in-app alert is the fallback.
 
 **Trusted contacts** (`src/features/contacts/`, route `/contacts`)
 - **Fields:** name, relationship, phone (E.164), optional email, `confirmation_status` (pending / confirmed / declined), and three toggles, **all off by default**: `receive_location`, `receive_health_summary`, `receive_recording`.
@@ -111,7 +113,7 @@ It's idempotent: a contact already called or texted for an alert is skipped. Pho
 
 ## Pulse: health signals and risk
 
-**Purpose:** decide *when* Jam should check in, from a combination of signals, with reasons a person can read. Pulse is a **simulated wearable** plus a **deterministic, explainable points system**. It flags a *possible* need for support. It is **not machine learning**, and it never diagnoses illness, intoxication, assault, or danger. The UI always says "Simulated wearable data."
+**Purpose:** decide *when* Huddle should check in, from a combination of signals, with reasons a person can read. Pulse is a **simulated wearable** plus a **deterministic, explainable points system**. It flags a *possible* need for support. It is **not machine learning**, and it never diagnoses illness, intoxication, assault, or danger. The UI always says "Simulated wearable data."
 
 **Use cases**
 - *Heart-rate spike:* 145 BPM against a 75 BPM baseline → "Heart rate is 93% above personal baseline."
@@ -158,13 +160,22 @@ It's idempotent: a contact already called or texted for an alert is skipped. Pho
 
 ## Supporting systems (brief)
 
-- **Onboarding and Jams (P2):** welcome / email-code / demo-account sign-in → profile → consent (all five consents off by default, emergency preference actively chosen) → baseline. Then create a Jam (the Campus Walk preset), join by code or QR (`join_jam`; running Jams can still be joined, ended ones can't), lobby, and the active-Jam tabs **Map / Group / Signals / Settings**. Group and the lobby show the invite card (code, QR, Share). See `src/features/{auth,jams}/`.
+- **Onboarding and Huddles (P2):** welcome / email-code / demo-account sign-in → profile → consent (all five consents off by default, emergency preference actively chosen) → baseline. Then create a Huddle (the Campus Walk preset), join by code or QR (`join_jam`; running Huddles can still be joined, ended ones can't), lobby, and the active-Huddle tabs **Map / Group / Signals / Settings**. Group and the lobby show the invite card (code, QR, Share). See `src/features/{auth,jams}/`.
 - **Map, live location, Toronto data (P3):** `JamMapScreen` shows members live over `jam:{jamId}`, routes (OSRM with a demo-route fallback), route deviation (100 / 200 / 350 m), Toronto Open Data support points, `getRouteRecommendation()`, and `getSpokenGuidance()` for Lifeline. `useLocationSharing` broadcasts every ~4 s and upserts `live_locations` at most every 10 s or after a 10 m move. Presence goes stale at 30 s and offline at 60 s, and staleness never means danger. See `src/features/{map,location}/README.md`.
-- **Demo Mode:** `/demo-control` is the **only** demo panel (P5). Actions register in `src/features/demo/demoActions.ts` and read `getDemoContext()` (`{ jamId, affectedUserId }`) at run time. They run on the tapping phone, so they must **broadcast** to affect other phones. **Reset demo** (`demo-reset`, host only) clears one Jam's alerts, incidents, notifications, health signals, and live locations.
+- **Demo Mode:** `/demo-control` is the **only** demo panel (P5). Actions register in `src/features/demo/demoActions.ts` and read `getDemoContext()` (`{ jamId, affectedUserId }`) at run time. They run on the tapping phone, so they must **broadcast** to affect other phones. **Reset demo** (`demo-reset`, host only) clears one Huddle's alerts, incidents, notifications, health signals, and live locations.
 
 ## Design system (use this for every new screen)
 
-Jam should feel **safe, confident, sophisticated, approachable**: Apple Find My / Apple Health / Linear, not a hospital dashboard, a dispatch console, or a soft wellness app. Tokens live in `src/theme/index.ts`; components in `src/components/ui/` (import from `@/components/ui`). Never hardcode a hex in a screen; add a token instead.
+Huddle should feel **safe, confident, sophisticated, approachable**: Apple Find My / Apple Health / Linear, not a hospital dashboard, a dispatch console, or a soft wellness app. Tokens live in `src/theme/index.ts`; components in `src/components/ui/` (import from `@/components/ui`). Never hardcode a hex in a screen; add a token instead.
+
+**Brand:** **Huddle**, tagline "Your journey, connected." (`APP_NAME`, `APP_TAGLINE` in `src/lib/constants`). The mascot is **Pico**, a burgundy penguin in a scarf.
+- **Components** (`src/components/brand`, import from `@/components/brand`):
+  - `<Pico mood size />` is decorative by default; pass `accessibilityLabel` only when it carries meaning.
+  - `<HuddleLogo size tagline align />` sets "Huddle" in Inter Bold burgundy until the wordmark artwork (the penguin "u") is ready. Swap the art in **only** that component.
+- **Moods:** `default | wave | happy | concerned | waiting | walking`. Only the default pose exists today, so every mood maps to `assets/brand/pico.png` in `brandAssets.ts`. Add expression art there and nothing else changes. Pico is always calm: gently concerned at most, never scared or alarmed.
+- **Where Pico appears:** Welcome (wave, plus logo and tagline), the Home header, `LoadingState` (waiting), `EmptyState mascot`, the lobby wait, and the check-in sheet (concerned).
+- **App icon and splash** (`app.json`): `assets/brand/icon.png` (Pico on blush, opaque 1024²), `adaptive-icon.png` (Android foreground, safe-zone padded, blush background), and the splash (`pico.png` on ivory). Expo Go shows its own icon, so check the real icon in a dev build or EAS Update.
+- **Type:** **Inter** (`@expo-google-fonts/inter`, loaded in `src/app/_layout.tsx` while the splash stays up). Use `type.*`, or pair any `fontWeight` with its family (`fonts.regular | medium | semibold | bold`). Android ignores `fontWeight` for custom fonts.
 
 **Palette** (~70% neutrals, ~20% burgundy, ~10% pastels/status):
 
@@ -219,7 +230,7 @@ npm run publish:demo        # EAS Update to the "demo" branch (needs the Expo pr
 
 Install native modules only with `npx expo install <pkg>`, and only modules that ship in Expo Go.
 
-**Live smoke tests** against the shared Supabase project: use the seeded demo accounts (`host@`, `member@`, `affected@`, `contact@jam.demo`, password `jam-demo-1234`, see `supabase/seed.sql`) in a **throwaway Jam**, never the seeded Campus Walk Jam, and clean up with `demo-reset`. **Never** call `ai-phone-call`, `call-contacts`, or `test-call`, and never let an alert advance past `GROUP_ALERT_SENT`: those steps ring and text real phones through Twilio.
+**Live smoke tests** against the shared Supabase project: use the seeded demo accounts (`host@`, `member@`, `affected@`, `contact@jam.demo`, password `jam-demo-1234`, see `supabase/seed.sql`) in a **throwaway Huddle**, never the seeded Campus Walk Huddle, and clean up with `demo-reset`. **Never** call `ai-phone-call`, `call-contacts`, or `test-call`, and never let an alert advance past `GROUP_ALERT_SENT`: those steps ring and text real phones through Twilio.
 
 ## Layout
 
@@ -227,7 +238,7 @@ Install native modules only with `npx expo install <pkg>`, and only modules that
 src/app/                 Expo Router routes. Keep them THIN: they render a screen from src/features
   (auth)/                welcome, profile, consent, baseline
   jam/[jamId]/(tabs)/    map, group, signals, settings (+ JamOverlayHost, keep-awake in _layout)
-  jam/[jamId]/lobby, support-call · incident/[token] · incidents · contacts · notifications · demo-control · data-sources · dev
+  jam/[jamId]/lobby, chat, support-call · solo · incident/[token] · incidents · contacts · notifications · demo-control · data-sources · dev
 src/features/<area>/     screens + logic per owner; each has a README.md with the details
   auth, jams (P2) · map, location (P3) · health, ai (P4) · alerts, contacts (P5) · demo (shared registry)
 src/components/          JamMapView, JamOverlayHost (P4/P5 overlays), ui/ (Button, Card, Badge, Screen, States…)
@@ -245,8 +256,8 @@ supabase/functions/      Edge Functions + _shared/ (Deno; can't import from src/
 
 ## Architecture essentials
 
-- **Realtime:** one Broadcast channel per Jam, `jam:{jamId}`. Use `const ch = useJamChannel(jamId); useJamEvent(ch, "location_update", fn)`. Events: `location_update`, `member_status`, `health_update`, `alert_created`, `alert_updated`, `checkin_requested`, `ai_call_state`, `incident_created`. Delivery includes your own messages (`self: true`), so filter by `userId`. Channels are public-but-unguessable, so broadcasts carry **ids and states only**: no phone numbers, health history, recordings, or alert reasons.
-- **`postgres_changes` covers only `jams`, `jam_members`, `alerts`, `alert_responses`** (the `supabase_realtime` publication). `live_locations` and `health_signals` are NOT published. Use the broadcasts plus a periodic re-read (see `src/features/jams/useLiveLocations.ts`).
+- **Realtime:** one Broadcast channel per Huddle, `jam:{jamId}`. Use `const ch = useJamChannel(jamId); useJamEvent(ch, "location_update", fn)`. Events: `location_update`, `member_status`, `health_update`, `alert_created`, `alert_updated`, `checkin_requested`, `ai_call_state`, `incident_created`. Delivery includes your own messages (`self: true`), so filter by `userId`. Channels are public-but-unguessable, so broadcasts carry **ids and states only**: no phone numbers, health history, recordings, or alert reasons.
+- **`postgres_changes` covers only `jams`, `jam_members`, `alerts`, `alert_responses`, `chat_messages`** (the `supabase_realtime` publication). `live_locations` and `health_signals` are NOT published. Use the broadcasts plus a periodic re-read (see `src/features/jams/useLiveLocations.ts`).
 - **Timers survive closed phones:** there's no server scheduler. Deadlines live in `alerts.next_deadline_at`, and any member's open app calls `advance-alert` when one passes.
 - **Civic data:** Toronto Open Data + OSM, preprocessed into `src/features/map/data/*.json` and imported statically. To regenerate, run `node src/features/map/data/extract/extract-toronto.mjs <cache-dir-outside-repo>`, then `server-support-points.mjs` (writes `supabase/functions/_shared/support-points.json`, used by the Lifeline phone call).
 

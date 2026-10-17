@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { colors, radius, space, TAP_TARGET } from "@/theme";
+import { fonts, colors, radius, space, TAP_TARGET } from "@/theme";
 
 /** Small map-local controls. If P2's shared `@/components/ui` primitives land, these can switch over. */
 
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
   secondary: { backgroundColor: colors.sky },
   quiet: { backgroundColor: "transparent", paddingHorizontal: space(3) },
   pressed: { opacity: 0.75 },
-  label: { fontSize: 15, fontWeight: "600" },
+  label: { fontSize: 15, fontFamily: fonts.semibold, fontWeight: "600" },
   labelPrimary: { color: colors.warmWhite },
   labelSecondary: { color: colors.navy },
   badge: {
@@ -63,5 +63,5 @@ const styles = StyleSheet.create({
   },
   badgeAttention: { backgroundColor: colors.amberSoft },
   badgeOk: { backgroundColor: colors.okSoft },
-  badgeText: { fontSize: 12, fontWeight: "600", color: colors.navy },
+  badgeText: { fontSize: 12, fontFamily: fonts.semibold, fontWeight: "600", color: colors.navy },
 });

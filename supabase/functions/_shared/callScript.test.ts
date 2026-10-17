@@ -6,7 +6,7 @@ Deno.test("message includes only what the contact may receive", () => {
   const bare = buildCallMessage({ contactName: "Sam", personName: "Alex" });
   assertStringIncludes(bare, "Alex may need support");
   assert(!bare.includes("location"), "no location without permission");
-  assert(!bare.includes("Jam noticed"), "no reasons without permission");
+  assert(!bare.includes("Huddle noticed"), "no reasons without permission");
 
   const full = buildCallMessage({
     contactName: "Sam",
@@ -15,7 +15,7 @@ Deno.test("message includes only what the contact may receive", () => {
     reasons: ["Heart rate is 93% above personal baseline.", "Unexpected running detected.", "Third reason."],
   });
   assertStringIncludes(full, "Their last known location was near Robarts Library, St. George Street.");
-  assertStringIncludes(full, "Jam noticed: Heart rate is 93% above personal baseline, and Unexpected running detected.");
+  assertStringIncludes(full, "Huddle noticed: Heart rate is 93% above personal baseline, and Unexpected running detected.");
   assert(!full.includes("Third reason"), "at most two reasons");
   assertStringIncludes(full, "call 9 1 1");
 });
@@ -58,7 +58,7 @@ Deno.test("text includes only what the contact may receive", () => {
     recordingUrl: "https://example.supabase.co/storage/v1/object/sign/recordings/u/a.m4a?token=x",
   });
   assertStringIncludes(full, "Last seen near Robarts Library (2 min ago): https://maps.google.com/?q=43.66451,-79.39988");
-  assertStringIncludes(full, "Jam noticed: Unexpected running detected.");
+  assertStringIncludes(full, "Huddle noticed: Unexpected running detected.");
   assertStringIncludes(full, "recording (link expires in 24 hours)");
   assertStringIncludes(full, "call 911");
 });
