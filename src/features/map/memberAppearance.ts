@@ -1,8 +1,23 @@
 import type { MemberPresence } from "@/lib/types";
 import { colors } from "@/theme";
 
-/** Friendly member colours (no red: that's reserved for confirmed escalation). */
-const PROFILE_COLORS = ["#3b6ea5", "#2f8a5b", "#8a5bb5", "#b9772a", "#2c8a8a", "#a8557d", "#5a6fb5", "#6b8a2f"];
+/**
+ * Friendly member colours (no red: that's reserved for confirmed escalation). Chosen for strong
+ * separation from each other at small marker size, not just distinct hues — the previous palette
+ * had several muted blue/teal tones that read as "the same colour" at a glance on the map.
+ */
+const PROFILE_COLORS = [
+  "#2563EB", // blue
+  "#059669", // emerald
+  "#7C3AED", // violet
+  "#D97706", // amber
+  "#DB2777", // pink
+  "#0891B2", // cyan
+  "#65A30D", // lime
+  "#EA580C", // orange
+  "#9333EA", // purple
+  "#0D9488", // teal
+];
 
 /** Stable colour per user id. */
 export function profileColor(userId: string): string {

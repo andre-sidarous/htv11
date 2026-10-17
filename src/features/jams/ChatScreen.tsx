@@ -56,8 +56,8 @@ export function ChatScreen({ jamId }: { jamId: string }) {
     if (messages.length > 0) requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
   }, [messages.length]);
 
-  async function handleSend() {
-    const text = draft.trim();
+  async function handleSend(overrideText?: string) {
+    const text = (overrideText ?? draft).trim();
     if (!text || sending) return;
     setSending(true);
     setSendError(null);
@@ -68,6 +68,18 @@ export function ChatScreen({ jamId }: { jamId: string }) {
       return;
     }
     setDraft("");
+  }
+
+  /** The return key inserts "\n" into a multiline TextInput — treat that as "send" instead of a
+   * line break, so Enter sends like a normal chat app (the device's send button is often hidden
+   * behind the keyboard, so this is the main way people will actually send a message). */
+  function handleChangeText(value: string) {
+    if (value.endsWith("\n")) {
+      void handleSend(value.slice(0, -1));
+      return;
+    }
+    setSendError(null);
+    setDraft(value);
   }
 
   function renderItem({ item, index }: ListRenderItemInfo<ChatMessageRow>) {
@@ -128,7 +140,7 @@ export function ChatScreen({ jamId }: { jamId: string }) {
           <View style={styles.composer}>
             <TextInput
               value={draft}
-              onChangeText={setDraft}
+              onChangeText={handleChangeText}
               placeholder="Message your Huddle"
               placeholderTextColor={colors.inkFaint}
               multiline
