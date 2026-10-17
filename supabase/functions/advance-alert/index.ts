@@ -4,7 +4,14 @@
 // passes; this is how timers survive the affected phone closing. Safe to call repeatedly: it only
 // advances when the deadline is due, and the update is compare-and-set on escalation_state.
 //
-// P4 owns the transition logic (see TODO).
+// P4 owns the transition logic (see TODO). Order and deadlines (next_deadline_at):
+//   CHECK_IN_SENT     + profiles.checkin_buffer_seconds (the person's own, set at sign-up)  -> GROUP_ALERT_SENT (in-app + ntfy)
+//   GROUP_ALERT_SENT  + jams.group_response_timeout_seconds, nobody acknowledged             -> AI_CALL_STARTING
+//                     (contact_only_alert or no ai_call_consent skips straight to CONTACTS_NOTIFIED)
+//   AI_CALL_ACTIVE    + AI_CALL_SILENCE_TIMEOUT_S; the affected phone pushes the deadline out
+//                     whenever the person speaks or taps, so it only fires after 45s of silence  -> CONTACTS_NOTIFIED
+//   The person answering at any point -> USER_RESPONDED / AI_CALL_USER_RESPONDED; a member acknowledging the
+//   group alert -> GROUP_MEMBER_ACKNOWLEDGED.
 import { TERMINAL_ESCALATION_STATES } from "../_shared/constants.ts";
 import { isUuid, json, requireUser, serve } from "../_shared/supabase.ts";
 
@@ -36,6 +43,12 @@ serve(async (req, body) => {
   //     .update({ escalation_state: next.state, status: next.status, next_deadline_at: next.deadlineAt })
   //     .eq("id", alertId).eq("escalation_state", state).select().maybeSingle();
   //   if (!data) return json({ ok: true, advanced: false, state }); // someone else advanced first
-  // Then the caller broadcasts alert_updated on jam:{jamId}.
+  // When next.state === "CONTACTS_NOTIFIED" (45s of silence on the AI call, or the affected phone stopped
+  // sending heartbeats): run the last step here on the server, so it works even if every app is closed.
+  // It builds the incident package, calls + texts the contacts, and pings the group. Consent and
+  // per-contact toggles are enforced inside; it's idempotent with the affected phone's own call-contacts.
+  //   import { escalateToContacts } from "../_shared/contactEscalation.ts";
+  //   const results = await escalateToContacts(adminClient(), alertId);
+  // Then the caller broadcasts alert_updated (and incident_created with the package id) on jam:{jamId}.
   return json({ ok: true, advanced: false, state, reason: "not_implemented" });
 });

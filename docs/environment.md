@@ -77,6 +77,8 @@ Install native libraries with `npx expo install <pkg>`, **not** `npm install`. T
 | `GEMINI_MODEL` | defaults to `gemini-2.5-flash` |
 | `NTFY_BASE_URL` | `https://ntfy.sh` |
 | `NTFY_TOKEN` | only for a protected or self-hosted ntfy |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | twilio.com/console. Used to phone and text trusted contacts. |
+| `TWILIO_FROM_NUMBER` | your Twilio number in E.164, e.g. `+16475550100`. Trial accounts can only call and text **verified** numbers (Console → Phone Numbers → Verified Caller IDs). |
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are injected into functions automatically, so nobody needs the service-role key locally.
 

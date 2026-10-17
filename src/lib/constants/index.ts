@@ -48,6 +48,19 @@ export const RISK_THRESHOLDS = {
 
 export const DEMO_CHECKIN_TIMEOUT_MS = 12_000;
 
+// ---------- Escalation timing ----------
+// check-in -> (buffer) group alert -> (jams.group_response_timeout_seconds) AI call
+// -> (AI_CALL_SILENCE_TIMEOUT_MS of silence) call contacts + send the incident package
+
+/** Default for profiles.checkin_buffer_seconds. Each person picks theirs at sign-up. */
+export const DEFAULT_CHECKIN_BUFFER_S = 120;
+/** Choices shown at sign-up (seconds). */
+export const CHECKIN_BUFFER_CHOICES_S = [60, 120, 300, 600] as const;
+/** The AI checks in again this often while the call is active. */
+export const AI_CALL_CHECKIN_INTERVAL_MS = 15_000;
+/** No speech or tap from the person for this long during the AI call escalates to contacts. */
+export const AI_CALL_SILENCE_TIMEOUT_MS = 45_000;
+
 // ---------- Escalation ----------
 
 export const TERMINAL_ESCALATION_STATES = ["RESOLVED", "CANCELLED"] as const satisfies readonly EscalationState[];
@@ -69,12 +82,6 @@ export const DEFAULT_CONSENTS: Record<ConsentKey, boolean> = {
   recording_consent: false,
   contact_notify_consent: false,
 };
-
-// ---------- Check-in buffer (profiles.checkin_buffer_seconds) ----------
-
-/** How long an unanswered check-in waits before Jam alerts the group. Chosen in profile setup. */
-export const CHECKIN_BUFFER_CHOICES_S = [60, 120, 300, 600] as const;
-export const DEFAULT_CHECKIN_BUFFER_S = 120;
 
 // ---------- AI support call ----------
 

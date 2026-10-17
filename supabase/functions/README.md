@@ -9,6 +9,8 @@ Our own secrets come from `supabase secrets set` (see `.env.example` in this fol
 | `advance-alert` | P4 | `advanceAlert(alertId)` in `src/lib/supabase/functions.ts` |
 | `ai-support-call` | P4 | `getSupportCallTurn(context, step)` (scripted fallback built in) |
 | `notify-ntfy` | P5 | `notifyNtfy(jamId, alertId)` |
+| `call-contacts` | P5 | Last step: incident package + Twilio call and text to contacts + ntfy to group. `escalateToContacts` is also run by `advance-alert` at CONTACTS_NOTIFIED |
+| `test-call` | P5 | Rings one of your own trusted contacts with a short test message (Contacts screen button) |
 | `incident-access` (to add) | P5 | contact view of `/incident/[token]` |
 | `demo-reset` (to add) | P5 | Demo Control "Reset demo" |
 

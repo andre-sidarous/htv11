@@ -8,6 +8,9 @@ export const mockNotificationService: NotificationService = {
       { channel: "ntfy", status: "skipped", detail: "Mock notification service" },
     ];
   },
+  async notifyContacts() {
+    return [{ channel: "voice_call", status: "skipped", detail: "Mock notification service" }];
+  },
   async previewSms({ contactIds }) {
     return contactIds.map((contactId) => ({
       contactId,
