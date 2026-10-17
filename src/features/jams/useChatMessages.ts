@@ -81,8 +81,18 @@ export function useChatMessages(jamId: string | undefined) {
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
     if (!userId) return "Sign in and try again.";
-    const { error } = await supabase.from("chat_messages").insert({ jam_id: jamId, user_id: userId, body: trimmed });
-    return error?.message ?? null;
+    const { data, error } = await supabase
+      .from("chat_messages")
+      .insert({ jam_id: jamId, user_id: userId, body: trimmed })
+      .select()
+      .single();
+    if (error) return error.message;
+    // Show it right away; the realtime INSERT for the same id is then ignored.
+    if (data && !seenIds.current.has(data.id)) {
+      seenIds.current.add(data.id);
+      setMessages((prev) => [...prev, data as ChatMessageRow]);
+    }
+    return null;
   }
 
   return { messages, loading, error, send, refresh: load };

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Send } from "lucide-react-native";
 import {
   FlatList,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,13 +12,16 @@ import {
   View,
   type ListRenderItemInfo,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Avatar, ErrorState, Icon, LoadingState } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
 import type { ChatMessageRow } from "@/lib/types";
 import { fonts, colors, radius, space, type } from "@/theme";
 import { useChatMessages } from "./useChatMessages";
 import { useJamMembers } from "./useJamMembers";
+
+/** The default stack header ("Chat") above this screen: 44pt on iOS, 56dp on Android, plus the status bar. */
+const HEADER_HEIGHT = Platform.OS === "ios" ? 44 : 56;
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -33,6 +37,15 @@ export function ChatScreen({ jamId }: { jamId: string }) {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const listRef = useRef<FlatList<ChatMessageRow>>(null);
+  const insets = useSafeAreaInsets();
+
+  // Keep the newest message in view when the keyboard opens.
+  useEffect(() => {
+    const sub = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", () =>
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true })),
+    );
+    return () => sub.remove();
+  }, []);
 
   const namesById = useMemo(
     () => new Map(members.map((m) => [m.user_id, m.profile?.display_name ?? "Member"])),
@@ -90,7 +103,9 @@ export function ChatScreen({ jamId }: { jamId: string }) {
 
   return (
     <SafeAreaView style={styles.screen} edges={["bottom", "left", "right"]}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* "padding" on both platforms: SDK 57 Android draws edge-to-edge, so the window no longer
+          resizes for the keyboard and the composer would sit underneath it. */}
+      <KeyboardAvoidingView style={styles.flex} behavior="padding" keyboardVerticalOffset={insets.top + HEADER_HEIGHT}>
         {messages.length === 0 ? (
           <View style={styles.empty}>
             <Text style={type.heading}>No messages yet</Text>
