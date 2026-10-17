@@ -1,3 +1,4 @@
+import { normalizePhone } from "@/features/contacts/schema";
 import { DEFAULT_CHECKIN_BUFFER_S } from "@/lib/constants";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "@/lib/types";
@@ -20,7 +21,8 @@ export async function upsertProfile(input: UpsertProfileInput): Promise<{ profil
     .upsert({
       id: input.id,
       display_name: input.displayName.trim(),
-      phone_number: input.phoneNumber?.trim() ? input.phoneNumber.trim() : null,
+      // E.164 so the live AI call (Twilio) can ring it; keep what they typed if it can't be normalized.
+      phone_number: input.phoneNumber?.trim() ? (normalizePhone(input.phoneNumber) ?? input.phoneNumber.trim()) : null,
       avatar_url: input.avatarUrl ?? null,
       checkin_buffer_seconds: input.checkinBufferSeconds ?? DEFAULT_CHECKIN_BUFFER_S,
     })

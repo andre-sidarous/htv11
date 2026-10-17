@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { campusWalk, toDemoRoute } from "@/lib/demo/campusWalk";
 import type { SupportPoint } from "@/lib/types";
-import { bearingDeg, compassWord, getSpokenGuidance, spokenDistance, spokenStreetName } from "./guidance";
+import { bearingDeg, compassWord, describeSupportNearby, getSpokenGuidance, spokenDistance, spokenStreetName } from "./guidance";
 
 const route = toDemoRoute(campusWalk.plannedRoute);
 const destination = campusWalk.destination;
@@ -37,6 +37,7 @@ describe("getSpokenGuidance off the route (> 200m)", () => {
     expect(result).toEqual({
       guidance: "Head east for about 400 metres to Robarts Library.",
       nearestSupportPoint: "Robarts Library",
+      supportNote: "You're in an area with few public support points. The nearest is Robarts Library, about 400 metres to the east.",
     });
   });
 
@@ -44,7 +45,9 @@ describe("getSpokenGuidance off the route (> 200m)", () => {
     const farPoint: SupportPoint = { id: "far", name: "Far Library", category: "library", latitude: 43.7, longitude: -79.5, source: "test" };
     const result = getSpokenGuidance({ position: offRouteEnd, route, destination, supportPoints: [farPoint] });
     expect(result.guidance).toMatch(/^Head east for about \d+ metres to get back to your route/);
-    expect(result.nearestSupportPoint).toBe("Far Library");
+    // ~5 km away: outside the mapped area, so it's never named.
+    expect(result).not.toHaveProperty("nearestSupportPoint");
+    expect(result).not.toHaveProperty("supportNote");
   });
 
   it("omits nearestSupportPoint when there are none", () => {
@@ -54,11 +57,43 @@ describe("getSpokenGuidance off the route (> 200m)", () => {
   });
 });
 
+describe("describeSupportNearby", () => {
+  const at = (id: string, latitude: number, longitude: number): SupportPoint => ({ id, name: id, category: "library", latitude, longitude, source: "test" });
+  const here = { latitude: 43.66, longitude: -79.4 };
+
+  it("flags an area with few support points and names the nearest", () => {
+    expect(describeSupportNearby(here, [at("Far Library", 43.664, -79.4)])).toBe(
+      "You're in an area with few public support points. The nearest is Far Library, about 450 metres to the north.",
+    );
+  });
+
+  it("just names the nearest when several are close", () => {
+    expect(describeSupportNearby(here, [at("A", 43.6605, -79.4), at("B", 43.661, -79.4)])).toBe(
+      "The nearest public support point is A, about 60 metres to the north.",
+    );
+  });
+
+  it("says nothing when the nearest is outside the mapped area", () => {
+    expect(describeSupportNearby(here, [at("Far away", 43.9, -79.4)])).toBeUndefined();
+  });
+
+  it("says nothing without support points", () => {
+    expect(describeSupportNearby(here, [])).toBeUndefined();
+  });
+});
+
 describe("getSpokenGuidance without a route", () => {
   it("points straight at the destination", () => {
     expect(getSpokenGuidance({ position: campusWalk.start, route: null, destination }).guidance).toBe(
       "Head north for about 1 kilometre toward St. George Station.",
     );
+  });
+
+  it("outside the mapped area: directions only, no far-away support point", () => {
+    const waterloo = { latitude: 43.4723, longitude: -80.5449 };
+    expect(getSpokenGuidance({ position: waterloo, route: null, destination: { latitude: 43.4643, longitude: -80.5204, name: "Uptown" } })).toEqual({
+      guidance: "Head south-east for about 2.2 kilometres toward Uptown.",
+    });
   });
 
   it("falls back to 'your destination' when it has no name", () => {

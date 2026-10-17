@@ -1,5 +1,5 @@
-import { ensureIncidentPackage } from "@/features/ai/incidents";
 import type { AlertRow, EscalationState, RiskEvaluation } from "@/lib/types";
+import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { notificationService } from "@/services/notification";
 import { alertRepository, toSafetyAlert, type AlertPatch } from "./alertRepository";
 import { transition, type EscalationEvent } from "./escalation";
@@ -19,9 +19,24 @@ const INCIDENT_FALLBACK_DELAY_MS = 6_000;
 const entered = (prev: EscalationState, next: AlertRow, ...states: EscalationState[]) =>
   prev !== next.escalation_state && states.includes(next.escalation_state);
 
-async function afterTransition(prevState: EscalationState, next: AlertRow) {
+async function afterTransition(prevState: EscalationState, next: AlertRow, { byServer = false } = {}) {
   safetyStore.putAlert(next);
   await broadcast(next.jam_id, "alert_updated", toSafetyAlert(next));
+
+  // advance-alert already called and texted the contacts when the server made this move. When a phone
+  // made it (AI call silence, demo "Simulate AI non-response"), run the same Twilio step via call-contacts.
+  // It reuses this alert's incident package and skips anyone already called, so repeats are harmless.
+  // advance-alert rings the phone itself when the server makes this move.
+  if (!byServer && entered(prevState, next, "AI_CALL_STARTING")) {
+    void startAiPhoneCall(next.id).catch((error) => console.warn("[alerts] AI phone call failed to start", error));
+  }
+
+  if (!byServer && entered(prevState, next, "CONTACTS_NOTIFIED")) {
+    void notificationService
+      .notifyContacts({ alertId: next.id })
+      .then((results) => results.filter((r) => r.status === "failed").forEach((r) => console.warn("[alerts] contact", r.channel, r.detail)))
+      .catch((error) => console.warn("[alerts] notifyContacts failed", error));
+  }
 
   if (entered(prevState, next, "GROUP_ALERT_SENT", "CONTACTS_NOTIFIED")) {
     void notificationService
@@ -33,7 +48,11 @@ async function afterTransition(prevState: EscalationState, next: AlertRow) {
     const me = await getCurrentUserId();
     if (me && me !== next.affected_user_id) {
       setTimeout(() => {
-        if (!safetyStore.get().incidents[next.id]) void ensureIncidentPackage(next.id).catch(() => {});
+        if (safetyStore.get().incidents[next.id]) return;
+        // Lazy import: incidents.ts imports dispatchAlertEvent from here, so a static import is a require cycle.
+        void import("@/features/ai/incidents")
+          .then(({ ensureIncidentPackage }) => ensureIncidentPackage(next.id))
+          .catch(() => {});
       }, INCIDENT_FALLBACK_DELAY_MS);
     }
   }
@@ -72,7 +91,7 @@ export async function dispatchForUser(jamId: string, userId: string, event: Esca
 export async function advanceDueAlert(alert: AlertRow): Promise<AlertRow | null> {
   const result = await alertRepository.advance(alert.id);
   if (result.advanced && result.alert) {
-    await afterTransition(alert.escalation_state, result.alert);
+    await afterTransition(alert.escalation_state, result.alert, { byServer: true });
     return result.alert;
   }
   await refreshAlert(alert.id);

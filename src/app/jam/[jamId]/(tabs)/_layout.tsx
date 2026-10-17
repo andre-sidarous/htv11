@@ -1,8 +1,16 @@
 import { useKeepAwake } from "expo-keep-awake";
 import { Tabs, useLocalSearchParams } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Activity, Map as MapIcon, Settings, Users, type LucideIcon } from "lucide-react-native";
+import { StyleSheet, View, type ColorValue } from "react-native";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
+import { JamIdProvider } from "@/features/jams/JamIdContext";
 import { colors } from "@/theme";
+
+function tabIcon(Glyph: LucideIcon) {
+  return function TabIcon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Glyph size={22} color={String(color)} strokeWidth={focused ? 2.25 : 1.75} />;
+  };
+}
 
 /**
  * Active-Jam shell: bottom tabs (Map / Group / Signals / Settings) plus the overlay host for
@@ -14,25 +22,28 @@ export default function JamTabsLayout() {
   useKeepAwake();
 
   return (
-    <View style={styles.container}>
-      <Tabs
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.warmWhite },
-          headerShadowVisible: false,
-          headerTintColor: colors.navy,
-          tabBarActiveTintColor: colors.navy,
-          tabBarInactiveTintColor: colors.inkFaint,
-          tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-          tabBarLabelStyle: { fontSize: 12, fontWeight: "600" },
-        }}
-      >
-        <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map" }} />
-        <Tabs.Screen name="group" options={{ title: "Group", tabBarAccessibilityLabel: "Group" }} />
-        <Tabs.Screen name="signals" options={{ title: "Signals", tabBarAccessibilityLabel: "Signals" }} />
-        <Tabs.Screen name="settings" options={{ title: "Settings", tabBarAccessibilityLabel: "Settings" }} />
-      </Tabs>
-      <JamOverlayHost jamId={jamId} />
-    </View>
+    <JamIdProvider jamId={jamId}>
+      <View style={styles.container}>
+        <Tabs
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.warmWhite },
+            headerShadowVisible: false,
+            headerTintColor: colors.brand,
+            headerTitleStyle: { color: colors.ink, fontWeight: "600" },
+            tabBarActiveTintColor: colors.brand,
+            tabBarInactiveTintColor: colors.inkFaint,
+            tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
+            tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+          }}
+        >
+          <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: tabIcon(MapIcon) }} />
+          <Tabs.Screen name="group" options={{ title: "Group", tabBarAccessibilityLabel: "Group", tabBarIcon: tabIcon(Users) }} />
+          <Tabs.Screen name="signals" options={{ title: "Health", tabBarAccessibilityLabel: "Health signals", tabBarIcon: tabIcon(Activity) }} />
+          <Tabs.Screen name="settings" options={{ title: "Settings", tabBarAccessibilityLabel: "Settings", tabBarIcon: tabIcon(Settings) }} />
+        </Tabs>
+        <JamOverlayHost jamId={jamId} />
+      </View>
+    </JamIdProvider>
   );
 }
 

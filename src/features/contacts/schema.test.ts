@@ -38,8 +38,13 @@ describe("validateContact", () => {
     expect(ok.ok && ok.data.phone_number).toBe("+14165550123");
   });
 
-  it("rejects phones without a country code, and junk", () => {
-    for (const phone of ["416 555 0123", "call me"]) {
+  it("treats a 10-digit number as North American (+1)", () => {
+    const result = validateContact({ ...base, phone_number: "416 555 0123" });
+    expect(result.ok && result.data.phone_number).toBe("+14165550123");
+  });
+
+  it("rejects numbers that are too short, and junk", () => {
+    for (const phone of ["555 0123", "call me"]) {
       const bad = validateContact({ ...base, phone_number: phone });
       expect(bad.ok).toBe(false);
       if (!bad.ok) expect(bad.errors.phone_number).toMatch(/country code/);

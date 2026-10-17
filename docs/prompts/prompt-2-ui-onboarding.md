@@ -56,7 +56,7 @@ Separate plain-language toggles for: location sharing, health signals, AI suppor
 
 **Ask for OS permissions here, once, at sign-up**, so nothing ever prompts during an emergency. When a toggle is turned on, request the matching permission right away: location (`Location.requestForegroundPermissionsAsync`), microphone for recording (`requestRecordingPermissionsAsync` from `expo-audio`). Ask for the camera only when someone opens the QR scanner. If a permission is denied, turn the toggle back off and explain calmly how to enable it in Settings. Later, P4 starts the AI call and recording automatically, with no confirmation step, so these permissions must already be granted.
 
-Trusted contacts (P5) are the last step: if the user doesn't answer the check-in, the group doesn't respond, and the user stays silent on the AI support call for 45 seconds, Jam phones their contacts and texts them the last-seen location and summary (Twilio). The trusted-contact notification consent covers that call and text.
+Trusted contacts (P5) are the last step: if the user doesn't answer the check-in, the group doesn't respond, and the user stays silent on the AI support call for 10 seconds, Jam phones their contacts and texts them the last-seen location and summary (Twilio). The trusted-contact notification consent covers that call and text.
 
 Emergency preference (`ai_support_call` or `contact_only_alert`) must be **actively chosen**, with nothing pre-selected. Keep a draft in local state, then persist it to the user's `jam_members` row when they create or join a Jam. RLS lets members update only those columns on their own row.
 

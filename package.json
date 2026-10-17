@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "doctor": "npx expo-doctor",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "publish:demo": "npx eas-cli update --branch demo --environment preview --message \"demo\" --platform ios && npx eas-cli update --branch demo --environment preview --message \"demo\" --platform android"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -33,8 +34,10 @@
     "expo-speech": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
+    "expo-updates": "~57.0.26",
     "expo-web-browser": "~57.0.3",
     "leaflet": "^1.9.4",
+    "lucide-react-native": "^1.59.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-leaflet": "^5.0.0",

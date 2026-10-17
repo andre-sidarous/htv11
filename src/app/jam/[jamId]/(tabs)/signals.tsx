@@ -1,7 +1,6 @@
-import { useLocalSearchParams } from "expo-router";
+import { useJamId } from "@/features/jams/JamIdContext";
 import { SignalsScreen } from "@/features/jams/SignalsScreen";
 
 export default function SignalsTabRoute() {
-  const { jamId } = useLocalSearchParams<{ jamId: string }>();
-  return <SignalsScreen jamId={jamId} />;
+  return <SignalsScreen jamId={useJamId()} />;
 }

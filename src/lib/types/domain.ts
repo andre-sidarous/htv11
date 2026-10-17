@@ -190,6 +190,8 @@ export type AiCallContext = {
   destinationName?: string;
   /** P3's next spoken direction, e.g. "Turn left on Harbord Street, then walk 200 metres". */
   guidance?: string;
+  /** P3's support-area line, e.g. "You're in an area with few public support points. The nearest is …". */
+  supportNote?: string;
 };
 
 export type AiCallTurn = { text: string; source: "gemini" | "scripted"; step: number };

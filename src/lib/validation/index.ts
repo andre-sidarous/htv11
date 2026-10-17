@@ -21,4 +21,5 @@ export const aiCallContextSchema = z.object({
   groupResponded: z.boolean(),
   destinationName: z.string().max(120).optional(),
   guidance: z.string().max(300).optional(),
+  supportNote: z.string().max(300).optional(),
 });

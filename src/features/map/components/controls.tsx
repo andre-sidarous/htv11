@@ -62,6 +62,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.sky,
   },
   badgeAttention: { backgroundColor: colors.amberSoft },
-  badgeOk: { backgroundColor: "#e3f2e9" },
+  badgeOk: { backgroundColor: colors.okSoft },
   badgeText: { fontSize: 12, fontWeight: "600", color: colors.navy },
 });

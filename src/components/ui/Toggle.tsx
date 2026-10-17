@@ -43,7 +43,7 @@ export function Toggle({
         value={value}
         onValueChange={handleChange}
         disabled={disabled}
-        trackColor={{ false: colors.border, true: colors.navySoft }}
+        trackColor={{ false: colors.border, true: colors.brand }}
         thumbColor={colors.surface}
       />
     </View>

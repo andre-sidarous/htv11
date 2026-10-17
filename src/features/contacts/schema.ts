@@ -16,6 +16,9 @@ const optionalText = (max: number, message: string) =>
 /** Stored as E.164 (+ country code, digits only) because Twilio calls need it. */
 export function normalizePhone(raw: string): string | null {
   const compact = raw.replace(/[\s().-]/g, "");
+  // North American numbers typed without the "+": "1 416 555 0123" or "416 555 0123".
+  if (/^1[2-9]\d{9}$/.test(compact)) return `+${compact}`;
+  if (/^[2-9]\d{9}$/.test(compact)) return `+1${compact}`;
   return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null;
 }
 

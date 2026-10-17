@@ -155,6 +155,14 @@ export type NotificationEventRow = {
   created_at: string;
 };
 
+export type ChatMessageRow = {
+  id: string;
+  jam_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+};
+
 /** View: co-members' public profile fields (no phone number). */
 export type MemberProfileRow = {
   id: string;
@@ -184,6 +192,7 @@ export type Database = {
       trusted_contacts: TableDef<TrustedContactRow, "owner_user_id" | "name">;
       incident_packages: TableDef<IncidentPackageRow, "alert_id" | "affected_user_id">;
       notification_events: TableDef<NotificationEventRow, "jam_id" | "channel" | "status">;
+      chat_messages: TableDef<ChatMessageRow, "jam_id" | "user_id" | "body">;
     };
     Views: {
       member_profiles: { Row: MemberProfileRow; Relationships: [] };

@@ -39,7 +39,7 @@ export const DATA_SOURCES: DataSource[] = [
     publisher: "City of Toronto, Information & Technology",
     url: portal("pedestrian-network"),
     refresh: "As available",
-    contributes: "Which route segments have a sidewalk or city walkway, along the Campus Walk corridor.",
+    contributes: "Which route segments have a sidewalk or city walkway, across Toronto.",
     limitations: "Snapshot data. Construction closures and winter conditions aren't included.",
   },
   {
@@ -47,7 +47,7 @@ export const DATA_SOURCES: DataSource[] = [
     publisher: "City of Toronto, Information & Technology",
     url: portal("toronto-centreline-tcl"),
     refresh: "Daily",
-    contributes: "Street names and types along the Campus Walk corridor.",
+    contributes: "Street names and types across Toronto.",
     limitations: "Street geometry only. It says nothing about lighting, traffic, or activity on a street.",
   },
   {

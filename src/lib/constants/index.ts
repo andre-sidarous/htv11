@@ -58,9 +58,9 @@ export const DEFAULT_CHECKIN_BUFFER_S = 120;
 /** Choices shown at sign-up (seconds). */
 export const CHECKIN_BUFFER_CHOICES_S = [60, 120, 300, 600] as const;
 /** The AI checks in again this often while the call is active. */
-export const AI_CALL_CHECKIN_INTERVAL_MS = 15_000;
+export const AI_CALL_CHECKIN_INTERVAL_MS = 5_000;
 /** No speech or tap from the person for this long during the AI call escalates to contacts. */
-export const AI_CALL_SILENCE_TIMEOUT_MS = 45_000;
+export const AI_CALL_SILENCE_TIMEOUT_MS = 10_000;
 
 // ---------- Escalation ----------
 

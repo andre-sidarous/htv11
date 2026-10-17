@@ -22,6 +22,8 @@ export type JamMapViewProps = {
   span?: number;
   style?: StyleProp<ViewStyle>;
   showsUserLocation?: boolean;
+  /** Fires after the user pans or zooms (e.g. to draw only the markers in view). */
+  onRegionChangeComplete?: (region: Region) => void;
   children?: ReactNode;
 };
 
@@ -35,7 +37,7 @@ export const regionAround = (center: LatLng, span = 0.012): Region => ({
 });
 
 export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapView(
-  { center, span, style, showsUserLocation = false, children },
+  { center, span, style, showsUserLocation = false, onRegionChangeComplete, children },
   ref,
 ) {
   return (
@@ -44,6 +46,7 @@ export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapVi
       style={[styles.map, style]}
       initialRegion={regionAround(center, span)}
       showsUserLocation={showsUserLocation}
+      onRegionChangeComplete={onRegionChangeComplete}
       showsPointsOfInterests={false}
       toolbarEnabled={false}
       accessibilityLabel="Jam map"

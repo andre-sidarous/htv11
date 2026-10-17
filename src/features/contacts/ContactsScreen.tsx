@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: colors.sky },
   avatarText: { fontSize: 18, fontWeight: "700", color: colors.navy },
   badge: { paddingHorizontal: space(3), paddingVertical: space(1), borderRadius: radius.pill },
-  badgeOk: { backgroundColor: "#e3f3ea" },
+  badgeOk: { backgroundColor: colors.okSoft },
   badgeWait: { backgroundColor: colors.amberSoft },
   badgeMuted: { backgroundColor: colors.border },
   badgeText: { fontSize: 12, fontWeight: "600", color: colors.ink },

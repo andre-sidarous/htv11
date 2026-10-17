@@ -2,9 +2,9 @@ import { StyleSheet, Text, View } from "react-native";
 import { colors, radius } from "@/theme";
 
 /** A simple initials avatar. `ring` draws a colored ring (e.g. for "currently live"). */
-export function Avatar({ name, size = 44, ring }: { name: string; size?: number; ring?: "ok" | "amber" | "escalation" }) {
+export function Avatar({ name, size = 44, ring }: { name: string; size?: number; ring?: "ok" | "amber" | "escalation" | "brand" }) {
   const initial = name.trim().charAt(0).toUpperCase() || "?";
-  const ringColor = ring ? { ok: colors.ok, amber: colors.amber, escalation: colors.escalation }[ring] : "transparent";
+  const ringColor = ring ? { ok: colors.ok, amber: colors.amber, escalation: colors.escalation, brand: colors.brand }[ring] : "transparent";
 
   return (
     <View
@@ -14,7 +14,7 @@ export function Avatar({ name, size = 44, ring }: { name: string; size?: number;
       ]}
     >
       <View style={[styles.inner, { width: size, height: size, borderRadius: size / 2 }]}>
-        <Text style={[styles.text, { fontSize: size * 0.4 }]} accessibilityElementsHidden>
+        <Text style={[styles.text, { fontSize: size * 0.4 }]} accessibilityElementsHidden maxFontSizeMultiplier={1.2}>
           {initial}
         </Text>
       </View>
@@ -24,6 +24,6 @@ export function Avatar({ name, size = 44, ring }: { name: string; size?: number;
 
 const styles = StyleSheet.create({
   outer: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  inner: { backgroundColor: colors.sky, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
-  text: { color: colors.navy, fontWeight: "700" },
+  inner: { backgroundColor: colors.blush, alignItems: "center", justifyContent: "center", borderRadius: radius.pill },
+  text: { color: colors.brand, fontWeight: "700" },
 });

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { Alert, Text, View } from "react-native";
-import { Badge, Button, Card, Chip, LoadingState, OptionCard, Screen, Toggle } from "@/components/ui";
+import { Badge, Button, Card, Chip, ErrorState, LoadingState, OptionCard, Screen, Toggle } from "@/components/ui";
 import { checkinBufferLabel } from "@/features/auth/checkinBuffer";
 import { requestConsentPermission } from "@/features/auth/consentPermissions";
 import { updateCheckinBufferSeconds } from "@/features/auth/profileApi";
@@ -22,7 +22,7 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
   const router = useRouter();
   const { session, profile, setProfile } = useSession();
   const { jam } = useJam(jamId);
-  const { members, loading: membersLoading, refresh: refreshMembers } = useJamMembers(jamId);
+  const { members, loading: membersLoading, error: membersError, refresh: refreshMembers } = useJamMembers(jamId);
   const { hasActiveAlert } = useHasActiveAlert(jamId, session?.user.id);
 
   const [saving, setSaving] = useState<string | null>(null);
@@ -123,7 +123,13 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
   }
 
   if (!self) {
-    return membersLoading ? <LoadingState label="Loading settings…" /> : null;
+    if (membersLoading) return <LoadingState label="Loading settings…" />;
+    return (
+      <ErrorState
+        description={membersError ?? "Couldn't find your membership in this Jam."}
+        onRetry={() => void refreshMembers()}
+      />
+    );
   }
 
   return (

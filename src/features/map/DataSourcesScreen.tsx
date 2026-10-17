@@ -10,7 +10,7 @@ export function DataSourcesScreen() {
       <View style={styles.intro}>
         <Text style={type.title}>Where the map data comes from</Text>
         <Text style={type.body}>
-          Jam bundles small extracts of public data for the Campus Walk area, so the map works without a connection.
+          Jam bundles compact extracts of public data for the whole City of Toronto, so the map works without a connection.
           Data was extracted on {Number.isNaN(extracted.getTime()) ? "an earlier date" : extracted.toLocaleDateString()}.
         </Text>
         <View style={styles.disclaimer} accessibilityRole="text">

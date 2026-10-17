@@ -51,19 +51,24 @@ export default function RootLayout() {
             screenOptions={{
               headerShadowVisible: false,
               headerStyle: { backgroundColor: colors.warmWhite },
-              headerTintColor: colors.navy,
+              headerTintColor: colors.brand,
+              headerTitleStyle: { color: colors.ink, fontWeight: "600" },
               contentStyle: { backgroundColor: colors.warmWhite },
             }}
           >
             <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
+            {/* Header-less screens still need a title: iOS uses it as the NEXT screen's back label,
+                and without one it shows the raw route name (e.g. "jam/[jamId]/(tabs)"). */}
+            <Stack.Screen name="index" options={{ headerShown: false, title: "Home" }} />
             <Stack.Screen name="create" options={{ title: "Create a Jam", presentation: "modal" }} />
+            <Stack.Screen name="solo" options={{ title: "Solo Jam", presentation: "modal" }} />
             <Stack.Screen name="join" options={{ title: "Join a Jam", presentation: "modal" }} />
             <Stack.Screen name="join/[code]" options={{ title: "Join a Jam" }} />
             <Stack.Screen name="demo" options={{ title: "Demo Mode", presentation: "modal" }} />
             <Stack.Screen name="privacy" options={{ title: "Privacy defaults", presentation: "modal" }} />
             <Stack.Screen name="jam/[jamId]/lobby" options={{ title: "Jam lobby" }} />
-            <Stack.Screen name="jam/[jamId]/(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="jam/[jamId]/chat" options={{ title: "Chat" }} />
+            <Stack.Screen name="jam/[jamId]/(tabs)" options={{ headerShown: false, title: "Jam" }} />
             <Stack.Screen name="dev" options={{ title: "Developer check" }} />
           </Stack>
         </SessionGate>

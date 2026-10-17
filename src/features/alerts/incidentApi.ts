@@ -1,4 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { functionErrorMessage } from "@/lib/supabase/functions";
 
 /** Client side of supabase/functions/incident-access and demo-reset. Never throws. */
 
@@ -39,7 +40,8 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<{
   if (!supabase) return { data: null, error: "Jam isn't connected." };
   try {
     const { data, error } = await supabase.functions.invoke<T>(name, { body });
-    return { data: data ?? null, error: error ? error.message : null };
+    if (error) return { data: null, error: await functionErrorMessage(name, error) };
+    return { data: data ?? null, error: null };
   } catch (e) {
     return { data: null, error: e instanceof Error ? e.message : "Request failed" };
   }
@@ -48,7 +50,7 @@ async function invoke<T>(name: string, body: Record<string, unknown>): Promise<{
 export async function getIncident(incidentId: string): Promise<{ incident: IncidentView | null; error: string | null }> {
   const { data, error } = await invoke<{ incident: IncidentView }>("incident-access", { incidentId });
   if (data?.incident) return { incident: data.incident, error: null };
-  return { incident: null, error: error && !/404|non-2xx/i.test(error) ? "Couldn't load this incident. Try again." : null };
+  return { incident: null, error: error && !/not_found|404|non-2xx/i.test(error) ? "Couldn't load this incident. Try again." : null };
 }
 
 export async function listSharedIncidents(): Promise<{ incidents: IncidentSummary[]; error: string | null }> {
@@ -66,5 +68,5 @@ export type DemoResetResult = { ok: boolean; cleared?: Record<string, number>; e
 export async function resetDemoJam(jamId: string): Promise<DemoResetResult> {
   const { data, error } = await invoke<DemoResetResult>("demo-reset", { jamId });
   if (data?.ok) return data;
-  return { ok: false, error: data?.error === "host_only" ? "Only the Jam's host can reset the demo." : error ?? data?.error ?? "Reset failed" };
+  return { ok: false, error: error === "host_only" ? "Only the Jam's host can reset the demo." : error ?? data?.error ?? "Reset failed" };
 }

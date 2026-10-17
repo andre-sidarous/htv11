@@ -74,7 +74,7 @@ Install native libraries with `npx expo install <pkg>`, **not** `npm install`. T
 | Variable | Notes |
 |---|---|
 | `GEMINI_API_KEY` | aistudio.google.com/apikey. Blank uses the scripted AI. |
-| `GEMINI_MODEL` | defaults to `gemini-2.5-flash` |
+| `GEMINI_MODEL` | defaults to `gemini-3.5-flash-lite` (fast, ~0.6s; `gemini-2.5-*` models are retired for new keys) |
 | `NTFY_BASE_URL` | `https://ntfy.sh` |
 | `NTFY_TOKEN` | only for a protected or self-hosted ntfy |
 | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` | twilio.com/console. Used to phone and text trusted contacts. |
@@ -93,12 +93,21 @@ Share the app `.env` values privately (DM or a password manager). `.env` files a
 
 ## 5. Demo day without a laptop (optional)
 
-Expo Go loads the app from a dev server. To avoid depending on a laptop on stage, publish an update with EAS:
+Expo Go loads the app from a dev server, which times out on Wi-Fi that blocks phone-to-laptop traffic.
+The project is set up for EAS Update instead (project `@aditin5/jam`, branch `demo`, runtime `exposdk:57.0.0`),
+so phones load it from Expo with no laptop:
 
 ```bash
-npm i -g eas-cli && eas login
-eas update:configure
-eas update --branch demo --message "demo build"
+npx eas-cli login          # the aditin5 account
+npm run publish:demo       # iOS then Android export + upload; ~3 minutes
 ```
 
-Then open the update in Expo Go from the link or QR that EAS prints. Run this at least once before demo day.
+- **Who can open it:** since May 2026, Expo Go only opens published updates for accounts that own the project
+  (or belong to its organization), so everyone signs in to Expo Go with the shared account.
+- **Opening it:** Expo Go → Home → Projects → **jam** → the latest `demo` update, or scan the QR on the update's
+  page in the EAS dashboard.
+- **Env vars:** `--environment preview` reads `EXPO_PUBLIC_*` from EAS, **not** from `.env`. They're set on the
+  `preview` environment (`npx eas-cli env:list --environment preview`). If you change `.env`, update them there too
+  (`npx eas-cli env:create --environment preview --name … --value … --visibility plaintext --force`), or the
+  published app falls back to mock mode.
+- Republish after every change you want on the phones. Run it at least once before demo day.

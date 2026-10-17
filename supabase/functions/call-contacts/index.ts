@@ -1,6 +1,6 @@
 // POST /functions/v1/call-contacts  { alertId, recordingPath? } -> { results: NotificationResult[] }
 //
-// Last escalation step (45s of silence on the AI support call): builds the incident package,
+// Last escalation step (10s of silence on the AI support call): builds the incident package,
 // phones and texts the affected user's trusted contacts (Twilio), and pings the group (ntfy).
 // The affected phone calls this with its uploaded recording; any member may call it (Demo Control).
 // Idempotent, so repeats are safe. advance-alert runs the same step server-side as a fallback.

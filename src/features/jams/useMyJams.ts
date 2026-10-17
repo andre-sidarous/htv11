@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { JamMemberRow, JamRow } from "@/lib/types";
+import { withTimeout } from "./withTimeout";
 
 export type MyJam = { membership: JamMemberRow; jam: JamRow };
 
@@ -23,28 +24,30 @@ export function useMyJams(userId: string | undefined) {
       return;
     }
 
-    const { data: memberships, error: memberError } = await supabase
-      .from("jam_members")
-      .select("*")
-      .eq("user_id", userId);
-    if (memberError) {
-      setError(memberError.message);
+    try {
+      const { data: memberships, error: memberError } = await withTimeout(
+        supabase.from("jam_members").select("*").eq("user_id", userId),
+      );
+      if (memberError) throw new Error(memberError.message);
+
+      const jamIds = (memberships ?? []).map((m) => m.jam_id);
+      const { data: jams } = jamIds.length
+        ? await withTimeout(supabase.from("jams").select("*").in("id", jamIds))
+        : { data: [] as JamRow[] };
+      const jamById = new Map((jams ?? []).map((j) => [j.id, j]));
+
+      const pairs = (memberships ?? [])
+        .map((membership) => ({ membership, jam: jamById.get(membership.jam_id) }))
+        .filter((pair): pair is MyJam => Boolean(pair.jam));
+
+      setActive(pairs.filter((pair) => pair.membership.is_active && pair.jam.status !== "ended"));
+      setPast(pairs.filter((pair) => !pair.membership.is_active || pair.jam.status === "ended"));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't load your Jams.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const jamIds = (memberships ?? []).map((m) => m.jam_id);
-    const { data: jams } = jamIds.length ? await supabase.from("jams").select("*").in("id", jamIds) : { data: [] as JamRow[] };
-    const jamById = new Map((jams ?? []).map((j) => [j.id, j]));
-
-    const pairs = (memberships ?? [])
-      .map((membership) => ({ membership, jam: jamById.get(membership.jam_id) }))
-      .filter((pair): pair is MyJam => Boolean(pair.jam));
-
-    setActive(pairs.filter((pair) => pair.membership.is_active && pair.jam.status !== "ended"));
-    setPast(pairs.filter((pair) => !pair.membership.is_active || pair.jam.status === "ended"));
-    setError(null);
-    setLoading(false);
   }, [userId]);
 
   // Fetching when `userId` changes is the standard Effect use case.

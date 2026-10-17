@@ -8,3 +8,6 @@ export * from "./Screen";
 export * from "./States";
 export * from "./TextField";
 export * from "./Toggle";
+export * from "./Icon";
+export * from "./Layout";
+export * from "./Sparkline";
