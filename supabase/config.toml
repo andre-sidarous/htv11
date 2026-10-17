@@ -26,3 +26,9 @@ verify_jwt = true
 
 [functions.test-call]
 verify_jwt = true
+
+[functions.incident-access]
+verify_jwt = true
+
+[functions.demo-reset]
+verify_jwt = true
