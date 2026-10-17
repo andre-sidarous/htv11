@@ -19,4 +19,6 @@ export const aiCallContextSchema = z.object({
   activity: z.enum(["walking", "running", "stationary", "fall_simulated"]).optional(),
   nearestSupportPoint: z.string().max(200).optional(),
   groupResponded: z.boolean(),
+  destinationName: z.string().max(120).optional(),
+  guidance: z.string().max(300).optional(),
 });

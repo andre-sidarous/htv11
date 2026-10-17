@@ -61,6 +61,20 @@ Never label streets "safe" or "unsafe." Compute support context from: distance t
 - "This route has fewer nearby public support points and a current transit disruption. We recommend an alternative route."
 - "This route keeps you closer to TTC access, a public library, and your group."
 
+## Spoken guidance for the AI call (P4 uses it)
+
+When someone stops responding, P4's AI call talks them toward the destination. Export a **pure** function from `src/features/map/guidance.ts`:
+
+```ts
+getSpokenGuidance({ position, route, destination, supportPoints }): { guidance: string; nearestSupportPoint?: string }
+```
+
+- On or near the route: look about 100m ahead along the route and say the compass direction and distance, e.g. "Head north on St. George Street for about 200 metres, toward Robarts Library." Street names come from the route or the local Centreline data; leave them out if unknown.
+- More than 200m off the route: guide them back to the nearest point on the route, or to the nearest support point if that's closer.
+- Close to the destination (under 50m): "You're almost there. Robarts Library is just ahead."
+- `nearestSupportPoint`: e.g. "Robarts Library, open now, 120 metres away".
+- Short, calm, spoken-style sentences. Round distances to 50m steps. Unit-test it.
+
 ## Data sources screen
 
 Add a route `src/app/data-sources.tsx` (a new file, so there's no conflict), linked from the map. For each dataset show: name, publisher, URL, refresh frequency, what it contributes, and its limitations. Include: "Historical safety data does not guarantee current safety and is used only as contextual information."
@@ -76,7 +90,7 @@ Sharing indicator, pause sharing, stop Jam, last-updated timestamp, no location 
 ## Done when
 
 - [ ] `npm run check` and `npm run doctor` pass
-- [ ] Unit tests (vitest, pure TS, no react-native imports) for deviation thresholds, the stale/offline presence logic, and recommendation text
+- [ ] Unit tests (vitest, pure TS, no react-native imports) for deviation thresholds, the stale/offline presence logic, recommendation text, and spoken guidance
 - [ ] Tested on **two phones in Expo Go**: both see each other move live. "Move affected user away" shows deviation on both
 - [ ] Works with OSRM blank and in airplane-mode-style failure (demo route label shows)
 - [ ] The PR says what changed and how to test it. No secrets. No changes outside your area.
