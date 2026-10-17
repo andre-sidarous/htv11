@@ -168,14 +168,29 @@ It's idempotent: a contact already called or texted for an alert is skipped. Pho
 
 Huddle should feel **safe, confident, sophisticated, approachable**: Apple Find My / Apple Health / Linear, not a hospital dashboard, a dispatch console, or a soft wellness app. Tokens live in `src/theme/index.ts`; components in `src/components/ui/` (import from `@/components/ui`). Never hardcode a hex in a screen; add a token instead.
 
-**Brand:** **Huddle**, tagline "Your journey, connected." (`APP_NAME`, `APP_TAGLINE` in `src/lib/constants`). The mascot is **Pico**, a burgundy penguin in a scarf.
+**Brand:** **Huddle**. Tagline **"Huddle N' Waddle"** (`APP_TAGLINE`), call to action **"Just Huddle N' Waddle."** (`APP_SLOGAN_CTA`), and the brand promise **"Nobody walks home alone, even when they're on their own."** (`BRAND_PROMISE`), all in `src/lib/constants`. The mascot is **Pico**, a burgundy penguin in a scarf.
 - **Components** (`src/components/brand`, import from `@/components/brand`):
-  - `<Pico mood size />` is decorative by default; pass `accessibilityLabel` only when it carries meaning.
-  - `<HuddleLogo size tagline align />` sets "Huddle" in Inter Bold burgundy until the wordmark artwork (the penguin "u") is ready. Swap the art in **only** that component.
+  - `<HuddleLogo variant height />`: `"wordmark"` (the walking-penguin "u") or `"slogan"` (with "N' Waddle" underneath). It's artwork from `assets/brand/logo-*.png`; width follows the aspect ratio in `brandAssets.ts`.
+  - `<PenguinHuddle height />`: three penguins huddled together (`penguin-huddle.png`), decorative. It means "your group", so use it where people create or join one.
+  - `<BrandLine text size tone />`: a handwritten brand line in **Caveat** (`fonts.script`). Use it **only** for `APP_SLOGAN_CTA` and `BRAND_PROMISE`, at 20 pt or more.
+  - `<Pico mood size />`: decorative by default; pass `accessibilityLabel` only when it carries meaning.
 - **Moods:** `default | wave | happy | concerned | waiting | walking`. Only the default pose exists today, so every mood maps to `assets/brand/pico.png` in `brandAssets.ts`. Add expression art there and nothing else changes. Pico is always calm: gently concerned at most, never scared or alarmed.
-- **Where Pico appears:** Welcome (wave, plus logo and tagline), the Home header, `LoadingState` (waiting), `EmptyState mascot`, the lobby wait, and the check-in sheet (concerned).
-- **App icon and splash** (`app.json`): `assets/brand/icon.png` (Pico on blush, opaque 1024²), `adaptive-icon.png` (Android foreground, safe-zone padded, blush background), and the splash (`pico.png` on ivory). Expo Go shows its own icon, so check the real icon in a dev build or EAS Update.
-- **Type:** **Inter** (`@expo-google-fonts/inter`, loaded in `src/app/_layout.tsx` while the splash stays up). Use `type.*`, or pair any `fontWeight` with its family (`fonts.regular | medium | semibold | bold`). Android ignores `fontWeight` for custom fonts.
+- **Where the brand appears:**
+
+  | Element | Where |
+  |---|---|
+  | Wordmark | Header of every Huddle tab (Map / Group / Health / Settings), the Home header |
+  | Slogan lockup | Welcome hero, the splash screen |
+  | Penguin huddle + "Just Huddle N' Waddle." | Top of Create a Huddle; Home when you have no active Huddle |
+  | Penguin huddle | Top of Join a Huddle (code entry) |
+  | Brand promise | Welcome (under the lockup); Solo Huddle (with `Pico mood="walking"`) |
+  | "Just Huddle N' Waddle." (text) | End of the invite Share message |
+  | Pico | `LoadingState` (waiting), `EmptyState mascot`, the lobby wait, the check-in sheet (concerned) |
+- **Rules:**
+  - Never put two penguins side by side: the logo already contains one, so no separate Pico next to it.
+  - No brand lines, logo art, or illustrations in alerts, the check-in sheet, the support call screen, incident screens, or any Edge Function copy (calls, texts, ntfy).
+- **App icon and splash** (`app.json`): `assets/brand/icon.png` (Pico on blush, opaque 1024²), `adaptive-icon.png` (Android foreground, safe-zone padded, blush background), and the splash (the slogan lockup `logo-slogan.png` on ivory). Expo Go shows its own icon, so check the real icon in a dev build or EAS Update.
+- **Type:** **Inter** for everything (`@expo-google-fonts/inter`), plus **Caveat SemiBold** for brand lines only (`@expo-google-fonts/caveat`). Both are loaded per weight in `src/app/_layout.tsx` while the splash stays up, so only the weights used are bundled. Use `type.*`, or pair any `fontWeight` with its family (`fonts.regular | medium | semibold | bold`). Android ignores `fontWeight` for custom fonts.
 
 **Palette** (~70% neutrals, ~20% burgundy, ~10% pastels/status):
 

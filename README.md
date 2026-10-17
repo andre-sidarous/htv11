@@ -1,6 +1,6 @@
 # Huddle
 
-*Your journey, connected.* A native mobile app for students, tourists, and friends travelling together. Create or join a private Huddle, share live location, set a destination, and get support if someone becomes lost, separated, or unresponsive.
+*Huddle N' Waddle.* Nobody walks home alone, even when they're on their own. A native mobile app for students, tourists, and friends travelling together. Create or join a private Huddle, share live location, set a destination, and get support if someone becomes lost, separated, or unresponsive.
 
 > Formerly **Jam**: code, routes, tables, and ids still use `jam` (see "Naming" in CLAUDE.md).
 
