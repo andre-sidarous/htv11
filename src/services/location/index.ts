@@ -1,5 +1,5 @@
 import type { LocationService } from "@/lib/types";
-import { mockLocationService } from "./mock";
+import { deviceLocationService } from "./device";
 
-// P3: swap for the browser Geolocation implementation (keeping the simulated override).
-export const locationService: LocationService = mockLocationService;
+// Real expo-location GPS; the mock (./mock.ts) stays as the per-user simulated source for Demo Mode.
+export const locationService: LocationService = deviceLocationService;

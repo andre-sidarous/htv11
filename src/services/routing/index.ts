@@ -1,5 +1,5 @@
 import type { RoutingService } from "@/lib/types";
-import { mockRoutingService } from "./mock";
+import { osrmRoutingService } from "./osrm";
 
-// P3: swap for OSRM (NEXT_PUBLIC_OSRM_URL) with mockRoutingService as the fallback.
-export const routingService: RoutingService = mockRoutingService;
+// OSRM (EXPO_PUBLIC_OSRM_URL), falling back to mockRoutingService's Campus Walk route.
+export const routingService: RoutingService = osrmRoutingService;
