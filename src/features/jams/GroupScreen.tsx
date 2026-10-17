@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import * as Haptics from "expo-haptics";
+import { MessageCircleQuestionMark, UserPlus } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 import { Avatar, Badge, Button, Card, ErrorState, LoadingState, Screen } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -84,6 +85,8 @@ export function GroupScreen({ jamId }: { jamId: string }) {
       <Text style={type.title}>Group</Text>
       <Button
         label={sent ? "Check-in sent" : "Check in with group"}
+        icon={MessageCircleQuestionMark}
+        size="lg"
         onPress={handleCheckIn}
         loading={sending}
         disabled={sent || !channel}
@@ -103,6 +106,7 @@ export function GroupScreen({ jamId }: { jamId: string }) {
           <View style={styles.invite}>
             <Button
               label={inviteOpen ? "Hide invite" : "Invite people"}
+              icon={UserPlus}
               variant="secondary"
               onPress={() => setInviteOpen((open) => !open)}
               accessibilityHint="Shows the join code, QR code, and share button."

@@ -162,6 +162,46 @@ It's idempotent: a contact already called or texted for an alert is skipped. Pho
 - **Map, live location, Toronto data (P3):** `JamMapScreen` shows members live over `jam:{jamId}`, routes (OSRM with a demo-route fallback), route deviation (100 / 200 / 350 m), Toronto Open Data support points, `getRouteRecommendation()`, and `getSpokenGuidance()` for Lifeline. `useLocationSharing` broadcasts every ~4 s and upserts `live_locations` at most every 10 s or after a 10 m move. Presence goes stale at 30 s and offline at 60 s, and staleness never means danger. See `src/features/{map,location}/README.md`.
 - **Demo Mode:** `/demo-control` is the **only** demo panel (P5). Actions register in `src/features/demo/demoActions.ts` and read `getDemoContext()` (`{ jamId, affectedUserId }`) at run time. They run on the tapping phone, so they must **broadcast** to affect other phones. **Reset demo** (`demo-reset`, host only) clears one Jam's alerts, incidents, notifications, health signals, and live locations.
 
+## Design system (use this for every new screen)
+
+Jam should feel **safe, confident, sophisticated, approachable**: Apple Find My / Apple Health / Linear, not a hospital dashboard, a dispatch console, or a soft wellness app. Tokens live in `src/theme/index.ts`; components in `src/components/ui/` (import from `@/components/ui`). Never hardcode a hex in a screen; add a token instead.
+
+**Palette** (~70% neutrals, ~20% burgundy, ~10% pastels/status):
+
+| Token | Value | Use |
+|---|---|---|
+| `colors.brand` (legacy `navy`) | `#7D1725` burgundy | primary buttons, selected states, graphs, wordmark. **Brand, not alarm** |
+| `colors.brandDark` | `#4A1018` | strong surfaces, text on pastel buttons |
+| `colors.warmWhite` | `#F8F4F1` ivory | screen background |
+| `colors.surface` | `#FFFFFF` | cards |
+| `colors.blush` (legacy `sky`) / `blushSoft` | `#F1D8D9` / `#F8ECEC` | secondary buttons, avatars, soft cards |
+| `colors.lavender` / `sage` | `#E3E0ED` / `#DCE8E2` | supporting info cards (reasons, activity) / ok states |
+| `colors.ink` / `inkMuted` / `inkFaint` | `#25272C` / `#77747A` / `#ABA6AB` | text |
+| `colors.amber` / `amberSoft` / `amberInk` | `#D99A36` … | attention, check-in range, recording dot |
+| `colors.escalation` / `escalationSoft` | `#DC4545` | **only** confirmed escalation (contacts notified), "I need help", irreversible deletes |
+| `colors.call*` | `callBg #4A1018`, `callSurface`, `callAccent`, `callInk` | the AI support call (dark) screen only |
+
+`tones` gives bg/fg pairs (`neutral`, `brand`, `lavender`, `sage`, `ok`, `amber`, `escalation`) for `Badge`, `Card tone`, `IconBadge`.
+
+**Shape and type:** `radius.md` 14 (buttons), `radius.card` 16, `radius.lg` 18 (hero cards, sheets), `radius.pill`. Cards: white, hairline `colors.border`, `shadow.card`; `shadow.raised` for overlays and hero cards. Spacing `space(n)` = 4n, screen padding `space(5)`. Type: `type.title` 24, `heading` 17, `body` 16, `caption` 13, `overline` (12 uppercase section labels), `metric` (40, tabular numbers for BPM and timers). Headings are charcoal; burgundy is for brand and actions.
+
+**Icons:** `lucide-react-native` only (works in Expo Go), stroke 1.75–2.25. Use `<Icon icon={X} />` or `<IconBadge icon={X} tone="sage" />`. Icons are decorative; the text label carries meaning. Note that `Map` must be imported as `Map as MapIcon`.
+
+**Components:**
+- `Button`: `variant` primary (one per view) / secondary (blush) / outline / ghost / destructive; also `icon`, `size="lg"`, and `tint` (text colour on dark surfaces).
+- `Card`: `tone` makes a flat pastel card; `padded={false}` for lists.
+- `Badge` (`tone`, `icon`), `Avatar` (`ring`), `SectionHeader`, `ListRow` (icon + label + chevron, stacked inside `Card padded={false}`), `StatusDot`.
+- `Sparkline` (line chart with a dashed `reference`), `Chip`, `OptionCard`, `Toggle`, `TextField`, and the `Loading`/`Empty`/`ErrorState` states.
+- Domain: `EscalationTimeline` (`src/features/health/`, view model in `escalationStages.ts`), `SafetyControls` (`dark` for the call screen).
+
+**Patterns:**
+- Screen = `<Screen scroll>` → title row → white hero card → `SectionHeader` + cards. Pastel cards are for secondary info.
+- Bottom sheets: ivory, `radius.lg + 6` top corners, a grab handle, `colors.overlay` backdrop, large 54pt options.
+- Alerts: a white card with a 4px left accent (amber; red only once escalated), an `IconBadge`, a step bar, and burgundy primary action. Never fill the screen with red.
+- Safety actions: "I'm safe" is primary burgundy. "Cancel escalation" confirms first. "Call emergency services" is a red-text ghost button whose placeholder dialog never dials.
+- Motion: restrained `Animated` (springs, soft pulses, `useNativeDriver`) and a light haptic on primary taps (built into `Button`).
+- Simulated health data always shows a "Simulated wearable data" badge and never reads as a diagnosis.
+
 ## Commands
 
 ```bash

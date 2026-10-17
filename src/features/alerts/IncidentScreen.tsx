@@ -2,12 +2,15 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as Clipboard from "expo-clipboard";
 import { Stack, router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ArrowLeft, CircleCheck, Clock, Copy, ExternalLink, HeartPulse, Hourglass, ListChecks, MapPin, Mic, Navigation, Pause, Play, Trash2, Users, type LucideIcon } from "lucide-react-native";
+import type { ReactNode } from "react";
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
 import { JamMapView } from "@/components/map/JamMapView";
+import { Badge, Button, IconBadge } from "@/components/ui";
 import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { getRouteRecommendation } from "@/features/map/recommendation";
-import { colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
+import { colors, radius, shadow, space, type, type Tone } from "@/theme";
 import { resolveAlert } from "./api";
 import { deleteIncident, getIncident, type IncidentView } from "./incidentApi";
 import { formatAgo, formatRemaining, mapsUrl } from "./presentation";
@@ -110,13 +113,19 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
     setIncident({ ...incident!, alertResolved: true });
   }
 
+  const resolved = incident.alertResolved;
+  const clock = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <Text style={type.caption}>Incident package created {formatAgo(incident.createdAt)}</Text>
-        <Text style={type.title}>{incident.alertResolved ? `${incident.personName} is marked safe.` : `${incident.personName} may need support.`}</Text>
+        <View style={styles.headRow}>
+          <Badge label={resolved ? "Resolved" : "Open alert"} tone={resolved ? "ok" : "amber"} icon={resolved ? CircleCheck : Clock} />
+          <Text style={type.caption}>Created {formatAgo(incident.createdAt)}</Text>
+        </View>
+        <Text style={type.title}>{resolved ? `${incident.personName} is marked safe.` : `${incident.personName} may need support.`}</Text>
         {incident.role === "contact" ? (
-          <Text style={type.body}>You’re seeing this because {incident.personName} listed you as a trusted contact.</Text>
+          <Text style={type.bodyMuted}>You’re seeing this because {incident.personName} listed you as a trusted contact. You only see what they chose to share.</Text>
         ) : null}
       </View>
 
@@ -124,98 +133,134 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
         <View style={[styles.card, styles.mapCard]}>
           <View pointerEvents="none" style={styles.map}>
             <JamMapView center={loc} span={0.006}>
-              <Marker coordinate={{ latitude: loc.latitude, longitude: loc.longitude }} pinColor={colors.amber} title="Last known location" />
+              <Marker coordinate={{ latitude: loc.latitude, longitude: loc.longitude }} pinColor={colors.brand} title="Last known location" />
             </JamMapView>
           </View>
           <View style={styles.mapFooter}>
-            <Text style={type.heading}>Last known location</Text>
+            <SectionTitle icon={MapPin} title="Last known location" />
             <Text style={type.body}>
               {loc.place ? `${loc.place.charAt(0).toUpperCase()}${loc.place.slice(1)}` : `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`}
             </Text>
             <Text style={type.caption}>Seen {formatAgo(loc.capturedAt)}</Text>
             <View style={styles.actions}>
-              <Action
-                label="Copy location"
+              <Button
+                label="Copy link"
+                icon={Copy}
+                variant="secondary"
+                style={styles.flex}
                 onPress={async () => {
                   await Clipboard.setStringAsync(mapsUrl(loc.latitude, loc.longitude));
                   Alert.alert("Copied", "A map link to the last known location is on your clipboard.");
                 }}
               />
-              <Action label="Open map" onPress={() => void Linking.openURL(mapsUrl(loc.latitude, loc.longitude))} />
+              <Button label="Open map" icon={ExternalLink} variant="secondary" style={styles.flex} onPress={() => void Linking.openURL(mapsUrl(loc.latitude, loc.longitude))} />
             </View>
           </View>
         </View>
       ) : (
-        <View style={styles.card}>
-          <Text style={type.heading}>Last known location</Text>
+        <Section icon={MapPin} title="Last known location">
           <Text style={type.caption}>Not shared.</Text>
-        </View>
+        </Section>
       )}
 
-      <View style={styles.card}>
-        <Text style={type.heading}>Last response</Text>
-        <Text style={type.body}>No response since {formatAgo(incident.alertCreatedAt)}</Text>
-        {incident.destinationName ? <Text style={type.caption}>Heading to {incident.destinationName}</Text> : null}
-      </View>
-
       {incident.reasons?.length || incident.health ? (
-        <View style={styles.card}>
-          <Text style={type.heading}>Why Jam flagged this</Text>
+        <Section icon={HeartPulse} title="Why Jam flagged this" tone="lavender">
           {(incident.reasons ?? []).map((r) => (
             <Text key={r} style={type.body}>
-              • {r}
+              · {r}
             </Text>
           ))}
           {incident.health?.heartRate ? (
-            <Text style={type.caption}>
-              Heart rate {Math.round(incident.health.heartRate)} bpm
-              {incident.health.baselineHeartRate ? ` (usual ${Math.round(incident.health.baselineHeartRate)})` : ""}
-              {incident.health.activity ? ` · ${incident.health.activity.replace("_", " ")}` : ""}
-            </Text>
+            <View style={styles.healthRow}>
+              <Text style={styles.metric}>{Math.round(incident.health.heartRate)}</Text>
+              <Text style={type.caption}>
+                BPM{incident.health.baselineHeartRate ? ` · usual ${Math.round(incident.health.baselineHeartRate)}` : ""}
+                {incident.health.activity ? ` · ${incident.health.activity.replace("_", " ")}` : ""}
+              </Text>
+            </View>
           ) : null}
-          <Text style={type.caption}>Simulated wearable data.</Text>
-        </View>
+          <Text style={type.caption}>Simulated wearable data. Not a diagnosis.</Text>
+        </Section>
       ) : null}
+
+      <Section icon={ListChecks} title="What happened">
+        {incident.alertCreatedAt ? <HistoryRow label="Jam checked in, no response" time={clock(incident.alertCreatedAt)} /> : null}
+        <HistoryRow label="Incident package created" time={clock(incident.createdAt)} />
+        {resolved ? <HistoryRow label="Marked safe" time="" done /> : null}
+        {incident.destinationName ? (
+          <View style={styles.inline}>
+            <IconBadge icon={Navigation} tone="neutral" size={24} />
+            <Text style={type.caption}>Heading to {incident.destinationName}</Text>
+          </View>
+        ) : null}
+      </Section>
 
       {incident.recordingUrl ? (
         <RecordingCard url={incident.recordingUrl} />
       ) : incident.hasRecording && incident.role === "contact" ? null : incident.hasRecording ? (
-        <View style={styles.card}>
-          <Text style={type.heading}>Support call recording</Text>
+        <Section icon={Mic} title="Support call recording">
           <Text style={type.caption}>Recording unavailable right now.</Text>
-        </View>
+        </Section>
       ) : null}
 
-      <View style={styles.card}>
-        <Text style={type.heading}>Shared with</Text>
+      <Section icon={Users} title="Shared with">
         <Text style={type.body}>
           {incident.sharedWith.members.length ? incident.sharedWith.members.join(", ") : "No Jam members"}
           {incident.sharedWith.contacts ? ` and ${incident.sharedWith.contacts} trusted contact${incident.sharedWith.contacts === 1 ? "" : "s"}` : ""}
         </Text>
-        <Text style={type.caption}>
-          Incident data is scheduled for deletion after the selected retention period ({incident.retentionHours} hours, {formatRemaining(incident.expiresAt)} left).
-        </Text>
-      </View>
+      </Section>
+
+      <Section icon={Hourglass} title="Expires" tone="neutral">
+        <Text style={type.body}>{formatRemaining(incident.expiresAt)} left</Text>
+        <Text style={type.caption}>Incident data is deleted after the {incident.retentionHours}-hour retention period.</Text>
+      </Section>
 
       {incident.role !== "contact" ? (
-        <View style={styles.card}>
-          <Text style={type.heading}>Route context</Text>
+        <Section icon={Navigation} title="Route context">
           <Text style={type.body}>{recommendation}</Text>
           <Text style={type.caption}>Move toward the highlighted public support point if you can do so safely.</Text>
-        </View>
+        </Section>
       ) : null}
 
-      <View style={styles.actions}>
-        {incident.canResolve && !incident.alertResolved ? (
-          <Action label="Mark resolved" primary busy={busy === "resolve"} onPress={markResolved} />
-        ) : null}
+      <View style={styles.footerActions}>
+        {incident.canResolve && !resolved ? <Button label="Mark resolved" icon={CircleCheck} size="lg" loading={busy === "resolve"} onPress={markResolved} /> : null}
         {incident.jamId && incident.role !== "contact" ? (
-          <Action label="Back to Jam" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
+          <Button label="Back to Jam" icon={ArrowLeft} variant="outline" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
         ) : null}
-        {incident.canDelete ? <Action label="Delete package" busy={busy === "delete"} onPress={confirmDelete} /> : null}
+        {incident.canDelete ? <Button label="Delete package" icon={Trash2} variant="ghost" tint={colors.escalation} loading={busy === "delete"} onPress={confirmDelete} /> : null}
       </View>
       <Text style={[type.caption, styles.footnote]}>Jam is not an emergency service. If someone is in immediate danger, call 911.</Text>
     </ScrollView>
+  );
+}
+
+function Section({ icon, title, tone, children }: { icon: LucideIcon; title: string; tone?: Tone; children: ReactNode }) {
+  return (
+    <View style={[styles.card, tone && styles.flat, tone === "lavender" && { backgroundColor: colors.lavender }, tone === "neutral" && { backgroundColor: colors.blushSoft }]}>
+      <SectionTitle icon={icon} title={title} tone={tone} />
+      {children}
+    </View>
+  );
+}
+
+function SectionTitle({ icon, title, tone = "brand" }: { icon: LucideIcon; title: string; tone?: Tone }) {
+  return (
+    <View style={styles.inline}>
+      <IconBadge icon={icon} tone={tone === "lavender" || tone === "neutral" ? "brand" : tone} size={28} />
+      <Text style={type.heading} accessibilityRole="header">
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function HistoryRow({ label, time, done }: { label: string; time: string; done?: boolean }) {
+  return (
+    <View style={styles.historyRow}>
+      <View style={[styles.historyDot, done && { backgroundColor: colors.ok }]} />
+      <Text style={[type.body, styles.flex]}>{label}</Text>
+      <Text style={type.caption}>{time}</Text>
+    </View>
   );
 }
 
@@ -224,58 +269,37 @@ function RecordingCard({ url }: { url: string }) {
   const status = useAudioPlayerStatus(player);
   const seconds = Math.round(status.duration || 0);
   return (
-    <View style={styles.card}>
-      <Text style={type.heading}>Support call recording</Text>
+    <Section icon={Mic} title="Support call recording">
       <Text style={type.caption}>{seconds ? `${seconds}-second recording` : "Loading recording…"} · link expires in 1 hour</Text>
-      <View style={styles.actions}>
-        <Action
-          label={status.playing ? "Pause" : "Play recording"}
-          primary
-          onPress={() => {
-            if (status.playing) return player.pause();
-            if (status.didJustFinish || (status.duration && status.currentTime >= status.duration)) void player.seekTo(0);
-            player.play();
-          }}
-        />
-      </View>
-    </View>
-  );
-}
-
-function Action({ label, onPress, primary, busy }: { label: string; onPress: () => void; primary?: boolean; busy?: boolean }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ busy }}
-      disabled={busy}
-      onPress={onPress}
-      style={({ pressed }) => [styles.action, primary && styles.actionPrimary, pressed && styles.pressed]}
-    >
-      {busy ? <ActivityIndicator color={primary ? colors.warmWhite : colors.navy} /> : <Text style={[styles.actionText, primary && styles.actionTextPrimary]}>{label}</Text>}
-    </Pressable>
+      <Button
+        label={status.playing ? "Pause" : "Play recording"}
+        icon={status.playing ? Pause : Play}
+        onPress={() => {
+          if (status.playing) return player.pause();
+          if (status.didJustFinish || (status.duration && status.currentTime >= status.duration)) void player.seekTo(0);
+          player.play();
+        }}
+      />
+    </Section>
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", padding: space(6), backgroundColor: colors.warmWhite },
-  content: { gap: space(4), padding: space(4), paddingBottom: space(12) },
-  card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
+  content: { gap: space(3), padding: space(4), paddingBottom: space(12) },
+  flex: { flex: 1 },
+  card: { gap: space(2), padding: space(4), borderRadius: radius.card, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, ...shadow.card },
+  flat: { borderColor: "transparent", shadowOpacity: 0, elevation: 0 },
+  headRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(2) },
   mapCard: { padding: 0, overflow: "hidden" },
   map: { height: 200 },
-  mapFooter: { gap: space(1), padding: space(5) },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: space(2), marginTop: space(1) },
-  action: {
-    minHeight: TAP_TARGET,
-    paddingHorizontal: space(5),
-    justifyContent: "center",
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  actionPrimary: { backgroundColor: colors.navy, borderColor: colors.navy },
-  actionText: { color: colors.navy, fontSize: 15, fontWeight: "600" },
-  actionTextPrimary: { color: colors.warmWhite },
-  pressed: { opacity: 0.85 },
+  mapFooter: { gap: space(1.5), padding: space(4) },
+  inline: { flexDirection: "row", alignItems: "center", gap: space(2) },
+  healthRow: { flexDirection: "row", alignItems: "baseline", gap: space(2) },
+  metric: { fontSize: 28, fontWeight: "700", color: colors.ink, fontVariant: ["tabular-nums"] },
+  historyRow: { flexDirection: "row", alignItems: "center", gap: space(3), minHeight: 32 },
+  historyDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand },
+  actions: { flexDirection: "row", gap: space(2), marginTop: space(1) },
+  footerActions: { gap: space(2), marginTop: space(1) },
   footnote: { textAlign: "center" },
 });
