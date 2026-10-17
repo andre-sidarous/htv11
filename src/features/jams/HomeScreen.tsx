@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, type LucideIcon } from "lucide-react-native";
+import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Avatar, Badge, Button, Card, Icon, IconBadge, ListRow, Screen, SectionHeader } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -51,6 +51,8 @@ export function HomeScreen() {
         <QuickAction icon={Plus} label="Create a Jam" onPress={() => router.push("/create")} primary />
         <QuickAction icon={QrCode} label="Join a Jam" onPress={() => router.push("/join")} />
       </View>
+
+      <Button label="Travelling alone? Start a Solo Jam" icon={User} variant="outline" onPress={() => router.push("/solo")} />
 
       <SectionHeader title="Active Jams" />
       {loading ? (

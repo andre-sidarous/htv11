@@ -61,11 +61,13 @@ export default function RootLayout() {
                 and without one it shows the raw route name (e.g. "jam/[jamId]/(tabs)"). */}
             <Stack.Screen name="index" options={{ headerShown: false, title: "Home" }} />
             <Stack.Screen name="create" options={{ title: "Create a Jam", presentation: "modal" }} />
+            <Stack.Screen name="solo" options={{ title: "Solo Jam", presentation: "modal" }} />
             <Stack.Screen name="join" options={{ title: "Join a Jam", presentation: "modal" }} />
             <Stack.Screen name="join/[code]" options={{ title: "Join a Jam" }} />
             <Stack.Screen name="demo" options={{ title: "Demo Mode", presentation: "modal" }} />
             <Stack.Screen name="privacy" options={{ title: "Privacy defaults", presentation: "modal" }} />
             <Stack.Screen name="jam/[jamId]/lobby" options={{ title: "Jam lobby" }} />
+            <Stack.Screen name="jam/[jamId]/chat" options={{ title: "Chat" }} />
             <Stack.Screen name="jam/[jamId]/(tabs)" options={{ headerShown: false, title: "Jam" }} />
             <Stack.Screen name="dev" options={{ title: "Developer check" }} />
           </Stack>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { MessageCircleQuestionMark, UserPlus } from "lucide-react-native";
+import { MessageCircle, MessageCircleQuestionMark, UserPlus } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 import { Avatar, Badge, Button, Card, ErrorState, LoadingState, Screen } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -38,6 +39,7 @@ const PRESENCE_TONE: Record<Presence, "ok" | "amber" | "neutral"> = {
 
 /** Member roster: presence, last seen, activity, and a one-tap group check-in. */
 export function GroupScreen({ jamId }: { jamId: string }) {
+  const router = useRouter();
   const { session } = useSession();
   const { members, loading, error, refresh } = useJamMembers(jamId);
   const { jam } = useJam(jamId);
@@ -91,6 +93,13 @@ export function GroupScreen({ jamId }: { jamId: string }) {
         loading={sending}
         disabled={sent || !channel}
         accessibilityHint="Asks everyone in the Jam to confirm they're okay."
+      />
+      <Button
+        label="Open chat"
+        icon={MessageCircle}
+        variant="secondary"
+        onPress={() => router.push({ pathname: "/jam/[jamId]/chat", params: { jamId } })}
+        accessibilityHint="Opens the group chat for this Jam"
       />
 
       {canInvite && jam ? (
