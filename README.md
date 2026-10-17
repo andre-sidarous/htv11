@@ -26,6 +26,44 @@ Full setup (Supabase, sign-in, Edge Functions, demo day): [docs/environment.md](
 - [Environment](docs/environment.md): setup, env vars, phones, EAS Update
 - [Demo](docs/demo.md): the 3 to 4 phone demo
 
+## P2: UI, auth, onboarding, Jam management
+
+Implemented on `feature/ui-onboarding`. Screens (route → `src/features/...`):
+
+- **Auth / onboarding** (`src/app/(auth)/`): `welcome` (email code sign-in/sign-up, demo-account
+  one-tap buttons, Google), `profile` (display name + optional phone; creates the `profiles`
+  row), `consent` (the five sharing toggles + emergency preference, nothing pre-selected),
+  `baseline` (simulated heart-rate baseline via `healthService.measureBaseline`). Consent and
+  baseline run once, right after profile setup, and become the on-device default (`src/features/
+  auth/onboardingDraft.ts`) applied to every Jam afterwards — still editable per Jam.
+- **Home** (`src/app/index.tsx` → `HomeScreen`): greeting, Create/Join buttons, active and past
+  Jams, links to contacts, privacy defaults (`/privacy`), and Demo Mode.
+- **Create a Jam** (`/create` → `CreateJamScreen`): name, destination presets (incl. a one-tap
+  "Campus Walk" preset), travel mode, expected arrival, check-in delay, group response timeout,
+  emergency preference. Inserts `jams` + the host's own `jam_members` row.
+- **Join a Jam** (`/join`, `/join/[code]` → `JoinJamScreen`): manual code entry or QR scan
+  (`expo-camera`, falls back to manual entry if the camera is denied), then a short confirm step
+  (location/health sharing + emergency preference) before calling `join_jam`.
+- **Lobby** (`/jam/[jamId]/lobby` → `LobbyScreen`): destination, host, live member list with
+  status (Ready / Location not shared / Health signals off / Waiting), join code, QR code,
+  Share button, and Start Jam (host only). Updates live via `postgres_changes`.
+- **Active Jam tabs** (`/jam/[jamId]/(tabs)/`): Map (renders P3's `JamMapScreen`), Group (member
+  roster, presence/last-seen/activity, "Check in with group"), Signals (health-sharing state,
+  baseline, current signal, simulated-data badge), Settings (every consent toggle, emergency
+  preference — locked during an active alert, trusted contacts link, Demo this Jam, stop/leave
+  Jam, delete incident data, delete account). Mounts `<JamOverlayHost>` once and keeps the screen
+  awake for the whole tab stack.
+- **Demo Mode** (`/demo` → `DemoEntryScreen`): "Demo this Jam" (sets the demo context to a live
+  Jam and opens `/demo-control`) and the seeded-account role-picker backup.
+
+Shared UI primitives added in `src/components/ui`: `Button`, `Card`, `Toggle`, `Badge`,
+`TextField`, `OptionCard`, `Avatar`, `Screen` (alongside the existing `States`).
+
+**Test plan:** `npm run check` and `npm run doctor` pass; `npx expo export --platform ios`
+bundles cleanly. On two phones: sign in → profile → consent → baseline → home → Create a Jam
+(phone A) → Join by code and by QR scan (phone B) → lobby member list updates live on both →
+Start Jam → tabs appear with the overlay host mounted and the screen staying awake.
+
 ## Layout
 
 ```
