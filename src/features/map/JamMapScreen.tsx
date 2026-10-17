@@ -214,9 +214,25 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
         setSosError("Couldn't send SOS. Try again.");
         return;
       }
-      if (alert.escalation_state === "CHECK_IN_SENT") {
-        await dispatchAlertEvent(alert, { type: "CHECK_IN_RESPONSE", response: "need_help" });
+
+      // SOS is an explicit, unambiguous "I need help" — skip the usual wait for the group to
+      // acknowledge and go straight for the next real step. Both dispatches are the same
+      // escalation events the normal flow already uses (answering "need help" on a check-in,
+      // then the documented "start the call now instead of waiting" event), so this can never
+      // reach a state the engine wouldn't otherwise reach on its own — it just gets there
+      // immediately instead of after a timeout. If the person's preference is contact-only (no
+      // AI call), the second dispatch is a no-op and the group alert still stands; the real
+      // group-timeout-then-contacts path (already built) takes over from there.
+      let current = alert;
+      if (current.escalation_state === "CHECK_IN_SENT") {
+        const afterNeedHelp = await dispatchAlertEvent(current, { type: "CHECK_IN_RESPONSE", response: "need_help" });
+        if (afterNeedHelp) current = afterNeedHelp;
       }
+      if (current.escalation_state === "GROUP_ALERT_SENT") {
+        const afterAiCall = await dispatchAlertEvent(current, { type: "START_AI_CALL" });
+        if (afterAiCall) current = afterAiCall;
+      }
+
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       setSosSent(true);
       setTimeout(() => setSosSent(false), 5_000);
@@ -230,7 +246,7 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
   const confirmSos = useCallback(() => {
     Alert.alert(
       "Send SOS?",
-      "Your group will be notified right away that you need help, and Huddle will follow up automatically if you don't respond.",
+      "Your group will be notified right away that you need help. If you still don't respond, Huddle calls you, then your emergency contacts.",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Send SOS", style: "destructive", onPress: () => void sendSos() },

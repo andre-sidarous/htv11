@@ -14,6 +14,6 @@ export function JamIdProvider({ jamId, children }: { jamId: string; children: Re
  */
 export function useJamId(): string {
   const jamId = useContext(JamIdContext);
-  if (!jamId) throw new Error("useJamId must be used within the active-Jam tabs.");
+  if (!jamId) throw new Error("useJamId must be used within the active-Huddle tabs.");
   return jamId;
 }

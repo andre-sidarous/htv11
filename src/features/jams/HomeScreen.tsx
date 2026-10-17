@@ -6,7 +6,7 @@ import { Avatar, Badge, Button, Card, Icon, IconBadge, ListRow, Screen, SectionH
 import { useSession } from "@/features/auth/SessionProvider";
 import { signOut } from "@/lib/supabase/auth";
 import type { JamRow } from "@/lib/types";
-import { fonts, colors, radius, shadow, space, type, type Tone } from "@/theme";
+import { fonts, colors, radius, shadow, space, tones, type, type Tone } from "@/theme";
 import { useJamMembers } from "./useJamMembers";
 import { useMyJams, type MyJam } from "./useMyJams";
 
@@ -46,6 +46,14 @@ export function HomeScreen() {
           Travel together. Huddle quietly looks out for your group.
         </Text>
       </View>
+
+      {!loading && !error ? (
+        <View style={styles.summaryRow} accessibilityRole="summary">
+          <SummaryStat label="Active" value={active.length} tone="ok" />
+          <SummaryStat label="Completed" value={past.length} tone="neutral" />
+          <SummaryStat label="Total" value={active.length + past.length} tone="brand" />
+        </View>
+      ) : null}
 
       {featured ? <StatusHero pair={featured} onOpen={() => openJam(featured)} /> : null}
 
@@ -153,6 +161,21 @@ function StatusHero({ pair, onOpen }: { pair: MyJam; onOpen: () => void }) {
   );
 }
 
+/** A single number in the at-a-glance Huddles summary (e.g. "2 Active"). */
+function SummaryStat({ label, value, tone }: { label: string; value: number; tone: Tone }) {
+  const t = tones[tone];
+  return (
+    <View style={[styles.statChip, { backgroundColor: t.bg }]} accessibilityLabel={`${value} ${label}`}>
+      <Text style={[styles.statValue, { color: t.fg }]} maxFontSizeMultiplier={1.3}>
+        {value}
+      </Text>
+      <Text style={[styles.statLabel, { color: t.fg }]} maxFontSizeMultiplier={1.6}>
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 function QuickAction({ icon, label, onPress, primary }: { icon: LucideIcon; label: string; onPress: () => void; primary?: boolean }) {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [styles.quick, primary && styles.quickPrimary, pressed && styles.pressed]}>
@@ -168,6 +191,10 @@ const styles = StyleSheet.create({
   brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   brandMark: { flexDirection: "row", alignItems: "center", gap: space(2) },
   hero: { gap: space(1) },
+  summaryRow: { flexDirection: "row", gap: space(2) },
+  statChip: { flex: 1, alignItems: "center", gap: 2, paddingVertical: space(3), borderRadius: radius.card },
+  statValue: { fontSize: 24, fontFamily: fonts.bold, fontWeight: "700", fontVariant: ["tabular-nums"] },
+  statLabel: { fontSize: 12, fontFamily: fonts.semibold, fontWeight: "600" },
   statusCard: { gap: space(2), padding: space(5), borderRadius: radius.lg, backgroundColor: colors.brand, ...shadow.raised },
   statusHead: { flexDirection: "row", alignItems: "center", gap: space(2) },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sage },
