@@ -106,6 +106,8 @@ export const incidentCreatedSchema = z.object({
   timestamp,
 });
 
+export const demoResetSchema = z.object({ jamId: id, requestedBy: id, timestamp });
+
 export const realtimeEventSchemas = {
   location_update: locationUpdateSchema,
   member_status: memberStatusSchema,
@@ -115,6 +117,7 @@ export const realtimeEventSchemas = {
   checkin_requested: checkInRequestedSchema,
   ai_call_state: aiCallStateSchema,
   incident_created: incidentCreatedSchema,
+  demo_reset: demoResetSchema,
 } satisfies { [E in RealtimeEventName]: z.ZodType<RealtimeEventMap[E]> };
 
 export function parseRealtimeEvent<E extends RealtimeEventName>(

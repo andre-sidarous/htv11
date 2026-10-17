@@ -47,7 +47,7 @@ With Twilio unset, the call and text are `skipped`; show an **"SMS preview"** (`
 
 ## Contact access to incident data
 
-Add `supabase/functions/incident-access`: input `{ token }`; compute SHA-256 of the token; look up `incident_packages.access_token_hash` with `adminClient()`; reject if expired or deleted; return **only** the fields that contact is permitted (location / health summary / recording signed URL per their `trusted_contacts` toggles). Copy `requireUser`-style helpers from `_shared/supabase.ts`. Because Presenter 4 runs the app too, the contact view is the `/incident/[token]` screen calling this function. A shared link can carry the token as text.
+`supabase/functions/incident-access` (built): `{}` lists packages shared with me; `{ incidentId }` returns one, filtered for me; `{ incidentId, action: "delete" }` wipes it and its recording. Jam members and the affected user are authorized by RLS. A **trusted contact** is matched by the email they sign in to Jam with (`trusted_contacts.email`) and gets only what their `receive_*` toggles allow. Recordings come back as 1-hour signed URLs. The contact opens **Incidents** (`/incidents`) → the package (`/incident/[id]`). They also get the text with the map link and recording link, so the app is optional for them.
 
 ## Incident package screen (`IncidentScreen.tsx`)
 

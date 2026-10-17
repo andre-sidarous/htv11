@@ -11,6 +11,8 @@ Our own secrets come from `supabase secrets set` (see `.env.example` in this fol
 | `notify-ntfy` | P5 | `notifyNtfy(jamId, alertId)` |
 | `call-contacts` | P5 | Last step: incident package + Twilio call and text to contacts + ntfy to group. `escalateToContacts` is also run by `advance-alert` at CONTACTS_NOTIFIED |
 | `test-call` | P5 | Rings one of your own trusted contacts with a short test message (Contacts screen button) |
+| `incident-access` | P5 | List / read / delete incident packages; members via RLS, trusted contacts by sign-in email, filtered by their toggles |
+| `demo-reset` | P5 | Host only: clears one Jam's alerts, incidents, notifications, health signals, and live locations |
 | `incident-access` (to add) | P5 | contact view of `/incident/[token]` |
 | `demo-reset` (to add) | P5 | Demo Control "Reset demo" |
 

@@ -53,6 +53,13 @@ export type IncidentCreatedEvent = {
   timestamp: string;
 };
 
+/** Demo Control "Reset demo": every phone clears its local alert / location / health state. */
+export type DemoResetEvent = {
+  jamId: string;
+  requestedBy: string;
+  timestamp: string;
+};
+
 export type RealtimeEventMap = {
   location_update: LocationUpdate;
   member_status: MemberStatusEvent;
@@ -62,6 +69,7 @@ export type RealtimeEventMap = {
   checkin_requested: CheckInRequestedEvent;
   ai_call_state: AiCallStateEvent;
   incident_created: IncidentCreatedEvent;
+  demo_reset: DemoResetEvent;
 };
 
 export type RealtimeEventName = keyof RealtimeEventMap;

@@ -34,6 +34,18 @@ export async function getSupportCallTurn(context: AiCallContext, step: number): 
   return data?.text ? data : scripted;
 }
 
+/** Last escalation step: incident package, call + text trusted contacts (Twilio), ping the group. Safe to call twice. */
+export async function callContacts(alertId: string, recordingPath?: string): Promise<NotificationResult[]> {
+  const { data, error } = await invoke<{ results: NotificationResult[] }>("call-contacts", { alertId, recordingPath });
+  return data?.results ?? [{ channel: "voice_call", status: "failed", detail: error ?? "unknown" }];
+}
+
+/** Rings one of your own trusted contacts with a short test message (checks Twilio + their number). */
+export async function testContactCall(contactId: string): Promise<NotificationResult> {
+  const { data, error } = await invoke<NotificationResult>("test-call", { contactId });
+  return data ?? { channel: "voice_call", status: "failed", detail: error ?? "unknown" };
+}
+
 /** Publishes the fixed generic ntfy message for a Jam. */
 export async function notifyNtfy(jamId: string, alertId: string): Promise<NotificationResult> {
   const { data, error } = await invoke<NotificationResult>("notify-ntfy", { jamId, alertId });

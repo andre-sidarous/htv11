@@ -15,6 +15,7 @@ export const REALTIME_EVENTS = [
   "checkin_requested",
   "ai_call_state",
   "incident_created",
+  "demo_reset",
 ] as const satisfies readonly RealtimeEventName[];
 
 // ---------- Location timing ----------

@@ -1,5 +1,6 @@
+import { mockServicesEnabled } from "@/lib/env";
 import type { NotificationService } from "@/lib/types";
 import { mockNotificationService } from "./mock";
+import { supabaseNotificationService } from "./supabase";
 
-// P5: swap for the real implementation.
-export const notificationService: NotificationService = mockNotificationService;
+export const notificationService: NotificationService = mockServicesEnabled ? mockNotificationService : supabaseNotificationService;
