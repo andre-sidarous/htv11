@@ -2,7 +2,7 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import * as Haptics from "expo-haptics";
 import { LocateFixed, Siren } from "lucide-react-native";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import type MapView from "react-native-maps";
 import { Marker, Polyline } from "react-native-maps";
 import { JamMapView, regionAround, toMapCoord } from "@/components/map/JamMapView";
@@ -12,6 +12,7 @@ import { createCheckInAlert, dispatchAlertEvent } from "@/features/health/alertA
 import { useLocationSharing } from "@/features/location/useLocationSharing";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { campusWalk } from "@/lib/demo/campusWalk";
+import { haversineM } from "@/lib/geo";
 import type { LatLng, Route } from "@/lib/types";
 import { routingService } from "@/services";
 import { colors, radius, shadow, space, type } from "@/theme";
@@ -24,7 +25,9 @@ import { RouteStatusCard } from "./components/RouteStatusCard";
 import { SharingBar } from "./components/SharingBar";
 import { GuideCard } from "./components/GuideCard";
 import { DisruptionLayer, SupportPointLayer, TransitLayer } from "./components/SupportLayers";
-import { guideRouteKey, pickGuideTarget, type GuideTarget } from "./guideTarget";
+import { getSpokenGuidance } from "./guidance";
+import { profileColor } from "./memberAppearance";
+import { guideRouteKey, pickGuideTarget, walkingDirectionsUrl, type GuideTarget } from "./guideTarget";
 import { mapUi, useMapUi } from "./mapUiStore";
 import { createMemberStore } from "./memberStore";
 import { getRouteRecommendation } from "./recommendation";
@@ -74,7 +77,8 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
   useMapDemoActions();
 
   // Non-preset destinations route from wherever you first appear.
-  if (!fallbackOrigin && sharing.lastPosition) setFallbackOrigin(sharing.lastPosition);
+  // Keep the planning origin near where I am, so a new destination is planned from here (not from where I started).
+  if (sharing.lastPosition && (!fallbackOrigin || haversineM(fallbackOrigin, sharing.lastPosition) > 50)) setFallbackOrigin(sharing.lastPosition);
 
   // ---- seed + keep the member store in sync ----
   const inactiveIds = useMemo(
@@ -225,6 +229,21 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
       animated: true,
     });
   }, [activeGuide]);
+  // "Next: Head north on … for about 300 metres", from where you are now (recomputed every ~10 m).
+  const here = sharing.lastPosition;
+  const hereKey = here ? `${here.latitude.toFixed(4)},${here.longitude.toFixed(4)}` : null;
+  const nextStep = useMemo(() => {
+    const goal = data.jam?.destination;
+    if (!here || !goal) return null;
+    return getSpokenGuidance({ position: here, route: data.route, destination: goal }).guidance;
+    // hereKey stands in for `here` so this only reruns after a ~10 m move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hereKey, data.route, data.jam?.destination]);
+  const openDirections = useCallback(() => {
+    const goal = data.jam?.destination;
+    if (goal) void Linking.openURL(walkingDirectionsUrl(goal)).catch(() => undefined);
+  }, [data.jam?.destination]);
+
   const stopGuide = useCallback(() => {
     framedGuide.current = null;
     mapUi.set({ guide: null });
@@ -249,11 +268,19 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
   const toggleAlternative = useCallback(() => mapUi.set({ showAlternative: !mapUi.get().showAlternative }), []);
   const openDataSources = useCallback(() => router.push("/data-sources"), [router]);
 
-  // ---- recenter on me ----
+  // ---- follow me like a maps app; panning stops it, the recenter button turns it back on ----
+  const [following, setFollowing] = useState(true);
+  useEffect(() => {
+    if (!following || !here || ui.guide) return;
+    mapRef.current?.animateCamera({ center: toMapCoord(here), zoom: 17 }, { duration: 600 });
+    // hereKey: follow every ~10 m move, not every GPS tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [following, hereKey, ui.guide]);
   const recenterOnMe = useCallback(() => {
     const target = sharing.lastPosition ?? (data.selfId ? store.get(data.selfId)?.position : null) ?? null;
     if (!target) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFollowing(true);
     mapRef.current?.animateToRegion(regionAround(target, 0.004), 400);
   }, [sharing.lastPosition, data.selfId, store]);
 
@@ -336,7 +363,7 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
 
   return (
     <View style={styles.screen}>
-      <JamMapView ref={mapRef} center={center} span={INITIAL_SPAN} onRegionChangeComplete={setRegion}>
+      <JamMapView ref={mapRef} center={center} span={INITIAL_SPAN} onRegionChangeComplete={setRegion} onPanDrag={() => setFollowing(false)}>
         <TransitLayer lines={TRANSIT_LINES} surfaceStops={shownStops} />
         {data.route ? (
           <Polyline coordinates={data.route.coordinates.map(toMapCoord)} strokeColor={colors.navy} strokeWidth={5} zIndex={5} />
@@ -354,17 +381,32 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
           <Polyline coordinates={guideLine.map(toMapCoord)} strokeColor={colors.ok} strokeWidth={6} lineDashPattern={guideRoute?.route ? undefined : [8, 8]} zIndex={7} />
         ) : null}
         {data.members
-          .filter((m) => m.isActive && m.userId !== data.selfId && m.personalDestination)
+          .filter((m) => m.isActive && m.userId !== data.selfId && m.plannedRoute)
           .map((m) => (
-            <Marker
-              key={`dest-${m.userId}`}
-              coordinate={toMapCoord(m.personalDestination!)}
-              title={`${m.displayName}’s new destination`}
-              description={m.personalDestination!.name}
-              pinColor={colors.amber}
-              zIndex={8}
+            <Polyline
+              key={`plan-${m.userId}`}
+              coordinates={m.plannedRoute!.coordinates.map(toMapCoord)}
+              strokeColor={profileColor(m.userId)}
+              strokeWidth={3}
+              lineDashPattern={[6, 6]}
+              zIndex={4}
             />
           ))}
+        {data.members
+          .filter((m) => m.isActive && m.userId !== data.selfId && (m.plannedTo || m.personalDestination))
+          .map((m) => {
+            const to = m.plannedTo ?? m.personalDestination!;
+            return (
+              <Marker
+                key={`dest-${m.userId}`}
+                coordinate={toMapCoord(to)}
+                title={`${m.displayName} is heading here`}
+                description={to.name ?? undefined}
+                pinColor={profileColor(m.userId)}
+                zIndex={8}
+              />
+            );
+          })}
         <SupportPointLayer points={shownSupport} highlightedIds={highlightedIds} />
         {ui.showDisruption ? <DisruptionLayer disruption={DISRUPTION} /> : null}
         {destination ? (
@@ -455,6 +497,8 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
         ) : (
           <RouteStatusCard
             destinationName={destination?.name ?? null}
+            nextStep={nextStep}
+            onDirections={destination ? openDirections : undefined}
             route={data.route}
             routeLoading={data.routeLoading}
             selfStatus={sharing.state === "live" ? sharing.routeStatus : null}

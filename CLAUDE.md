@@ -42,10 +42,10 @@ The product is built around three core features. Everything else (onboarding, Hu
 
    Limits and security: there's a hard cap of `MAX_TURNS` = 40. Every webhook request carries a per-alert HMAC `sig` (`AI_CALL_SIGNING_SECRET`; the function is deployed with `verify_jwt = false`).
 3. **In-app mode** (`src/features/ai/SupportCallScreen.tsx`, route `/jam/[jamId]/support-call`):
-   - Each turn comes from `aiService.getSupportCallTurn(context, step)` → the `ai-support-call` Edge Function, which uses Gemini (`GEMINI_MODEL`) with a 4 s timeout and a rate limit of 8 calls/min/user. It **always** returns a turn and falls back to the scripted line (`supportCallLine.ts`) on any failure.
-   - Each turn is spoken with `expo-speech` and shown in large text. The person taps "I can hear you" to respond.
-   - It checks in every `AI_CALL_CHECKIN_INTERVAL_MS` (5 s). After `AI_CALL_SILENCE_TIMEOUT_MS` (10 s) of silence, the contacts are called.
-4. **What the AI may know** is limited to `AiCallContext` (`src/features/ai/callContext.ts`): display name, a location *summary*, deviation level, a heart-rate summary, activity, nearest support point, whether the group responded, destination name, and the next spoken direction from P3's `getSpokenGuidance` (`src/features/map/guidance.ts`). It **never** gets raw coordinates or location history.
+   - Each turn comes from `aiService.getSupportCallTurn(context, step)` → the `ai-support-call` Edge Function, which uses Gemini (`GEMINI_MODEL`) with a 4 s timeout and a rate limit of 16 calls/min/user. It **always** returns a turn and falls back to the scripted line (`supportCallLine.ts`) on any failure.
+   - Each turn is spoken with `expo-speech` and shown in large text. It's a conversation: the person taps replies (`src/lib/ai/callReplies.ts`, mirrored in `_shared/callReplies.ts` with a drift test: *Where am I?*, *How do I get back on my route?*, *Where's somewhere busy nearby?*, *Stay with me*), and `ai-support-call` (`{ context, reply }`) answers each one. Every reply pushes `next_deadline_at` out. *I'm okay now* ends the call.
+   - Quiet for 12 s → "Are you still there?"; quiet another `AI_CALL_SILENCE_TIMEOUT_MS` (10 s) → the closing line, and the contacts are called.
+4. **What the AI may know** is limited to `AiCallContext` (`src/features/ai/callContext.ts`): display name, a location *summary*, deviation level, a heart-rate summary, activity, nearest support point, whether the group responded, destination name, `backToRoute` (how to rejoin their saved `jam_members.planned_route`), and the next spoken direction from P3's `getSpokenGuidance` (`src/features/map/guidance.ts`). It **never** gets raw coordinates or location history.
 5. **Recording**, only with `recording_consent`: `src/features/ai/useCallRecording.ts` (`expo-audio`) uploads to the private `recordings` bucket at `{userId}/{alertId}.m4a`. It's always visible with a timer and a stop control. If permission is denied it records nothing (a `simulated://` reference is used instead).
 
 **Invariants:** it never claims to be emergency services or medical. It never says a place is safe. It always has a turn to say (scripted fallback). The final line is always the scripted "I have not received a response. Your authorized contacts may be notified…". It never logs phone numbers or what the person said.
@@ -75,6 +75,8 @@ MONITORING → CHECK_IN_SENT ──check-in timeout──► GROUP_ALERT_SENT �
             USER_RESPONDED                  GROUP_MEMBER_ACKNOWLEDGED                                                          AI_CALL_USER_RESPONDED
                                                                        any state → RESOLVED / CANCELLED (sets resolved_at)
 ```
+
+A member acknowledging doesn't stop Lifeline: `GROUP_MEMBER_ACKNOWLEDGED` → `AI_CALL_STARTING` on `START_AI_CALL` or after the group timeout, so the AI guides the person until the helper arrives (without AI consent it just waits). When the affected person's heart rate goes high during an open alert, their phone adds `Health: …` lines to the alert's reasons (heart rate vs. normal for their age, their health profile, the NHANES estimate; `src/features/health/medicalAlert.ts`), shown to the group in a separate box. Huddles have a `destination_mode` (`group` | `individual`, migration 009): in `individual` everyone picks their own destination when joining.
 
 **Timers**
 - **Check-in timeout:** the Huddle's `checkin_delay_seconds`.

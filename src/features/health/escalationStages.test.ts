@@ -14,7 +14,9 @@ describe("timelineFor", () => {
   });
 
   it("stops at the stage where someone answered", () => {
-    expect(statuses(timelineFor("GROUP_MEMBER_ACKNOWLEDGED"))).toEqual(["done", "done", "settled", "skipped", "skipped"]);
+    expect(statuses(timelineFor("GROUP_MEMBER_ACKNOWLEDGED", false))).toEqual(["done", "done", "settled", "skipped", "skipped"]);
+    // With the AI call allowed, a helper on the way doesn't stop it.
+    expect(statuses(timelineFor("GROUP_MEMBER_ACKNOWLEDGED"))).toEqual(["done", "done", "active", "upcoming", "upcoming"]);
     expect(timelineFor("USER_RESPONDED").next).toMatch(/closes/);
   });
 

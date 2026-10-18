@@ -159,7 +159,10 @@ function nextState(state: EscalationState, event: EscalationEvent, config: Escal
       if (event.type === "START_AI_CALL") return config.aiCallAllowed ? "AI_CALL_STARTING" : null;
       return null;
     case "GROUP_MEMBER_ACKNOWLEDGED":
-      return null;
+      // Someone's on their way; the AI call still starts (now, or when the group timeout passes)
+      // to guide the person until they arrive. Without AI consent it waits for the helper.
+      if (!config.aiCallAllowed) return null;
+      return event.type === "START_AI_CALL" || event.type === "DEADLINE" ? "AI_CALL_STARTING" : null;
     case "AI_CALL_STARTING":
       return event.type === "AI_CALL_CONNECTED" || event.type === "DEADLINE" ? "AI_CALL_ACTIVE" : null;
     case "AI_CALL_ACTIVE":
@@ -184,6 +187,8 @@ function deadlineMsFor(state: EscalationState, config: EscalationConfig): number
       return config.userRespondedGraceMs;
     case "GROUP_ALERT_SENT":
       return config.groupResponseTimeoutMs;
+    case "GROUP_MEMBER_ACKNOWLEDGED":
+      return config.aiCallAllowed ? config.groupResponseTimeoutMs : null;
     case "AI_CALL_STARTING":
       return config.aiCallConnectTimeoutMs;
     case "AI_CALL_ACTIVE":

@@ -3,9 +3,11 @@ import { DEMO_ACTION_IDS, demoActions } from "@/features/demo/demoActions";
 import { getDemoContext } from "@/features/demo/demoContext";
 import { campusWalk } from "@/lib/demo/campusWalk";
 import { distanceToPolylineM, haversineM } from "@/lib/geo";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import type { DemoAction, LatLng } from "@/lib/types";
 import { realtimeService, routingService } from "@/services";
 import { mapUi } from "./mapUiStore";
+import { bearingDeg } from "./guidance";
 import { nearestHelp, pickQuietSpot, straightPath, thinPath } from "./quietArea";
 
 /**
@@ -95,7 +97,62 @@ async function walkingPath(a: LatLng, b: LatLng, steps: number): Promise<LatLng[
   return usable ? thinPath(route.coordinates, steps) : straightPath(a, b, steps);
 }
 
-const currentAffected = () => lastAffectedPosition ?? campusWalk.affectedUserOffRoutePath.at(-1) ?? campusWalk.start;
+// ---- moves relative to where the affected person REALLY is (works anywhere, not just on campus) ----
+
+/** The scripted Campus Walk paths only apply this close to that campus. */
+const CAMPUS_NEARBY_M = 3_000;
+const nearCampus = (p: LatLng) => haversineM(p, campusWalk.start) <= CAMPUS_NEARBY_M;
+
+/** Their position now: the last scripted move, else their last shared location, else the campus script. */
+async function affectedNow(): Promise<LatLng> {
+  if (lastAffectedPosition) return lastAffectedPosition;
+  const { jamId, affectedUserId } = getDemoContext();
+  const { data } = (await getSupabaseClient()
+    ?.from("live_locations")
+    .select("latitude, longitude")
+    .eq("jam_id", jamId)
+    .eq("user_id", affectedUserId)
+    .maybeSingle()) ?? { data: null };
+  return data ? { latitude: Number(data.latitude), longitude: Number(data.longitude) } : campusWalk.start;
+}
+
+/** Where the affected person is heading: their own destination, else the Huddle's (null if neither). */
+async function huddleDestination(): Promise<LatLng | null> {
+  const { jamId, affectedUserId } = getDemoContext();
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
+  const [{ data: mine }, { data: jam }] = await Promise.all([
+    supabase.from("jam_members").select("destination_lat, destination_lng").eq("jam_id", jamId).eq("user_id", affectedUserId).maybeSingle(),
+    supabase.from("jams").select("destination_lat, destination_lng").eq("id", jamId).maybeSingle(),
+  ]);
+  const d = mine?.destination_lat != null && mine.destination_lng != null ? mine : jam;
+  return d?.destination_lat != null && d.destination_lng != null ? { latitude: Number(d.destination_lat), longitude: Number(d.destination_lng) } : null;
+}
+
+/** A point `metres` from `from` toward compass `bearing`. */
+function offset(from: LatLng, bearing: number, metres: number): LatLng {
+  const rad = (bearing * Math.PI) / 180;
+  return {
+    latitude: from.latitude + (metres * Math.cos(rad)) / 111_320,
+    longitude: from.longitude + (metres * Math.sin(rad)) / (111_320 * Math.cos((from.latitude * Math.PI) / 180)),
+  };
+}
+
+/** Sideways away from the way to the destination (or west with no destination): a real route deviation. */
+async function awayPath(metres: number, steps: number): Promise<LatLng[]> {
+  const from = await affectedNow();
+  const dest = await huddleDestination();
+  const heading = dest ? bearingDeg(from, dest) : 0;
+  return straightPath(from, offset(from, heading + 90, metres), steps).slice(1);
+}
+
+/** The route line to judge "away from the route" against, for the quiet-area pick. */
+async function routeLineFrom(from: LatLng): Promise<LatLng[]> {
+  if (nearCampus(from)) return campusWalk.plannedRoute;
+  const dest = await huddleDestination();
+  return dest ? [from, dest] : [from, offset(from, 0, 100)];
+}
+
 
 const affectedStart = (): LatLng =>
   campusWalk.members.find((m) => m.demoRole === "affected_user")?.position ?? campusWalk.start;
@@ -105,7 +162,11 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     id: DEMO_ACTION_IDS.moveAffectedUserAway,
     label: "Move affected user away",
     owner: "map",
-    run: () => walk(campusWalk.affectedUserOffRoutePath),
+    async run() {
+      const from = await affectedNow();
+      // On the Campus Walk campus, the scripted path; anywhere else, ~450 m sideways from their route.
+      await walk(nearCampus(from) && !lastAffectedPosition ? campusWalk.affectedUserOffRoutePath : await awayPath(450, 6));
+    },
   },
   {
     id: DEMO_ACTION_IDS.triggerRouteDeviation,
@@ -113,14 +174,20 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     owner: "map",
     run: async () => {
       ++runToken;
-      await withChannel((send) => send.location(deviationPoint()));
+      const from = await affectedNow();
+      const point = nearCampus(from) ? deviationPoint() : (await awayPath(380, 1)).at(-1)!;
+      await withChannel((send) => send.location(point));
     },
   },
   {
     id: DEMO_ACTION_IDS.moveTowardDestination,
     label: "Move toward destination",
     owner: "map",
-    run: () => walk(pathTowardDestination()),
+    async run() {
+      const from = await affectedNow();
+      const dest = await huddleDestination();
+      await walk(nearCampus(from) || !dest ? pathTowardDestination() : await walkingPath(from, dest, 10));
+    },
   },
   {
     id: DEMO_ACTION_IDS.stopLocationUpdates,
@@ -138,11 +205,13 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     owner: "map",
     run: async () => {
       ++runToken;
+      const real = await affectedNow();
       lastAffectedPosition = null;
       mapUi.reset();
       await withChannel(async (send) => {
         await send.presence("live");
-        await send.location(affectedStart());
+        // Only snap to the Campus Walk start on that campus; elsewhere their phone goes back to its GPS.
+        if (nearCampus(real)) await send.location(affectedStart());
       });
     },
   },
@@ -151,8 +220,8 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     label: "Walk into a quiet area (few TTC stops)",
     owner: "map",
     async run() {
-      const from = currentAffected();
-      const spot = pickQuietSpot(from, campusWalk.plannedRoute);
+      const from = lastAffectedPosition ?? (await affectedNow());
+      const spot = pickQuietSpot(from, await routeLineFrom(from));
       if (!spot) throw new Error("No quiet spot found near them.");
       await walk(await walkingPath(from, spot, 8));
     },
@@ -162,10 +231,10 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     label: "Walk toward the nearest public place",
     owner: "map",
     async run() {
-      const from = currentAffected();
+      const from = lastAffectedPosition ?? (await affectedNow());
       const help = nearestHelp(from);
       if (!help) throw new Error("No public place nearby.");
-      await walk(await walkingPath(from, help, 10));
+      await walk(await walkingPath(from, help, 16));
     },
   },
   {

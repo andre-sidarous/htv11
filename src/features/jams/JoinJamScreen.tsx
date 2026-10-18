@@ -3,13 +3,17 @@ import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { StyleSheet, Text, View } from "react-native";
 import { PenguinHuddle } from "@/components/brand";
-import { Button, Card, OptionCard, Screen, TextField, Toggle } from "@/components/ui";
+import { Button, Card, Chip, OptionCard, Screen, TextField, Toggle } from "@/components/ui";
 import { requestConsentPermission } from "@/features/auth/consentPermissions";
 import { useSession } from "@/features/auth/SessionProvider";
 import { joinCodeSchema } from "@/lib/validation";
 import type { EmergencyPreference } from "@/lib/types";
 import { colors, space, type } from "@/theme";
-import { joinJamByCode, updateMyMembership } from "./jamsApi";
+import { DestinationPicker } from "./DestinationPicker";
+import { joinJamByCode, setMyDestination, updateMyMembership } from "./jamsApi";
+import type { Place } from "./placeSearch";
+import { useCurrentPosition } from "./useCurrentPosition";
+import { useJam } from "./useJam";
 
 /** Join by code or QR. `initialCode` prefills from a Share deep link (`jam://join/<code>`). */
 export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
@@ -63,6 +67,16 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
     setStep("confirm");
   }
 
+  // "Where are you heading?": the Huddle's destination by default, or anywhere else.
+  const { jam } = useJam(jamId ?? undefined);
+  const here = useCurrentPosition();
+  const individual = jam?.destination_mode === "individual";
+  const [ownChoice, setOwnChoice] = useState<boolean | null>(null);
+  // Everyone-picks-their-own Huddles start on "pick yours"; the Huddle's is still one tap away.
+  const ownDestination = ownChoice ?? individual;
+  const setOwnDestination = setOwnChoice;
+  const [myPlace, setMyPlace] = useState<Place | null>(null);
+
   async function handleConfirm() {
     if (!session || !jamId || !preference) return;
     setLoading(true);
@@ -75,6 +89,14 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
       contact_notify_consent: onboardingDraft.consents.contact_notify_consent,
       emergency_preference: preference,
     });
+    if (!error && ownDestination && myPlace) {
+      const { error: destError } = await setMyDestination(jamId, session.user.id, myPlace);
+      if (destError) {
+        setLoading(false);
+        setError("Joined, but couldn’t save your destination. Change it in Settings.");
+        return;
+      }
+    }
     setLoading(false);
     if (error) {
       setError(error);
@@ -124,6 +146,25 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
         <Text style={type.bodyMuted} maxFontSizeMultiplier={1.6}>
           Confirm what you’ll share with this Huddle. You can change this anytime in Settings.
         </Text>
+
+        <Card>
+          <Text style={type.heading}>Where are you heading?</Text>
+          <Text style={type.caption}>
+            {individual ? "Everyone in this Huddle picks their own destination. " : ""}Huddle plans your route there, and checks in if you go off it.
+            Everyone can see each other’s routes.
+          </Text>
+          <View style={styles.chips}>
+            <Chip
+              label={
+                jam?.destination_name ? `${individual ? "Same as the host" : "Same as the Huddle"}: ${jam.destination_name}` : "Same as the Huddle"
+              }
+              selected={!ownDestination}
+              onPress={() => setOwnDestination(false)}
+            />
+            <Chip label="Somewhere else" selected={ownDestination} onPress={() => setOwnDestination(true)} />
+          </View>
+          {ownDestination ? <DestinationPicker value={myPlace} onChange={setMyPlace} near={here.position} disabled={loading} /> : null}
+        </Card>
 
         <Card>
           <Toggle
@@ -213,6 +254,7 @@ export function JoinJamScreen({ initialCode }: { initialCode?: string }) {
 }
 
 const styles = StyleSheet.create({
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
   cameraScreen: { flex: 1, backgroundColor: colors.ink },
   camera: { flex: 1 },
   cameraOverlay: {

@@ -77,7 +77,11 @@ describe("evaluateRisk", () => {
     const r = evaluateRisk(input({ routeStatus: route("deviation", 260) }));
     expect(r.riskScore).toBe(1);
     expect(r.reasons).toEqual(["About 260 m away from the planned route."]);
-    expect(evaluateRisk(input({ routeStatus: route("significant_deviation", 400) })).riskScore).toBe(1);
+    // Clearly off the planned path is enough for a check-in on its own.
+    const off = evaluateRisk(input({ routeStatus: route("significant_deviation", 400) }));
+    expect(off.riskScore).toBe(3);
+    expect(off.recommendedAction).toBe("send_checkin");
+    expect(off.reasons).toEqual(["About 400 m off the planned path."]);
   });
 
   it("sudden stop after rapid movement scores +2 (not without prior rapid movement)", () => {

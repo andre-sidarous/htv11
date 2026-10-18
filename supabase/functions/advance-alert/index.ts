@@ -10,8 +10,9 @@
 //                     (contact_only_alert or no ai_call_consent skips straight to CONTACTS_NOTIFIED)
 //   AI_CALL_ACTIVE    + AI_CALL_SILENCE_TIMEOUT_S; the affected phone pushes the deadline out
 //                     whenever the person speaks or taps, so it only fires after 10s of silence  -> CONTACTS_NOTIFIED
-//   The person answering at any point -> USER_RESPONDED / AI_CALL_USER_RESPONDED; a member acknowledging the
-//   group alert -> GROUP_MEMBER_ACKNOWLEDGED.
+//   GROUP_MEMBER_ACKNOWLEDGED + the same group timeout -> AI_CALL_STARTING (someone's on the way; the AI
+//                     guides the person meanwhile). Without AI consent it just waits for the helper.
+//   The person answering at any point -> USER_RESPONDED / AI_CALL_USER_RESPONDED.
 // The caller broadcasts alert_updated (and incident_created when `incidentId` is returned) on jam:{jamId}.
 import { TERMINAL_ESCALATION_STATES } from "../_shared/constants.ts";
 import { escalationConfigFor, transition, type EscalationState } from "../_shared/escalation.ts";

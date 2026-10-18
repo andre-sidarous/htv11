@@ -65,7 +65,13 @@ export function SharingBar({ sharing }: { sharing: LocationSharing }) {
       {live && lastAccuracy !== null && lastAccuracy > POOR_ACCURACY_M ? (
         <Text style={type.caption}>Low GPS accuracy (about {Math.round(lastAccuracy)} m). Your marker may be approximate.</Text>
       ) : null}
-      {state === "live" || state === "waiting_for_fix" || sharing.simulated ? (
+      {sharing.simulated ? (
+        <View style={[styles.row, styles.demoRow]} accessibilityRole="alert">
+          <Text style={[type.caption, styles.label, styles.demoText]}>Showing a demo position, not your real GPS.</Text>
+          <PillButton label="Use my real location" onPress={() => sharing.setCampusWalkPosition(false)} accessibilityHint="Switches back to your phone's GPS" />
+        </View>
+      ) : null}
+      {state === "live" || state === "waiting_for_fix" ? (
         <View style={styles.row}>
           <Text style={[type.caption, styles.label]}>Use Campus Walk demo position</Text>
           <Switch
@@ -92,4 +98,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: space(2) },
   dot: { width: 10, height: 10, borderRadius: 5 },
   label: { flex: 1 },
+  demoRow: { padding: space(2), borderRadius: radius.sm, backgroundColor: colors.amberSoft },
+  demoText: { color: colors.amberInk, fontWeight: "600" },
 });

@@ -14,11 +14,13 @@ import { SafetyControls, STATE_COPY } from "@/features/health/SafetyControls";
 import { useCurrentUserId } from "@/features/health/useCurrentUserId";
 import { demoFlags } from "@/features/demo/demoFlags";
 import { useJam } from "@/features/jams/useJam";
+import { fromPlannedRoute, planMatches } from "@/features/map/plannedRoute";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
+import { CALL_REPLIES, callReplyLabel, STILL_THERE, type CallReplyId } from "@/lib/ai/callReplies";
 import { AI_CALL_SILENCE_TIMEOUT_MS, SUPPORT_CALL_SCRIPT } from "@/lib/constants";
-import type { AiCallContext, AiCallState, AiCallTurn, AlertRow } from "@/lib/types";
+import type { AiCallContext, AiCallState, AiCallTurn, AlertRow, PlannedRoute } from "@/lib/types";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { startAiPhoneCall } from "@/lib/supabase/functions";
+import { getSupportCallReply, startAiPhoneCall } from "@/lib/supabase/functions";
 import { aiService } from "@/services/ai";
 import { simulatedHealth } from "@/services/health";
 import { routingService } from "@/services/routing";
@@ -27,9 +29,10 @@ import { buildCallContext, callRoute, type CallDestination } from "./callContext
 import { ensureIncidentPackage } from "./incidents";
 import { useCallRecording } from "./useCallRecording";
 
-/** How long Jam waits for a tap after each question: the silence budget split over the two pauses. */
-const LISTEN_MS = AI_CALL_SILENCE_TIMEOUT_MS / (SUPPORT_CALL_SCRIPT.length - 1);
-const THANKS = "Thank you. Your group can see that you responded.";
+/** After Huddle speaks, how long it waits for a reply; quiet twice in a row ends the call. */
+const REPLY_WAIT_MS = 12_000;
+const STILL_THERE_WAIT_MS = AI_CALL_SILENCE_TIMEOUT_MS;
+const THANKS = "Glad you’re okay. Your group can see that you responded.";
 
 /** "phone" = Jam is ringing their real phone (Twilio); "calling" = the in-app spoken fallback. */
 type Phase = "loading" | "idle" | "phone" | "calling" | "responded" | "unresponsive" | "done";
@@ -51,6 +54,9 @@ function speak(text: string, muted = false): Promise<void> {
     Speech.speak(text, { rate: 0.95, onDone: done, onStopped: done, onError: done });
   });
 }
+
+/** Timestamps for the call loop (outside the component, so the compiler doesn't treat them as render-time). */
+const clock = { now: () => Date.now(), isoIn: (ms: number) => new Date(Date.now() + ms).toISOString() };
 
 const formatTimer = (ms: number) => {
   const s = Math.max(0, Math.floor(ms / 1000));
@@ -82,7 +88,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   const [listeningUntil, setListeningUntil] = useState<number | null>(null);
   /** Why the real phone call couldn't be placed (shown when we fall back to the in-app call). */
   const [fallbackReason, setFallbackReason] = useState<string | null>(null);
-  const [directions, setDirections] = useState<Pick<AiCallContext, "guidance" | "nearestSupportPoint" | "supportNote" | "destinationName"> | null>(null);
+  const [directions, setDirections] = useState<Pick<AiCallContext, "guidance" | "nearestSupportPoint" | "supportNote" | "destinationName" | "backToRoute"> | null>(null);
 
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
@@ -95,6 +101,9 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     setPhase(p);
   };
   const wake = useRef<(() => void) | null>(null);
+  /** A reply they tapped, picked up by the call loop. */
+  const pendingReply = useRef<CallReplyId | null>(null);
+  const [heard, setHeard] = useState<string | null>(null);
   const started = useRef<string | null>(null);
   const onAlertChangeRef = useRef<() => void>(() => {});
   useEffect(() => {
@@ -160,6 +169,24 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
 
   const stillCalling = () => phaseRef.current === "calling";
 
+  /** They're talking with Huddle: keep the server's no-response timer from firing mid-conversation. */
+  async function pushDeadline(a: AlertRow) {
+    const latest = (await refreshAlert(a.id)) ?? a;
+    if (latest.escalation_state !== "AI_CALL_ACTIVE") return;
+    const ms = policyRef.current?.config.aiCallResponseTimeoutMs ?? 30_000;
+    await alertRepository.update(latest.id, latest.escalation_state, { next_deadline_at: clock.isoIn(ms) }).catch(() => null);
+  }
+
+  /** A reply button: cut Huddle off if it's still talking and answer this instead. */
+  function reply(id: CallReplyId) {
+    if (phaseRef.current !== "calling") return;
+    pendingReply.current = id;
+    setHeard(callReplyLabel(id));
+    safetyStore.set({ lastResponseAt: new Date().toISOString() });
+    void Speech.stop();
+    wake.current?.();
+  }
+
   async function finishUnresponsive(alreadyAdvanced: boolean) {
     const a = callAlert.current;
     if (!a || phaseRef.current === "unresponsive" || phaseRef.current === "done") return;
@@ -210,7 +237,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     // "I changed my destination" overrides the Huddle's destination for this person.
     const { data: mine } = (await getSupabaseClient()
       ?.from("jam_members")
-      .select("destination_name, destination_lat, destination_lng")
+      .select("destination_name, destination_lat, destination_lng, planned_route")
       .eq("jam_id", jamId)
       .eq("user_id", userId)
       .maybeSingle()) ?? { data: null };
@@ -220,7 +247,10 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
         : j?.destination_lat != null && j.destination_lng != null
           ? { latitude: Number(j.destination_lat), longitude: Number(j.destination_lng), name: j.destination_name ?? undefined }
           : null;
-    const route = location && destination ? await callRoute(routingService, location, destination, j?.travel_mode) : null;
+    // Their saved plan (if it's for this destination) is what "back on your route" means.
+    const plan = (mine?.planned_route as PlannedRoute | null | undefined) ?? null;
+    const plannedRoute = planMatches(plan, destination) ? fromPlannedRoute(plan) : null;
+    const route = plannedRoute ?? (location && destination ? await callRoute(routingService, location, destination, j?.travel_mode) : null);
     const context = buildCallContext({
       displayName,
       location,
@@ -229,8 +259,10 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
       groupResponded: Boolean(alert.acknowledged_at),
       destination,
       route,
+      plannedRoute,
     });
     setDirections({
+      backToRoute: context.backToRoute,
       guidance: context.guidance,
       nearestSupportPoint: context.nearestSupportPoint,
       supportNote: context.supportNote,
@@ -246,25 +278,44 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     let current: AlertRow = initial;
     if (current.escalation_state === "AI_CALL_STARTING") current = (await dispatchAlertEvent(current, { type: "AI_CALL_CONNECTED" })) ?? current;
     sendState("active");
-    setCallStartedAt(Date.now());
+    setCallStartedAt(clock.now());
     void recordingRef.current.start(initial.id, p.consents.recording);
 
     const displayName = await alertRepository.displayName(userId).catch(() => null);
-    for (let step = 0; step < SUPPORT_CALL_SCRIPT.length && stillCalling(); step++) {
-      const context = await contextNow(userId, current, displayName);
-      const next = await aiService.getSupportCallTurn(context, step);
+    const say = async (next: AiCallTurn) => {
       if (!stillCalling()) return;
       setTurn(next);
-      sendState("active", { scriptStep: step });
+      sendState("active", { scriptStep: next.step });
       await speak(next.text, mutedRef.current);
-      if (step < SUPPORT_CALL_SCRIPT.length - 1 && stillCalling()) await listen(LISTEN_MS);
+      // Silence is counted from when Huddle stops talking (the server timer too).
+      if (stillCalling()) await pushDeadline(current);
+    };
+
+    // Opening: why Huddle is calling, how to get back on route, the nearest busy public place.
+    await say(await aiService.getSupportCallTurn(await contextNow(userId, current, displayName), 0));
+    // Then a conversation: every reply gets an answer; quiet once → "are you still there?"; quiet again → contacts.
+    let quiet = 0;
+    while (stillCalling()) {
+      if (!pendingReply.current) await listen(quiet === 0 ? REPLY_WAIT_MS : STILL_THERE_WAIT_MS);
+      if (!stillCalling()) return;
+      const reply = pendingReply.current;
+      pendingReply.current = null;
+      if (reply) {
+        quiet = 0;
+        await say(await getSupportCallReply(await contextNow(userId, current, displayName), reply, 1));
+        continue;
+      }
+      if (++quiet >= 2) break;
+      await say({ text: STILL_THERE, source: "scripted", step: 1 });
     }
+    if (!stillCalling()) return;
+    await say({ text: SUPPORT_CALL_SCRIPT[SUPPORT_CALL_SCRIPT.length - 1]!, source: "scripted", step: SUPPORT_CALL_SCRIPT.length - 1 });
     if (stillCalling()) await finishUnresponsive(false);
   }
 
   /** Ring their real phone (AI talks on the call); fall back to speaking here if that isn't possible. */
   async function beginCall(initial: AlertRow) {
-    setCallStartedAt(Date.now());
+    setCallStartedAt(clock.now());
     const result = demoFlags.get().inAppCall
       ? ({ mode: "app", reason: "Demo: the call runs in the app" } as const)
       : await startAiPhoneCall(initial.id);
@@ -482,6 +533,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
           </Text>
         ) : (
           <View style={styles.transcript} accessibilityLiveRegion="polite">
+            {heard ? <Text style={styles.heard}>You: “{heard}”</Text> : null}
             <Text style={styles.line} maxFontSizeMultiplier={1.4}>
               {turn?.text ?? "Connecting…"}
             </Text>
@@ -505,6 +557,7 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
               <Text style={styles.directionsLabel}>{directions.destinationName ? `Toward ${directions.destinationName}` : "Where to go"}</Text>
             </View>
             {directions.guidance ? <Text style={styles.directionsText}>{directions.guidance}</Text> : null}
+            {directions.backToRoute && directions.backToRoute !== directions.guidance ? <Text style={styles.body}>{directions.backToRoute}</Text> : null}
             {directions.nearestSupportPoint ? (
               <View style={styles.supportRow}>
                 <Icon icon={LifeBuoy} size={18} color={colors.callAccent} />
@@ -557,17 +610,29 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
         ) : null}
 
         {phase === "calling" ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityHint="Lets Huddle and your group know you can hear the call"
-            onPress={() => void onResponded(false)}
-            style={({ pressed }) => [styles.hear, pressed && styles.dim]}
-          >
-            <Icon icon={Ear} size={26} color={colors.brandDark} strokeWidth={2} />
-            <Text style={styles.hearText} maxFontSizeMultiplier={1.4}>
-              I can hear you
-            </Text>
-          </Pressable>
+          <View style={styles.replies}>
+            <Text style={styles.caption}>Talk to Huddle</Text>
+            <View style={styles.replyWrap}>
+              {CALL_REPLIES.map((r) => (
+                <Pressable key={r.id} accessibilityRole="button" onPress={() => reply(r.id)} style={({ pressed }) => [styles.reply, pressed && styles.dim]}>
+                  <Text style={styles.replyText} maxFontSizeMultiplier={1.4}>
+                    {r.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityHint="Tells Huddle and your group you're okay"
+              onPress={() => void onResponded(false)}
+              style={({ pressed }) => [styles.hear, pressed && styles.dim]}
+            >
+              <Icon icon={Ear} size={26} color={colors.brandDark} strokeWidth={2} />
+              <Text style={styles.hearText} maxFontSizeMultiplier={1.4}>
+                I&apos;m okay now
+              </Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {phase === "unresponsive" ? <Text style={styles.body}>Preparing an incident package for your group…</Text> : null}
@@ -764,6 +829,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.callAccent,
   },
   hearText: { color: colors.brandDark, fontSize: 22, fontFamily: fonts.bold, fontWeight: "700" },
+  replies: { gap: space(2) },
+  replyWrap: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },
+  reply: {
+    minHeight: TAP_TARGET,
+    justifyContent: "center",
+    paddingHorizontal: space(4),
+    borderRadius: radius.pill,
+    backgroundColor: colors.callSurfaceStrong,
+    borderWidth: 1,
+    borderColor: colors.callAccent,
+  },
+  replyText: { color: colors.callInk, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
+  heard: { color: colors.callInkMuted, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600", fontStyle: "italic" },
   back: { minHeight: TAP_TARGET, alignItems: "center", justifyContent: "center" },
   backText: { color: colors.callAccent, fontSize: 16, fontFamily: fonts.semibold, fontWeight: "600" },
   dim: { opacity: 0.55 },

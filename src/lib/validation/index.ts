@@ -22,4 +22,5 @@ export const aiCallContextSchema = z.object({
   destinationName: z.string().max(120).optional(),
   guidance: z.string().max(300).optional(),
   supportNote: z.string().max(300).optional(),
+  backToRoute: z.string().max(300).optional(),
 });

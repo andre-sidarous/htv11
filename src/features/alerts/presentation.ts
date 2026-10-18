@@ -13,9 +13,18 @@ export function responseStatus(kinds: AlertResponseKind[], resolved: boolean): R
   return LABEL[Math.max(0, ...kinds.map((k) => RANK[k]))]!;
 }
 
+/** The alert was raised because they left their own planned path. */
+export const isOffPath = (reasons: readonly string[] | null | undefined) => Boolean(reasons?.some((r) => /off the planned path/i.test(r)));
+
 /** Card headline that reflects what they answered, if they answered. */
-export function alertHeadline(name: string, response: CheckInResponse | null | undefined, resolved: boolean): string {
+export function alertHeadline(
+  name: string,
+  response: CheckInResponse | null | undefined,
+  resolved: boolean,
+  reasons?: readonly string[] | null,
+): string {
   if (resolved) return `${name} is marked safe.`;
+  if (!response && isOffPath(reasons)) return `${name} is off their planned path.`;
   if (response === "im_lost") return `${name} is lost.`;
   if (response === "need_help") return `${name} asked for help.`;
   if (response === "cannot_respond") return `${name} can’t respond right now.`;
@@ -24,8 +33,9 @@ export function alertHeadline(name: string, response: CheckInResponse | null | u
 }
 
 /** Calm, plain-language line for where escalation is. Never alarming. */
-export function escalationLine(state: EscalationState, name: string, response?: CheckInResponse | null): string {
+export function escalationLine(state: EscalationState, name: string, response?: CheckInResponse | null, reasons?: readonly string[] | null): string {
   if (state === "GROUP_ALERT_SENT") {
+    if (!response && isOffPath(reasons)) return `${name} is off their planned path and hasn’t answered Huddle’s check-in. Check in on them.`;
     if (response === "im_lost") return `${name} said they’re lost and is sharing their location. Tap Find ${name} for a route to them.`;
     if (response === "need_help") return `${name} asked for help. Your group has been notified.`;
     if (response === "cannot_respond") return `${name} said they can’t respond right now. Your group has been notified.`;
@@ -37,7 +47,7 @@ export function escalationLine(state: EscalationState, name: string, response?: 
     case "GROUP_ALERT_SENT":
       return `${name} hasn't answered Huddle's check-in. Your group has been notified.`;
     case "GROUP_MEMBER_ACKNOWLEDGED":
-      return "Someone in your group is helping.";
+      return `Someone in your group is on the way. Huddle’s AI will call ${name} to guide them meanwhile.`;
     case "AI_CALL_STARTING":
     case "AI_CALL_ACTIVE":
       return `Huddle's support call with ${name} is active.`;

@@ -24,7 +24,7 @@ const POSITION: Record<Exclude<EscalationState, "RESOLVED" | "CANCELLED">, { ind
   CHECK_IN_SENT: { index: 1 },
   USER_RESPONDED: { index: 1, settled: true },
   GROUP_ALERT_SENT: { index: 2 },
-  GROUP_MEMBER_ACKNOWLEDGED: { index: 2, settled: true },
+  GROUP_MEMBER_ACKNOWLEDGED: { index: 2 },
   AI_CALL_STARTING: { index: 3 },
   AI_CALL_ACTIVE: { index: 3 },
   AI_CALL_USER_RESPONDED: { index: 3, settled: true },
@@ -37,7 +37,7 @@ const CURRENT: Record<EscalationState, string> = {
   CHECK_IN_SENT: "Huddle is checking in.",
   USER_RESPONDED: "Answered the check-in.",
   GROUP_ALERT_SENT: "The group has been notified.",
-  GROUP_MEMBER_ACKNOWLEDGED: "Someone from the group is responding.",
+  GROUP_MEMBER_ACKNOWLEDGED: "Someone from the group is on the way.",
   AI_CALL_STARTING: "Starting the support call.",
   AI_CALL_ACTIVE: "Support call in progress.",
   AI_CALL_USER_RESPONDED: "Responded on the support call.",
@@ -56,7 +56,9 @@ export function timelineFor(state: EscalationState | null, aiCallAllowed = true)
   if (s === "RESOLVED" || s === "CANCELLED") {
     return { stages: ORDER.map((key) => ({ key, label: LABELS[key], status: key === "monitoring" ? "active" : "upcoming" })), current: CURRENT[s], next: null };
   }
-  const { index, settled } = POSITION[s];
+  const { index } = POSITION[s];
+  // A helper on the way only stops the escalation when there's no AI call to start next.
+  const settled = POSITION[s].settled || (s === "GROUP_MEMBER_ACKNOWLEDGED" && !aiCallAllowed);
   const stages = ORDER.map((key, i): TimelineStage => {
     let status: StageStatus = i < index ? "done" : i === index ? (settled ? "settled" : "active") : "upcoming";
     if ((key === "ai_call" && !aiCallAllowed) || (settled && i > index)) status = "skipped";
@@ -71,6 +73,8 @@ function nextStep(state: EscalationState, aiCallAllowed: boolean): string | null
       return "Huddle only checks in when several signals change together.";
     case "CHECK_IN_SENT":
       return "If there’s no answer, the group is notified.";
+    case "GROUP_MEMBER_ACKNOWLEDGED":
+      return aiCallAllowed ? "Huddle’s AI calls them to guide them until help arrives." : null;
     case "GROUP_ALERT_SENT":
       return aiCallAllowed ? "If nobody responds, Huddle starts a support call." : "If nobody responds, trusted contacts are notified.";
     case "AI_CALL_STARTING":

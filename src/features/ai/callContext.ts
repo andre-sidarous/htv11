@@ -1,5 +1,5 @@
 import { loadAllSupportPoints } from "@/features/map/civicData";
-import { describeSupportNearby, getSpokenGuidance, spokenSupportPoints } from "@/features/map/guidance";
+import { backToRouteLine, describeSupportNearby, getSpokenGuidance, spokenSupportPoints } from "@/features/map/guidance";
 import { describeTransitNearby, nearestHelp } from "@/features/map/quietArea";
 import { campusWalk } from "@/lib/demo/campusWalk";
 import { haversineM } from "@/lib/geo";
@@ -61,7 +61,10 @@ export function buildCallContext(input: {
   destination?: CallDestination | null;
   /** Route from `location` to the destination (see callRoute). Without it, directions are straight-line. */
   route?: Route | null;
+  /** Their saved planned path: "how do I get back on my route?" is measured against it. */
+  plannedRoute?: Route | null;
 }): AiCallContext {
+  const backToRoute = input.location ? backToRouteLine(input.location, input.plannedRoute?.coordinates) : null;
   const nearest = nearestSupportPoint(input.location);
   // In an area with few public support points, guide them to the nearest staffed place (library,
   // station, hospital...) instead of the destination, and say how scarce transit is.
@@ -95,5 +98,6 @@ export function buildCallContext(input: {
     ...(input.destination?.name ? { destinationName: input.destination.name.slice(0, 120) } : {}),
     ...(directions?.guidance ? { guidance: directions.guidance.slice(0, 300) } : {}),
     ...(note ? { supportNote: note.slice(0, 300) } : {}),
+    ...(backToRoute ? { backToRoute: backToRoute.slice(0, 300) } : {}),
   };
 }

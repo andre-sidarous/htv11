@@ -54,3 +54,14 @@ describe("check-in answers", () => {
     expect(alertHeadline("Alex", "im_lost", true)).toBe("Alex is marked safe.");
   });
 });
+
+describe("off their planned path", () => {
+  const reasons = ["About 400 m off the planned path."];
+  it("tells the group they left their path, not just that they didn't answer", () => {
+    expect(alertHeadline("Alex", null, false, reasons)).toBe("Alex is off their planned path.");
+    expect(escalationLine("GROUP_ALERT_SENT", "Alex", null, reasons)).toMatch(/off their planned path and hasn’t answered/);
+  });
+  it("their own answer still wins", () => {
+    expect(alertHeadline("Alex", "im_lost", false, reasons)).toBe("Alex is lost.");
+  });
+});

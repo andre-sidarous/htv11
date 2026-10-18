@@ -60,6 +60,9 @@ function Panel() {
   const [story] = useState(buildDemoStory);
   const [progress, setProgress] = useState<StoryProgress | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [blockers, setBlockers] = useState<string[]>([]);
+  /** The story's AI call: inside the app (shows when mirrored) or a real phone call (Twilio). */
+  const [callInApp, setCallInApp] = useState(true);
   const [incidentId, setIncidentId] = useState<string | null>(null);
   const [tick, setTick] = useState(() => Date.now());
   const cancelled = useRef(false);
@@ -71,16 +74,24 @@ function Panel() {
   }, [storyRunning]);
   useEffect(() => {
     let active = true;
-    void storyPreflight().then((w) => active && setWarnings(w));
+    void storyPreflight().then((r) => {
+      if (!active) return;
+      setBlockers(r.blockers);
+      setWarnings(r.warnings);
+    });
     return () => {
       active = false;
     };
   }, [context.jamId, context.affectedUserId]);
 
   async function startStory() {
+    const check = await storyPreflight();
+    setBlockers(check.blockers);
+    setWarnings(check.warnings);
+    if (check.blockers.length) return;
     cancelled.current = false;
     setIncidentId(null);
-    await setStoryRunning(true).catch(() => undefined);
+    await setStoryRunning(true, callInApp).catch(() => undefined);
     const result = await runStory(story, { onProgress: setProgress, isCancelled: () => cancelled.current });
     setIncidentId(storyIncidentId);
     await setStoryRunning(false).catch(() => undefined);
@@ -179,15 +190,26 @@ function Panel() {
 
       <View style={[styles.card, styles.storyCard]}>
         <Text style={type.heading}>Automated demo</Text>
-        <Text style={type.caption}>Two taps to set the scene, then one tap runs the whole story on its own. Read the line in bold aloud.</Text>
+        <Text style={type.caption}>
+          Before you start, everyone picks their own destination (when joining, or Settings → Destination) so each route is on the map. Then
+          reset, and one tap runs the whole story. Read the line in bold aloud.
+        </Text>
         <ActionRow index={1} label="Reset demo" available={demoActions.has(DEMO_ACTION_IDS.resetDemo)} state={runs[DEMO_ACTION_IDS.resetDemo]} onPress={() => run(DEMO_ACTION_IDS.resetDemo, "Reset demo")} />
-        <ActionRow
-          index={2}
-          label="Move affected user away"
-          available={demoActions.has(DEMO_ACTION_IDS.moveAffectedUserAway)}
-          state={runs[DEMO_ACTION_IDS.moveAffectedUserAway]}
-          onPress={() => run(DEMO_ACTION_IDS.moveAffectedUserAway, "Move affected user away")}
-        />
+        {!storyRunning ? (
+          <View style={styles.chips}>
+            <Chip label="AI call in the app" selected={callInApp} onPress={() => setCallInApp(true)} />
+            <Chip label="Real phone call" selected={!callInApp} onPress={() => setCallInApp(false)} />
+          </View>
+        ) : null}
+        {blockers.length && !storyRunning ? (
+          <View style={styles.blockers}>
+            {blockers.map((b) => (
+              <Text key={b} style={[type.caption, styles.error]}>
+                · {b}
+              </Text>
+            ))}
+          </View>
+        ) : null}
         {warnings.length && !storyRunning ? (
           <View style={styles.warnings}>
             {warnings.map((w) => (
@@ -203,7 +225,7 @@ function Panel() {
           </Pressable>
         ) : (
           <Pressable accessibilityRole="button" onPress={() => void startStory()} style={({ pressed }) => [styles.action, styles.play, pressed && styles.pressed]}>
-            <Text style={styles.actionText}>3. ▶ Run the rest automatically</Text>
+            <Text style={styles.actionText}>2. ▶ Run the story</Text>
           </Pressable>
         )}
 
@@ -363,6 +385,7 @@ const styles = StyleSheet.create({
   dimText: { color: colors.inkMuted },
   activeText: { fontWeight: "700", color: colors.brand },
   countdown: { fontSize: 13, color: colors.brand, fontVariant: ["tabular-nums"] },
+  blockers: { gap: space(1), padding: space(3), borderRadius: radius.sm, backgroundColor: colors.escalationSoft },
   warnings: { gap: space(1), padding: space(3), borderRadius: radius.sm, backgroundColor: colors.amberSoft },
   warnText: { color: colors.amberInk },
   notice: { borderWidth: 1, borderColor: colors.amber },

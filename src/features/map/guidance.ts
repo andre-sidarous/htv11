@@ -316,3 +316,15 @@ export function getSpokenGuidance(input: SpokenGuidanceInput): SpokenGuidance {
   parts.push(`for ${spokenDistance(runM)}`);
   return withNearest(`${parts.join(" ")}${toward ? `, toward ${toward}` : ""}.`);
 }
+
+/**
+ * "Your planned route is about 450 metres west, on Military Trail. Head west to rejoin it." Null
+ * when they're on it (within GUIDANCE_OFF_ROUTE_M) or there's no route. For the AI call.
+ */
+export function backToRouteLine(position: LatLng, route: LatLng[] | null | undefined, streets?: Street[]): string | null {
+  const onRoute = route && route.length >= 2 ? project(position, route) : null;
+  if (!onRoute || onRoute.distanceM <= GUIDANCE_OFF_ROUTE_M) return null;
+  const dir = compassWord(bearingDeg(position, onRoute.point));
+  const street = streetAlong([onRoute.point], streets ?? streetsInBox(boxAround([onRoute.point], STREET_MATCH_M)));
+  return `Your planned route is ${spokenDistance(onRoute.distanceM)} ${dir}${street ? `, on ${street}` : ""}. Head ${dir} to rejoin it.`;
+}

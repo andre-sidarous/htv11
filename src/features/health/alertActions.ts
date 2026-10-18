@@ -4,6 +4,7 @@ import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { notificationService } from "@/services/notification";
 import { alertRepository, toSafetyAlert, type AlertPatch } from "./alertRepository";
 import { transition, type EscalationEvent } from "./escalation";
+import { mergeReasons, withMedicalLines } from "./medicalAlert";
 import { broadcast, safetyStore } from "./safetyStore";
 import { getCurrentUserId } from "./useCurrentUserId";
 
@@ -15,7 +16,7 @@ import { getCurrentUserId } from "./useCurrentUserId";
 
 /** If a non-affected phone wins a transition into these states, it builds a members-only package
  * after this delay unless the affected phone already did (incident_created). */
-const INCIDENT_FALLBACK_DELAY_MS = 6_000;
+const INCIDENT_FALLBACK_DELAY_MS = 25_000;
 
 const entered = (prev: EscalationState, next: AlertRow, ...states: EscalationState[]) =>
   prev !== next.escalation_state && states.includes(next.escalation_state);
@@ -165,15 +166,37 @@ export async function createCheckInAlert(input: {
 
 /** Keep the open alert's score and reasons current (affected phone only; state is untouched). */
 export async function updateAlertRisk(alert: AlertRow, evaluation: RiskEvaluation): Promise<void> {
-  const sameReasons = JSON.stringify(alert.reasons) === JSON.stringify(evaluation.reasons);
+  const reasons = mergeReasons(alert.reasons, evaluation.reasons);
+  const sameReasons = JSON.stringify(alert.reasons) === JSON.stringify(reasons);
   if (Number(alert.risk_score) === evaluation.riskScore && alert.severity === evaluation.severity && sameReasons) return;
   const updated = await alertRepository
     .update(alert.id, alert.escalation_state, {
       risk_score: evaluation.riskScore,
       severity: evaluation.severity,
-      reasons: evaluation.reasons,
+      reasons,
     })
     .catch(() => null);
+  if (!updated) return;
+  safetyStore.putAlert(updated);
+  await broadcast(updated.jam_id, "alert_updated", toSafetyAlert(updated));
+}
+
+/** Add "why" lines to an open alert (Demo Control's story), keeping any health lines last. */
+export async function addAlertReasons(alert: AlertRow, lines: string[]): Promise<void> {
+  const existing = (Array.isArray(alert.reasons) ? alert.reasons : []).filter((r): r is string => typeof r === "string");
+  const reasons = mergeReasons(existing, [...existing.filter((r) => !lines.includes(r)), ...lines]);
+  if (JSON.stringify(existing) === JSON.stringify(reasons)) return;
+  const updated = await alertRepository.update(alert.id, alert.escalation_state, { reasons }).catch(() => null);
+  if (!updated) return;
+  safetyStore.putAlert(updated);
+  await broadcast(updated.jam_id, "alert_updated", toSafetyAlert(updated));
+}
+
+/** Heart rate went high during an open alert: show the group the health lines (affected phone only). */
+export async function shareHealthOnAlert(alert: AlertRow, lines: string[]): Promise<void> {
+  const reasons = withMedicalLines(alert.reasons, lines);
+  if (JSON.stringify(alert.reasons) === JSON.stringify(reasons)) return;
+  const updated = await alertRepository.update(alert.id, alert.escalation_state, { reasons }).catch(() => null);
   if (!updated) return;
   safetyStore.putAlert(updated);
   await broadcast(updated.jam_id, "alert_updated", toSafetyAlert(updated));

@@ -1,5 +1,5 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { Consents, EmergencyPreference, JamMemberRow, JamRow, TravelMode } from "@/lib/types";
+import type { Consents, DestinationMode, EmergencyPreference, JamMemberRow, JamRow, TravelMode } from "@/lib/types";
 
 /** Columns a member may update on their own `jam_members` row (see RLS column grant). */
 export type MemberSettableFields = Partial<
@@ -17,6 +17,7 @@ export type MemberSettableFields = Partial<
     | "destination_lat"
     | "destination_lng"
     | "destination_updated_at"
+    | "planned_route"
   >
 >;
 
@@ -27,6 +28,8 @@ export type CreateJamInput = {
   destinationLng?: number | null;
   expectedArrival?: string | null;
   travelMode: TravelMode;
+  /** Defaults to 'group'. */
+  destinationMode?: DestinationMode;
   checkinDelaySeconds: number;
   groupResponseTimeoutSeconds: number;
   emergencyPreference: EmergencyPreference;
@@ -52,6 +55,7 @@ export async function createJam(input: CreateJamInput): Promise<{ jam: JamRow | 
       destination_lng: input.destinationLng ?? null,
       expected_arrival: input.expectedArrival ?? null,
       travel_mode: input.travelMode,
+      destination_mode: input.destinationMode ?? "group",
       checkin_delay_seconds: input.checkinDelaySeconds,
       group_response_timeout_seconds: input.groupResponseTimeoutSeconds,
     })
@@ -122,6 +126,30 @@ export async function setMyDestination(
     destination_lng: place.longitude,
     destination_updated_at: new Date().toISOString(),
   });
+}
+
+/** Host: change the Huddle's destination for everyone (RLS: host only). */
+export async function updateJamDestination(jamId: string, place: { name: string; latitude: number; longitude: number }): Promise<{ error: string | null }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { error } = await supabase
+    .from("jams")
+    .update({ destination_name: place.name.slice(0, 120), destination_lat: place.latitude, destination_lng: place.longitude })
+    .eq("id", jamId);
+  return { error: error?.message ?? null };
+}
+
+/** Host: one destination for everyone, or everyone picks their own. */
+export async function updateDestinationMode(jamId: string, mode: DestinationMode): Promise<{ error: string | null }> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return { error: "Supabase is not configured." };
+  const { error } = await supabase.from("jams").update({ destination_mode: mode }).eq("id", jamId);
+  return { error: error?.message ?? null };
+}
+
+/** Back to the Huddle's destination (drops "I'm heading somewhere else"). */
+export function clearMyDestination(jamId: string, userId: string) {
+  return updateMyMembership(jamId, userId, { destination_name: null, destination_lat: null, destination_lng: null, destination_updated_at: null });
 }
 
 /** "Call someone in my group": their numbers, only while I have an open alert (enforced by the DB). */

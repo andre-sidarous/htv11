@@ -222,6 +222,20 @@ export function useLocationSharing({ channel, jamId, userId, locationConsent, ja
     setSuspended(false);
   });
 
+  // "Reset demo" or the end of the demo story: back to real GPS (a demo position must never stick).
+  const backToGps = useCallback(() => {
+    if (!userId) return;
+    locationService.setSimulatedPath(userId, null);
+    setSimulated(false);
+    setSuspended(false);
+  }, [userId]);
+  useJamEvent(channel, "demo_reset", (e) => {
+    if (e.jamId === jamId) backToGps();
+  });
+  useJamEvent(channel, "demo_story", (e) => {
+    if (e.jamId === jamId && !e.running) backToGps();
+  });
+
   useJamEvent(channel, "member_status", (event) => {
     if (!userId || event.userId !== userId || sentStatusTimestamps.current.has(event.timestamp)) return;
     // Presence hints from the map demo actions: "offline" = stop updates, "live" = resume.

@@ -3,8 +3,9 @@ import { campusWalk } from "@/lib/demo/campusWalk";
 import { mockServicesEnabled } from "@/lib/env";
 import { haversineM } from "@/lib/geo";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import type { EscalationState, JamStatus, LatLng, LiveLocationRow, MemberRole, Route, TravelMode } from "@/lib/types";
+import type { EscalationState, JamStatus, LatLng, LiveLocationRow, MemberRole, PlannedRoute, Route, TravelMode } from "@/lib/types";
 import { routingService } from "@/services";
+import { fromPlannedRoute, PLAN_MATCH_M, toPlannedRoute } from "./plannedRoute";
 
 /**
  * Everything the map needs from Supabase for one Jam: the current user, the Jam (destination,
@@ -21,6 +22,9 @@ export type MapMember = {
   healthConsent: boolean;
   /** "I changed my destination": where this member is heading instead of the Huddle's destination. */
   personalDestination: (LatLng & { name: string }) | null;
+  /** Their saved planned path (drawn for everyone; "off their planned path" is measured against it). */
+  plannedRoute: Route | null;
+  plannedTo: (LatLng & { name: string | null }) | null;
 };
 
 export type MapJam = {
@@ -53,6 +57,8 @@ export type JamMapData = {
 
 /** Destinations within this distance of the Campus Walk preset use the Campus Walk start. */
 const PRESET_MATCH_M = 75;
+/** Closer than this to the Campus Walk start, the demo route starts there; farther, from your position. */
+const CAMPUS_NEARBY_M = 3_000;
 
 function mockData(jamId: string): Omit<JamMapData, "route" | "alternativeRoute" | "routeLoading" | "reload"> {
   const host = campusWalk.members.find((m) => m.role === "host") ?? campusWalk.members[0]!;
@@ -77,6 +83,8 @@ function mockData(jamId: string): Omit<JamMapData, "route" | "alternativeRoute" 
       locationConsent: true,
       healthConsent: true,
       personalDestination: null,
+      plannedRoute: null,
+      plannedTo: null,
     })),
     initialLocations: campusWalk.members
       .filter((m) => m.userId !== host.userId)
@@ -98,7 +106,9 @@ function mockData(jamId: string): Omit<JamMapData, "route" | "alternativeRoute" 
 
 /** Start of the planned route: the Campus Walk start for the preset, else a known position. */
 export function routeOrigin(destination: LatLng, fallback: LatLng | null): LatLng | null {
-  if (haversineM(destination, campusWalk.destination) <= PRESET_MATCH_M) return campusWalk.start;
+  const preset = haversineM(destination, campusWalk.destination) <= PRESET_MATCH_M;
+  // The scripted Campus Walk only makes sense on that campus: anywhere else, route from where you are.
+  if (preset && (!fallback || haversineM(fallback, campusWalk.start) <= CAMPUS_NEARBY_M)) return campusWalk.start;
   return fallback;
 }
 
@@ -144,7 +154,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             .maybeSingle(),
           supabase
             .from("jam_members")
-            .select("user_id, role, is_active, location_consent, health_consent, destination_name, destination_lat, destination_lng")
+            .select("user_id, role, is_active, location_consent, health_consent, destination_name, destination_lat, destination_lng, planned_route")
             .eq("jam_id", jamId),
           supabase.from("live_locations").select("*").eq("jam_id", jamId),
           supabase
@@ -194,6 +204,8 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             locationConsent: r.location_consent,
             healthConsent: r.health_consent,
             personalDestination: personal(r),
+            plannedRoute: fromPlannedRoute(r.planned_route as PlannedRoute | null),
+            plannedTo: (r.planned_route as PlannedRoute | null)?.to ?? null,
           })),
           // Positions are optional; RLS hides members who aren't sharing.
           initialLocations: locationsRes.error ? [] : (locationsRes.data ?? []),
@@ -239,12 +251,18 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
     };
   }, [jamId, load, supabase, instanceId]);
 
-  // Planned + alternative route, once per destination/origin.
+  // My planned path: the saved one if it's for my current destination; otherwise plan it once from
+  // where I am and save it, so everyone sees it and deviation is measured against a fixed plan.
   const destination = state.jam?.destination ?? null;
+  const selfPlan = state.members.find((m) => m.userId === state.selfId)?.plannedTo ?? null;
+  const savedRoute =
+    destination && selfPlan && haversineM(selfPlan, destination) <= PLAN_MATCH_M
+      ? (state.members.find((m) => m.userId === state.selfId)?.plannedRoute ?? null)
+      : null;
   const origin = destination ? routeOrigin(destination, fallbackOrigin) : null;
   const travelMode = state.jam?.travelMode ?? "walking";
   const routeKey =
-    destination && origin
+    destination && origin && !savedRoute
       ? [origin.latitude, origin.longitude, destination.latitude, destination.longitude].map((n) => n.toFixed(4)).join(",")
       : null;
 
@@ -256,8 +274,24 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
       routingService.getRoute(origin, destination, travelMode),
       routingService.getAlternativeRoute(origin, destination, travelMode),
     ])
-      .then(([route, alternativeRoute]) => {
-        if (!cancelled) setRoutes({ route, alternativeRoute, key: routeKey });
+      .then(([planned, alternativeRoute]) => {
+        // Routing down → the Campus Walk fallback only fits the Campus Walk; elsewhere a straight line.
+        const isCampus = haversineM(destination, campusWalk.destination) <= PRESET_MATCH_M;
+        const route: Route =
+          planned.isDemoRoute && !isCampus
+            ? { coordinates: [origin, destination], distanceM: haversineM(origin, destination), durationS: haversineM(origin, destination) / 1.3, source: "demo", isDemoRoute: true }
+            : planned;
+        if (cancelled) return;
+        setRoutes({ route, alternativeRoute: planned.isDemoRoute && !isCampus ? null : alternativeRoute, key: routeKey });
+        const selfId = state.selfId;
+        if (supabase && selfId) {
+          void supabase
+            .from("jam_members")
+            .update({ planned_route: toPlannedRoute(route, destination) })
+            .eq("jam_id", jamId)
+            .eq("user_id", selfId)
+            .then(({ error }) => error && console.warn("[map] saving planned route failed", error.message));
+        }
       })
       .catch((error) => console.warn("[map] routing failed", error))
       .finally(() => {
@@ -272,5 +306,11 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
-  return { ...state, route: routes.route, alternativeRoute: routes.alternativeRoute, routeLoading, reload };
+  return {
+    ...state,
+    route: savedRoute ?? routes.route,
+    alternativeRoute: savedRoute ? null : routes.alternativeRoute,
+    routeLoading: savedRoute ? false : routeLoading,
+    reload,
+  };
 }

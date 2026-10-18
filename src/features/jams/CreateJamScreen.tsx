@@ -7,7 +7,7 @@ import { Button, Card, Chip, Icon, OptionCard, Screen, TextField } from "@/compo
 import { useSession } from "@/features/auth/SessionProvider";
 import { routeOrigin } from "@/features/map/useJamMapData";
 import { APP_SLOGAN_CTA } from "@/lib/constants";
-import type { EmergencyPreference, TravelMode } from "@/lib/types";
+import type { DestinationMode, EmergencyPreference, TravelMode } from "@/lib/types";
 import { routingService } from "@/services";
 import { colors, radius, space, type } from "@/theme";
 import { CAMPUS_WALK_PLACE, DestinationPicker } from "./DestinationPicker";
@@ -33,6 +33,7 @@ export function CreateJamScreen() {
 
   const [name, setName] = useState("");
   const [destination, setDestination] = useState<Place | null>(null);
+  const [destinationMode, setDestinationMode] = useState<DestinationMode>("group");
   const [travelMode, setTravelMode] = useState<TravelMode>("walking");
   const here = useCurrentPosition();
   // Expected arrival is worked out from the real route, never asked for.
@@ -85,6 +86,7 @@ export function CreateJamScreen() {
       destinationLng: destination?.longitude ?? null,
       expectedArrival,
       travelMode,
+      destinationMode,
       checkinDelaySeconds,
       groupResponseTimeoutSeconds,
       emergencyPreference: preference,
@@ -113,7 +115,25 @@ export function CreateJamScreen() {
       </Card>
 
       <Card>
-        <Text style={type.label}>Destination</Text>
+        <Text style={type.heading}>Where is everyone going?</Text>
+        <View style={{ gap: space(3) }}>
+          <OptionCard
+            title="Same place for everyone"
+            description="Pick one destination. Everyone gets a route there."
+            selected={destinationMode === "group"}
+            onPress={() => setDestinationMode("group")}
+          />
+          <OptionCard
+            title="Everyone picks their own"
+            description="Each person chooses where they’re heading when they join. Everyone sees each other’s routes."
+            selected={destinationMode === "individual"}
+            onPress={() => setDestinationMode("individual")}
+          />
+        </View>
+      </Card>
+
+      <Card>
+        <Text style={type.label}>{destinationMode === "group" ? "Destination" : "Your destination"}</Text>
         <DestinationPicker value={destination} onChange={setDestination} near={here.position} disabled={loading} />
       </Card>
 

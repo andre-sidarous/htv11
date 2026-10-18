@@ -7,6 +7,7 @@ import { mockServicesEnabled } from "@/lib/env";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { IncidentPackage, IncidentRecipient } from "@/lib/types";
 import { heartRateIncreasePct } from "@/services/risk/engine";
+import { callContacts } from "@/lib/supabase/functions";
 import { incidentService } from "@/services/incident";
 
 /**
@@ -132,6 +133,11 @@ export function ensureIncidentPackage(alertId: string): Promise<string | null> {
     const existing = await existingPackageId(alertId).catch(() => null);
     if (existing) {
       safetyStore.set((s) => ({ incidents: { ...s.incidents, [alertId]: existing } }));
+      // Someone else's phone (or the server) made the package first: attach our recording to it.
+      if ((await getCurrentUserId()) === alert.affected_user_id && pendingRecordings.has(alertId)) {
+        const path = await withTimeout(pendingRecordings.get(alertId)!, RECORDING_WAIT_MS, null);
+        if (path) void callContacts(alertId, path).catch(() => undefined);
+      }
       return existing;
     }
 

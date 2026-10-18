@@ -1,3 +1,4 @@
+import { scriptedReply, type CallReplyId } from "@/lib/ai/callReplies";
 import { scriptedSupportLine } from "@/lib/ai/supportCallLine";
 import { SUPPORT_CALL_SCRIPT } from "@/lib/constants";
 import type { AiCallContext, AiCallTurn, EscalationState, NotificationResult } from "@/lib/types";
@@ -47,6 +48,13 @@ export async function getSupportCallTurn(context: AiCallContext, step: number): 
   const index = Math.max(0, Math.min(step, SUPPORT_CALL_SCRIPT.length - 1));
   const scripted: AiCallTurn = { text: scriptedSupportLine(context, index), source: "scripted", step: index };
   const { data } = await invoke<AiCallTurn>("ai-support-call", { context, step: index });
+  return data?.text ? data : scripted;
+}
+
+/** Answer to a reply they tapped on the in-app call; always usable (scripted when Gemini isn't). */
+export async function getSupportCallReply(context: AiCallContext, reply: CallReplyId, step: number): Promise<AiCallTurn> {
+  const scripted: AiCallTurn = { text: scriptedReply(context, reply), source: "scripted", step };
+  const { data } = await invoke<AiCallTurn>("ai-support-call", { context, reply, step });
   return data?.text ? data : scripted;
 }
 

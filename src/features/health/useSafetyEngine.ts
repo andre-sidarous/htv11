@@ -12,6 +12,7 @@ import { advanceDueAlert, createCheckInAlert, refreshAlert, refreshOpenAlerts, u
 import { alertRepository, type MemberPolicy } from "./alertRepository";
 import { openAlertFor, safetyStore } from "./safetyStore";
 import { useCurrentUserId } from "./useCurrentUserId";
+import { demoFlags } from "@/features/demo/demoFlags";
 
 /** Non-affected phones wait a little past the deadline so the affected phone (if alive) ticks first. */
 const MEMBER_TICK_GRACE_MS = 3_000;
@@ -109,12 +110,14 @@ export function useSafetyEngine(jamId: string) {
     });
     safetyStore.set({ evaluation });
 
+    // During Demo Control's automated story the story opens the check-ins and writes the reasons; don't race it.
+    const storyDriving = demoFlags.get().storyRunning;
     if (myAlert) {
-      void updateAlertRisk(myAlert, evaluation);
+      if (!storyDriving) void updateAlertRisk(myAlert, evaluation);
       return;
     }
     const cooling = now < cooldown.current.until && evaluation.riskScore <= cooldown.current.score;
-    if (evaluation.riskScore >= RISK_THRESHOLDS.checkIn && !cooling && !creating.current && policyRef.current?.isMember) {
+    if (evaluation.riskScore >= RISK_THRESHOLDS.checkIn && !cooling && !creating.current && !storyDriving && policyRef.current?.isMember) {
       creating.current = true;
       void createCheckInAlert({ jamId, userId: me, evaluation, requestedBy: me }).finally(() => {
         creating.current = false;

@@ -1,11 +1,12 @@
 import * as Haptics from "expo-haptics";
 import { router, type Href } from "expo-router";
 import { memo, useEffect, useState } from "react";
-import { BellRing, CircleCheck, Clock, EyeOff, FileText, HandHeart, Map as MapIcon, MapPin, Navigation, Phone } from "lucide-react-native";
+import { BellRing, CircleCheck, Clock, EyeOff, FileText, HandHeart, HeartPulse, Map as MapIcon, MapPin, Navigation, Phone } from "lucide-react-native";
 import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Badge, Button, Icon, IconBadge } from "@/components/ui";
 import { timelineFor } from "@/features/health/escalationStages";
+import { isMedicalLine, MEDICAL_PREFIX } from "@/features/health/medicalAlert";
 import { mapUi } from "@/features/map/mapUiStore";
 import type { AlertResponseKind, SafetyAlert } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
@@ -129,6 +130,9 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
     );
   }
 
+  const placeReasons = alert.reasons.filter((r) => !isMedicalLine(r));
+  const healthReasons = alert.reasons.filter(isMedicalLine).map((r) => r.slice(MEDICAL_PREFIX.length));
+
   return (
     <Animated.View style={[styles.card, style]} accessibilityLiveRegion="polite">
       <View style={[styles.accent, { backgroundColor: accent }]} />
@@ -138,7 +142,7 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
           <View style={styles.flex}>
             <Text style={type.overline}>{resolved ? "Resolved" : escalated ? "Escalated" : "Group alert"}</Text>
             <Text style={type.heading} accessibilityRole="header" maxFontSizeMultiplier={1.6}>
-              {alertHeadline(name, alert.checkinResponse, resolved)}
+              {alertHeadline(name, alert.checkinResponse, resolved, alert.reasons)}
             </Text>
           </View>
           <Badge label={status} tone={resolved ? "ok" : "neutral"} />
@@ -147,7 +151,7 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
         {!resolved ? (
           <>
             <Text style={type.body} maxFontSizeMultiplier={1.6}>
-              {escalationLine(alert.escalationState, name, alert.checkinResponse)}
+              {escalationLine(alert.escalationState, name, alert.checkinResponse, alert.reasons)}
             </Text>
             <View style={styles.steps} accessibilityLabel={`Escalation step ${stages.findIndex((st) => st.status === "active" || st.status === "settled") + 1} of ${stages.length}`}>
               {stages.map((st) => (
@@ -180,13 +184,28 @@ const AlertCard = memo(function AlertCard({ alert, jamId, name, kinds, incidentI
           </View>
         </View>
 
-        {alert.reasons.length > 0 && !resolved ? (
+        {placeReasons.length > 0 && !resolved ? (
           <View style={styles.reasons}>
-            {alert.reasons.slice(0, 3).map((r) => (
+            {placeReasons.slice(0, 3).map((r) => (
               <Text key={r} style={[type.caption, styles.reasonText]}>
                 · {r}
               </Text>
             ))}
+          </View>
+        ) : null}
+
+        {healthReasons.length > 0 && !resolved ? (
+          <View style={styles.health} accessibilityLabel={`Health: ${healthReasons.join(" ")}`}>
+            <View style={styles.metaRow}>
+              <Icon icon={HeartPulse} size={14} color={colors.escalation} />
+              <Text style={[type.overline, styles.healthTitle]}>Health, shared by {name}</Text>
+            </View>
+            {healthReasons.map((r) => (
+              <Text key={r} style={[type.caption, styles.reasonText]}>
+                · {r}
+              </Text>
+            ))}
+            <Text style={type.caption}>Estimate from CDC health survey data, not a diagnosis.</Text>
           </View>
         ) : null}
 
@@ -247,6 +266,8 @@ const styles = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: space(1.5) },
   reasons: { gap: space(1), padding: space(3), borderRadius: radius.sm, backgroundColor: colors.lavender },
   reasonText: { color: colors.ink },
+  health: { gap: space(1), padding: space(3), borderRadius: radius.sm, backgroundColor: colors.escalationSoft, borderLeftWidth: 3, borderLeftColor: colors.escalation },
+  healthTitle: { color: colors.escalation },
   error: { color: colors.escalation },
   actions: { gap: space(2) },
   actionRow: { flexDirection: "row", gap: space(2) },

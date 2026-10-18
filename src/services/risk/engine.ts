@@ -11,6 +11,8 @@ export const RISK_POINTS = {
   heartRate70: 1,
   unexpectedRunning: 2,
   routeDeviation: 1,
+  /** Clearly off their planned path (> 350 m): enough on its own for a check-in. */
+  offPlannedPath: 3,
   suddenStop: 2,
   fall: 3,
   noCheckInResponse: 3,
@@ -41,7 +43,10 @@ export function evaluateRisk(input: RiskInput): RiskEvaluation {
   }
 
   const level = input.routeStatus?.level;
-  if (level === "deviation" || level === "significant_deviation") {
+  if (level === "significant_deviation") {
+    score += RISK_POINTS.offPlannedPath;
+    reasons.push(`About ${Math.round(input.routeStatus!.distanceFromRouteM)} m off the planned path.`);
+  } else if (level === "deviation") {
     score += RISK_POINTS.routeDeviation;
     reasons.push(`About ${Math.round(input.routeStatus!.distanceFromRouteM)} m away from the planned route.`);
   }

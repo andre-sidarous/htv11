@@ -98,7 +98,7 @@ const ACTIONS: DemoAction[] = [
     owner: "health",
     run: async () =>
       void (await drive(
-        { CHECK_IN_SENT: { type: "DEADLINE" }, GROUP_ALERT_SENT: { type: "DEADLINE" } },
+        { CHECK_IN_SENT: { type: "DEADLINE" }, GROUP_ALERT_SENT: { type: "DEADLINE" }, GROUP_MEMBER_ACKNOWLEDGED: { type: "DEADLINE" } },
         ["AI_CALL_STARTING", "CONTACTS_NOTIFIED"],
       )),
   },
@@ -108,7 +108,7 @@ const ACTIONS: DemoAction[] = [
     owner: "health",
     run: async () =>
       void (await drive(
-        { CHECK_IN_SENT: { type: "DEADLINE" }, GROUP_ALERT_SENT: { type: "START_AI_CALL" } },
+        { CHECK_IN_SENT: { type: "DEADLINE" }, GROUP_ALERT_SENT: { type: "START_AI_CALL" }, GROUP_MEMBER_ACKNOWLEDGED: { type: "START_AI_CALL" } },
         ["AI_CALL_STARTING", "AI_CALL_ACTIVE"],
       )),
   },

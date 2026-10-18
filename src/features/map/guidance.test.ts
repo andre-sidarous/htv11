@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { campusWalk, toDemoRoute } from "@/lib/demo/campusWalk";
 import type { SupportPoint } from "@/lib/types";
-import { bearingDeg, compassWord, describeSupportNearby, getSpokenGuidance, spokenDistance, spokenStreetName } from "./guidance";
+import { backToRouteLine, bearingDeg, compassWord, describeSupportNearby, getSpokenGuidance, spokenDistance, spokenStreetName } from "./guidance";
 
 const route = toDemoRoute(campusWalk.plannedRoute);
 const destination = campusWalk.destination;
@@ -137,5 +137,20 @@ describe("guidance wording", () => {
     expect(compassWord(225)).toBe("south-west");
     expect(compassWord(-90)).toBe("west");
     expect(Math.round(bearingDeg({ latitude: 43.66, longitude: -79.4 }, { latitude: 43.67, longitude: -79.4 }))).toBe(0);
+  });
+});
+
+describe("backToRouteLine", () => {
+  const line = [
+    { latitude: 43.66, longitude: -79.4 },
+    { latitude: 43.67, longitude: -79.4 },
+  ];
+  it("says how far and which way their planned route is", () => {
+    // ~400 m east of a north-south route → head west.
+    expect(backToRouteLine({ latitude: 43.665, longitude: -79.395 }, line, [])).toMatch(/^Your planned route is about \d+ metres west\. Head west to rejoin it\.$/);
+  });
+  it("says nothing when they're on it or there's no route", () => {
+    expect(backToRouteLine({ latitude: 43.665, longitude: -79.4001 }, line, [])).toBeNull();
+    expect(backToRouteLine({ latitude: 43.665, longitude: -79.395 }, null, [])).toBeNull();
   });
 });

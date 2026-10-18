@@ -11,6 +11,7 @@ import { CHECKIN_BUFFER_CHOICES_S } from "@/lib/constants";
 import { signOut } from "@/lib/supabase/auth";
 import type { ConsentKey, EmergencyPreference } from "@/lib/types";
 import { colors, space, type } from "@/theme";
+import { DestinationCard } from "./DestinationCard";
 import { useHasActiveAlert } from "./useHasActiveAlert";
 import { deleteMyIncidentData } from "./incidentPrivacy";
 import { leaveJam, stopJam, updateMyMembership } from "./jamsApi";
@@ -135,6 +136,8 @@ export function SettingsScreen({ jamId }: { jamId: string }) {
   return (
     <Screen scroll>
       <Text style={type.title}>Settings</Text>
+
+      {jam ? <DestinationCard jam={jam} self={self} isHost={isHost} onChanged={() => void refreshMembers()} /> : null}
 
       <Card>
         <Toggle

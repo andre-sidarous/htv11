@@ -32,28 +32,38 @@ Backup password: `jam-demo-1234` (needs `EXPO_PUBLIC_ENABLE_DEV_LOGIN=true`).
 ## Setup on stage
 
 1. Every phone opens Jam in **Expo Go** (SDK 57): `npm run start:tunnel` on the laptop, or an EAS Update published beforehand.
-2. Presenter 1 creates "Campus Walk" (Bahen Centre → St. George Station). Presenters 2 and 3 join by QR or code.
+2. Presenter 1 creates a Huddle with **Everyone picks their own** destination. Presenters 2 and 3 join by QR or code and each pick where they're heading.
 3. Presenter 1 opens **Demo Control** (`/demo-control`), picks the Jam, then picks presenter 3 as the **Affected user**, then taps **1. Reset demo**.
 4. Mirror presenter 1's or 2's phone to the projector (AirPlay / QuickTime, or scrcpy on Android).
 
 ## The automated story (recommended)
 
-Demo Control → **Automated demo**: tap **1. Reset demo**, **2. Move affected user away**, then
-**3. ▶ Run the rest automatically**. The presenter's phone shows each step with a countdown and one bold
-line to read aloud; **Stop the story** ends it at any point. During the story the AI support call runs
-**inside presenter 3's app** (spoken + on screen, so it mirrors well); outside the story it's a real phone call.
+**Setup:** presenter 1 creates the Huddle with **Everyone picks their own** (Create → *Where is everyone going?*).
+Each person picks where they're heading when they join; everyone's dashed route and destination pin show on
+every map. Presenter 3 opens the **Map** tab once so their planned route is saved.
 
-1. +5s: presenter 3 gets **"You're away from your group"** (all answers available).
-2. +6s: no answer → everyone gets **"Alex hasn't answered — check on them"**.
-3. +10s: **heart-rate spike** → presenter 3 gets a **heart-rate heads-up** using their health profile
-   ("above the normal range for your age (CDC NHANES); you've listed asthma and a family history of heart
-   disease") → they tap **Understood** (the story taps it after ~12s if not).
-4. +5s: they walk into a **quiet area** picked from City of Toronto data (few public places, no TTC stops
-   within 300 m) → check-in → no answer → group alerted → nobody responds.
-5. **Huddle's AI calls them** (in the app): says they're away from public support and no TTC stops are
-   nearby, names the nearest place (e.g. Spadina Road Library), and **guides them while the map moves**.
-6. Recording on → no response → **trusted contact's phone rings** + text → **incident package** with the
-   Medical ID and medical card photo. **Open the incident package** appears on the presenter's phone.
+Demo Control → **Automated demo**: tap **1. Reset demo**, then **2. ▶ Run the story**. The presenter's phone
+shows each step with a countdown and one bold line to read aloud; **Stop the story** ends it at any point.
+Choose **AI call in the app** (spoken + on screen on presenter 3's phone, so it mirrors well) or **Real phone call**.
+
+1. **Off their planned path:** presenter 3's position moves about 450 m sideways from their own route.
+2. **Check-in to them only:** "You're off your planned path". Presenter 3 taps **I'm lost**, or ignores it
+   (after 15 s the story treats it as no answer).
+3. **The group is told:** "Alex is lost" / "Alex is off their planned path and hasn't answered". Members can
+   tap **Find Alex** for a walking route to them.
+4. **Quiet street:** they walk onto a residential street with few public places and no TTC stops within
+   300 m (City of Toronto open data). Huddle never calls a street "unsafe"; it says what the data shows.
+5. **Heart rate rises** to 145. Presenter 3's phone adds a **Health** box to the group alert: heart rate vs.
+   normal for their age, what's in their health profile (e.g. asthma, family history of heart disease,
+   allergies/EpiPen), and **Huddle's estimate** from the CDC NHANES model.
+6. **The AI calls them, even if someone tapped "I'm going to help"**, and records with consent. It opens with
+   how to get back on their route and the nearest busy public place.
+7. **They talk:** presenter 3 taps *Where am I?*, *How do I get back on my route?*, *Where's somewhere busy
+   nearby?*, *Stay with me*. Gemini answers each one; the map walks them toward the public place.
+   (On a real phone call they just speak.)
+8. **They stop replying:** "Are you still there?", then the **incident package** goes to the trusted contact
+   (call + text) and the Huddle: location, why Huddle was concerned, the recording, the Medical ID.
+   **Open the incident package** appears on the presenter's phone.
 
 Needs (the panel warns if any are off): presenter 3 has location, health, AI call, recording and
 contact-notification consents on, emergency preference **AI support call**, a **health profile** (e.g.

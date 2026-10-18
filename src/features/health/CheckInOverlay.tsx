@@ -14,9 +14,10 @@ import { mapUi } from "@/features/map/mapUiStore";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import type { AlertRow, CheckInResponse } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, tones, type } from "@/theme";
-import { createCheckInAlert, dispatchAlertEvent } from "./alertActions";
+import { createCheckInAlert, dispatchAlertEvent, shareHealthOnAlert } from "./alertActions";
 import { alertRepository } from "./alertRepository";
 import { openAlertFor, safetyStore, useSafetySnapshot } from "./safetyStore";
+import { useDemoFlags } from "@/features/demo/demoFlags";
 import { HeartRateHeadsUp } from "./HeartRateHeadsUp";
 import { SafetyControls } from "./SafetyControls";
 import { simulatedHealth } from "@/services/health";
@@ -83,7 +84,11 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   const here = useCurrentPosition();
 
   const myAlert = openAlertFor(snapshot, engine.me);
+  const { storyRunning } = useDemoFlags();
   const checkInOpen = myAlert?.escalation_state === "CHECK_IN_SENT" || (!myAlert && snapshot.manualCheckIn !== null);
+  // The AI support call is on screen (the heart-rate sheet would cover it), or the automated demo
+  // story is driving (its "Understood" would close the alert mid-story; the group still gets the health lines).
+  const inAiCall = Boolean(myAlert && myAlert.escalation_state.startsWith("AI_CALL")) || storyRunning;
   // A check-in that closed (answered elsewhere, or timed out) starts over at the main choices next time.
   const [wasOpen, setWasOpen] = useState(checkInOpen);
   if (wasOpen !== checkInOpen) {
@@ -98,7 +103,8 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   const reasons = (Array.isArray(myAlert?.reasons) ? (myAlert.reasons as unknown[]) : [])
     .filter((r): r is string => typeof r === "string" && r.length > 0)
     .slice(0, 3);
-  const awayFromGroup = reasons.some((r) => /route|away from|group/i.test(r));
+  const offPath = reasons.some((r) => /off the planned path/i.test(r));
+  const awayFromGroup = !offPath && reasons.some((r) => /route|away from|group/i.test(r));
 
   // A calm haptic each time a check-in opens.
   const hapticFor = useRef<string | null>(null);
@@ -236,7 +242,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
               <Pico mood="concerned" size={64} />
               <View style={styles.flex}>
                 <Text style={type.title} accessibilityRole="header">
-                  {awayFromGroup ? "You’re away from your group" : "Are you okay?"}
+                  {offPath ? "You’re off your planned path" : awayFromGroup ? "You’re away from your group" : "Are you okay?"}
                 </Text>
                 <Text style={[type.body, styles.muted]} maxFontSizeMultiplier={1.6}>
                   {myAlert ? "We noticed some unusual activity. Please let us know how you’re doing." : "Your group is checking in. Let them know how you’re doing."}
@@ -348,7 +354,10 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
         userId={engine.me}
         heartRate={snapshot.lastSignal?.heartRate}
         baselineHeartRate={snapshot.lastSignal?.baselineHeartRate}
-        blocked={checkInOpen || helpOpen || callList !== null}
+        blocked={checkInOpen || helpOpen || callList !== null || inAiCall}
+        onSpike={(lines) => {
+          if (myAlert) void shareHealthOnAlert(myAlert, lines);
+        }}
         onUnderstood={async () => {
           if (engine.me) simulatedHealth.setScenario(engine.me, "safe_again");
           if (myAlert?.escalation_state === "CHECK_IN_SENT") await respond("im_okay");

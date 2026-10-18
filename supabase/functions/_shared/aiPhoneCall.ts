@@ -212,7 +212,30 @@ export type CallKnowledge = {
   reasons: string[];
   /** From their health profile: "allergic to peanuts (carries an EpiPen); asthma". */
   medical: string | null;
+  /** "Your planned route is about 450 metres west. Head west to rejoin it." when they're off it. */
+  backToRoute: string | null;
 };
+
+/** Off their saved planned path by more than this: tell them how to rejoin it. */
+const OFF_ROUTE_M = 200;
+
+/** Nearest vertex of their saved plan (thinned to ~150 points, close enough for "which way"). */
+function backToRoute(here: { lat: number; lng: number }, plan: unknown, dest: { lat: number; lng: number } | null): string | null {
+  const p = plan as { to?: { latitude?: number; longitude?: number }; coordinates?: unknown } | null;
+  if (!p || !Array.isArray(p.coordinates) || p.coordinates.length < 2) return null;
+  // Only a plan for where they're heading now (40 m, as in the app).
+  if (dest && p.to && typeof p.to.latitude === "number" && typeof p.to.longitude === "number" && distanceM({ lat: p.to.latitude, lng: p.to.longitude }, dest) > 40) return null;
+  let best: { lat: number; lng: number; d: number } | null = null;
+  for (const c of p.coordinates) {
+    if (!Array.isArray(c) || typeof c[0] !== "number" || typeof c[1] !== "number") continue;
+    const point = { lat: c[0], lng: c[1] };
+    const d = distanceM(here, point);
+    if (!best || d < best.d) best = { ...point, d };
+  }
+  if (!best || best.d <= OFF_ROUTE_M) return null;
+  const dir = compass(bearing(here, best));
+  return `Your planned route is ${spokenDistance(best.d)} ${dir}. Head ${dir} to rejoin it.`;
+}
 
 const toRad = (d: number) => (d * Math.PI) / 180;
 function distanceM(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
@@ -385,7 +408,7 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
     admin.from("jams").select("destination_name, destination_lat, destination_lng").eq("id", alert.jam_id).maybeSingle(),
     admin
       .from("jam_members")
-      .select("location_consent, destination_name, destination_lat, destination_lng")
+      .select("location_consent, destination_name, destination_lat, destination_lng, planned_route")
       .eq("jam_id", alert.jam_id)
       .eq("user_id", alert.affected_user_id)
       .maybeSingle(),
@@ -423,11 +446,13 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
     medical: describeMedical(
       hp ? { allergies: (hp.allergies ?? []) as string[], carriesEpipen: Boolean(hp.carries_epipen), conditions: (hp.conditions ?? []) as string[] } : null,
     ),
+    backToRoute: null,
   };
   if (!loc) return knowledge;
 
   const here = { lat: Number(loc.latitude), lng: Number(loc.longitude) };
   knowledge.locationAgeMin = Math.max(0, Math.round((Date.now() - Date.parse(loc.last_seen_at)) / 60_000));
+  knowledge.backToRoute = backToRoute(here, member?.planned_route, dest);
 
   const key = `${here.lat.toFixed(4)},${here.lng.toFixed(4)}`;
   const cached = placeCache.get(key);
@@ -459,6 +484,7 @@ const SYSTEM_PROMPT = [
   "never claim to have called anyone except their trusted contacts when told so. If they say they are in danger, tell them to call 9 1 1.",
   "Goals: confirm they're okay, then guide them step by step to their destination using ONLY the directions given (never invent streets),",
   "mention the nearest public places when useful, answer their questions (where am I, how far, what's nearby), and keep them talking.",
+  "If they're off their planned route, tell them how to rejoin it (as given), or point them to the nearest busy public place first if it's closer.",
   "Style: calm, warm, plain spoken English for text-to-speech. One or two short sentences (under 45 words). No lists, emoji, or markdown.",
   "Usually end with a short question so they keep responding. Say distances exactly as given.",
   'Reply ONLY with JSON: {"say": string, "intent": "continue" | "safe" | "help" | "arrived" | "end"}.',
@@ -474,6 +500,7 @@ function knowledgeLines(k: CallKnowledge): string {
     k.remaining ? `Remaining: ${k.remaining}` : null,
     k.places.length ? `Nearby public places: ${k.places.join("; ")}` : "Nearby public places: none found",
     k.fewPlaces ? "Note: few public support points are close to them." : null,
+    k.backToRoute ? `How to rejoin their planned route: ${k.backToRoute}` : null,
     k.reasons.length ? `Why Huddle checked in: ${k.reasons.join("; ")}` : null,
     k.medical ? `Their medical info (for practical questions only, e.g. whether they have their EpiPen or inhaler; never diagnose): ${k.medical}` : null,
   ]
@@ -497,7 +524,8 @@ export function scriptedTurn(k: CallKnowledge, kind: "greeting" | "reply" | "sil
   const dir = k.directions ? ` ${k.directions}` : "";
   const near = k.places[0] ? ` The nearest public place is ${k.places[0]}.` : "";
   if (kind === "greeting") {
-    return `Hi ${k.name}, this is Huddle, calling because your group couldn't reach you. Are you okay? You can just say yes, or press any key.${dir}`;
+    const back = k.backToRoute ? ` ${k.backToRoute}` : dir;
+    return `Hi ${k.name}, this is Huddle, calling because your group couldn't reach you. Are you okay? You can just say yes, or press any key.${back}${k.fewPlaces ? near : ""}`;
   }
   if (kind === "silence") return `${k.name}, are you still there? Say anything or press a key if you can hear me.${dir}`;
   if (intent === "help") return `I'm letting your trusted contacts know right now, and I'll stay with you.${near} If you're in immediate danger, call 9 1 1.`;

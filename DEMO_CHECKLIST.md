@@ -37,7 +37,10 @@ Full plan: [docs/demo.md](docs/demo.md).
 
 - [ ] Presenter 1 opened the Huddle once (map/health actions load), then Settings → Demo this Huddle
 - [ ] Affected user picked; no warnings under the Automated demo card
-- [ ] 1. Reset demo → 2. Move affected user away → 3. ▶ Run the rest automatically
+- [ ] Huddle created with **Everyone picks their own**; each person picked a destination when joining
+- [ ] Presenter 3 opened the Map tab once (their planned route is saved; the panel warns otherwise)
+- [ ] 1. Reset demo → 2. ▶ Run the story
+- [ ] During the call, presenter 3 taps two or three replies, then stops (that's what sends the incident)
 
 ## Right before going on stage
 

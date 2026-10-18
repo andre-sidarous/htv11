@@ -26,6 +26,8 @@ export type JamMapViewProps = {
   onRegionChangeComplete?: (region: Region) => void;
   /** Tap on the map (not on a marker): e.g. drop a destination pin. */
   onPress?: (point: LatLng) => void;
+  /** The person dragged the map (e.g. stop following their position). */
+  onPanDrag?: () => void;
   /** Show the platform's points of interest (shops, stations) — useful when picking a place. */
   showsPointsOfInterest?: boolean;
   accessibilityLabel?: string;
@@ -49,6 +51,7 @@ export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapVi
     showsUserLocation = false,
     onRegionChangeComplete,
     onPress,
+    onPanDrag,
     showsPointsOfInterest = false,
     accessibilityLabel = "Huddle map",
     children,
@@ -63,6 +66,7 @@ export const JamMapView = forwardRef<MapView, JamMapViewProps>(function JamMapVi
       showsUserLocation={showsUserLocation}
       onRegionChangeComplete={onRegionChangeComplete}
       onPress={onPress ? (e) => onPress(toMapCoord(e.nativeEvent.coordinate)) : undefined}
+      onPanDrag={onPanDrag}
       showsPointsOfInterests={showsPointsOfInterest}
       toolbarEnabled={false}
       accessibilityLabel={accessibilityLabel}

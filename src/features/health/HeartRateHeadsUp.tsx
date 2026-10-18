@@ -7,6 +7,7 @@ import { Button, IconBadge } from "@/components/ui";
 import { colors, radius, shadow, space, type } from "@/theme";
 import { restingRange, type Sex } from "./healthModel";
 import { loadHealthProfile, type HealthProfileInput } from "./healthProfileApi";
+import { medicalAlertLines } from "./medicalAlert";
 
 /** Without a health profile, "high" means this far above their own baseline. */
 const ABOVE_BASELINE = 1.4;
@@ -36,6 +37,7 @@ export function HeartRateHeadsUp({
   blocked,
   onUnderstood,
   onNeedHelp,
+  onSpike,
 }: {
   userId: string | null;
   heartRate: number | null | undefined;
@@ -44,6 +46,8 @@ export function HeartRateHeadsUp({
   blocked: boolean;
   onUnderstood: () => Promise<void> | void;
   onNeedHelp: () => void;
+  /** Once per spike, with the health lines for the group (heart rate vs. normal, profile, estimate). */
+  onSpike?: (lines: string[]) => void;
 }) {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<HealthProfileInput | null>(null);
@@ -69,6 +73,13 @@ export function HeartRateHeadsUp({
     setWasHigh(high);
     if (!high) setDismissed(false);
   }
+
+  // Tell the group once per spike (even while the sheet waits behind another one).
+  useEffect(() => {
+    if (high && heartRate) onSpike?.(medicalAlertLines(heartRate, profile, baselineHeartRate));
+    // Only when it turns high; later ticks of the same spike don't re-send.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [high]);
 
   const visible = high && !dismissed && !blocked;
   useEffect(() => {

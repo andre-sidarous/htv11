@@ -168,6 +168,17 @@ export type SafetyAlert = {
   checkinResponse?: CheckInResponse | null;
 };
 
+/** Migration 008: a member's planned path to their destination (jam_members.planned_route). */
+export type PlannedRoute = {
+  to: { latitude: number; longitude: number; name: string | null };
+  /** [lat, lng] pairs, thinned. */
+  coordinates: [number, number][];
+  distanceM: number;
+  durationS: number;
+  isDemoRoute?: boolean;
+  plannedAt: string;
+};
+
 export type CheckInResponse =
   | "im_okay"
   | "changed_destination"
@@ -194,6 +205,8 @@ export type AiCallContext = {
   guidance?: string;
   /** P3's support-area line, e.g. "You're in an area with few public support points. The nearest is …". */
   supportNote?: string;
+  /** "Your planned route is about 450 metres west, on Military Trail. Head west to rejoin it." */
+  backToRoute?: string;
 };
 
 export type AiCallTurn = { text: string; source: "gemini" | "scripted"; step: number };

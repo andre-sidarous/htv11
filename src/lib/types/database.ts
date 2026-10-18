@@ -2,6 +2,7 @@ import type {
   Activity,
   AlertResponseKind,
   CheckInResponse,
+  PlannedRoute,
   AlertStatus,
   ConfirmationStatus,
   EmergencyPreference,
@@ -33,6 +34,8 @@ export type ProfileRow = {
   updated_at: string;
 };
 
+export type DestinationMode = "group" | "individual";
+
 export type JamRow = {
   id: string;
   host_id: string;
@@ -44,6 +47,8 @@ export type JamRow = {
   destination_lng: number | null;
   expected_arrival: string | null;
   travel_mode: TravelMode;
+  /** 'group': one destination for everyone; 'individual': everyone picks their own (migration 009). */
+  destination_mode: DestinationMode;
   checkin_delay_seconds: number;
   group_response_timeout_seconds: number;
   status: JamStatus;
@@ -71,6 +76,8 @@ export type JamMemberRow = {
   destination_lat?: number | null;
   destination_lng?: number | null;
   destination_updated_at?: string | null;
+  /** Migration 008: their planned path (saved by their own phone). */
+  planned_route?: PlannedRoute | null;
 };
 
 export type LiveLocationRow = {

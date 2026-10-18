@@ -1,4 +1,5 @@
 // POST /functions/v1/ai-support-call  { context: AiCallContext, step: number } -> AiCallTurn
+//                                      { context, reply: CallReplyId } -> AiCallTurn (answer to a tapped reply)
 //
 // Keeps GEMINI_API_KEY server-side. ALWAYS returns a usable turn: if Gemini is unconfigured,
 // slow, rate-limited, or failing, it returns the scripted line (with P3's directions and
@@ -8,11 +9,12 @@
 import { SUPPORT_CALL_SCRIPT } from "../_shared/constants.ts";
 import { json, requireUser, serve } from "../_shared/supabase.ts";
 import { scriptedSupportLine } from "../_shared/supportCallLine.ts";
+import { callReplyLabel, isCallReply, scriptedReply, type CallReplyId } from "../_shared/callReplies.ts";
 
 const TIMEOUT_MS = 4_000;
 const MAX_OUTPUT_CHARS = 400;
 /** Per-user limit (per function instance; good enough for the POC). */
-const RATE_LIMIT = { windowMs: 60_000, max: 8 };
+const RATE_LIMIT = { windowMs: 60_000, max: 16 };
 const recentCalls = new Map<string, number[]>();
 
 const DEVIATION_LEVELS = ["on_route", "slightly_off", "deviation", "significant_deviation"];
@@ -31,6 +33,7 @@ type AiCallContext = {
   guidance?: string;
   /** P3's support-area line, e.g. "You're in an area with few public support points. The nearest is …". */
   supportNote?: string;
+  backToRoute?: string;
 };
 
 const str = (value: unknown, max: number) =>
@@ -54,6 +57,7 @@ function parseContext(raw: unknown): AiCallContext | null {
     destinationName: str(c.destinationName, 120),
     guidance: str(c.guidance, 300),
     supportNote: str(c.supportNote, 300),
+    backToRoute: str(c.backToRoute, 300),
   };
 }
 
@@ -91,13 +95,32 @@ function userPrompt(context: AiCallContext, step: number): string {
     context.destinationName ? `Heading to: ${context.destinationName}` : null,
     context.guidance ? `Direction to give: ${context.guidance}` : null,
     step === 0 && context.supportNote ? `Support-area note: ${context.supportNote}` : null,
+    step === 0 && context.backToRoute ? `How to rejoin their planned route: ${context.backToRoute}` : null,
     `Group responded: ${context.groupResponded ? "yes" : "no"}`,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-async function callGemini(apiKey: string, context: AiCallContext, step: number): Promise<string | null> {
+/** They tapped a reply on the in-app call: answer it from what Huddle knows. */
+function replyPrompt(context: AiCallContext, reply: CallReplyId): string {
+  return [
+    `${context.displayName} just said: "${callReplyLabel(reply)}"`,
+    "Answer that directly and kindly, using only the facts below. Name real places exactly as given.",
+    `A good answer would be close to: "${scriptedReply(context, reply)}"`,
+    `Location summary: ${context.locationSummary}`,
+    context.backToRoute ? `How to rejoin their planned route: ${context.backToRoute}` : null,
+    context.guidance ? `Next direction: ${context.guidance}` : null,
+    context.nearestSupportPoint ? `Nearest public place (library, station, community centre…): ${context.nearestSupportPoint}` : null,
+    context.supportNote ? `Area: ${context.supportNote}` : null,
+    context.destinationName ? `Heading to: ${context.destinationName}` : null,
+    `Someone in the group said they're coming: ${context.groupResponded ? "yes" : "no"}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function callGemini(apiKey: string, context: AiCallContext, step: number, reply?: CallReplyId): Promise<string | null> {
   // gemini-2.5-* are retired for new keys; the lite model answers in ~0.6s (and rejects thinkingConfig).
   const model = Deno.env.get("GEMINI_MODEL") || "gemini-3.5-flash-lite";
   const controller = new AbortController();
@@ -109,7 +132,7 @@ async function callGemini(apiKey: string, context: AiCallContext, step: number):
       headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: userPrompt(context, step) }] }],
+        contents: [{ role: "user", parts: [{ text: reply ? replyPrompt(context, reply) : userPrompt(context, step) }] }],
         generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
       }),
     });
@@ -144,9 +167,18 @@ serve(async (req, body) => {
   const requested = typeof body.step === "number" && Number.isFinite(body.step) ? Math.floor(body.step) : 0;
   const step = Math.max(0, Math.min(requested, SUPPORT_CALL_SCRIPT.length - 1));
   const context = parseContext(body.context);
-  const scripted = { text: scriptedSupportLine(context, step), source: "scripted", step };
-
   const apiKey = Deno.env.get("GEMINI_API_KEY");
+
+  // A reply on the in-app call ({ context, reply }): answer it, the call carries on.
+  if (body.reply !== undefined) {
+    if (!context || !isCallReply(body.reply)) return json({ ok: false, error: "invalid_reply" }, 400);
+    const fallback = { text: scriptedReply(context, body.reply), source: "scripted", step };
+    if (!apiKey || rateLimited(auth.user.id, Date.now())) return json(fallback);
+    const text = await callGemini(apiKey, context, step, body.reply);
+    return json(text ? { text, source: "gemini", step } : fallback);
+  }
+
+  const scripted = { text: scriptedSupportLine(context, step), source: "scripted", step };
   if (!apiKey || !context || step >= SUPPORT_CALL_SCRIPT.length - 1) return json(scripted);
   if (rateLimited(auth.user.id, Date.now())) return json(scripted);
 

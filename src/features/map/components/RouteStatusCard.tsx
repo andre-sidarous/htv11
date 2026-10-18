@@ -9,6 +9,10 @@ import { Badge, PillButton } from "./controls";
 
 type Props = {
   destinationName: string | null;
+  /** "Head north on St. George Street for about 300 metres." from where you are now. */
+  nextStep?: string | null;
+  /** Opens turn-by-turn walking directions in the phone's maps app. */
+  onDirections?: () => void;
   route: Route | null;
   routeLoading: boolean;
   selfStatus: RouteStatus | null;
@@ -31,7 +35,7 @@ const minutes = (s: number) => Math.max(1, Math.round(s / 60));
 
 /** Bottom card: where you are relative to the route, plus support context. */
 export function RouteStatusCard(props: Props) {
-  const { destinationName, route, routeLoading, selfStatus, recommendation, disruption } = props;
+  const { destinationName, route, routeLoading, selfStatus, recommendation, disruption, nextStep, onDirections } = props;
   const [expanded, setExpanded] = useState(false);
   const open = expanded || Boolean(disruption);
 
@@ -67,6 +71,24 @@ export function RouteStatusCard(props: Props) {
           {route?.isDemoRoute ? <Badge>Demo route</Badge> : null}
         </View>
       </Pressable>
+
+      {nextStep || onDirections ? (
+        <View style={styles.nextRow} accessibilityLiveRegion="polite">
+          {nextStep ? (
+            <Text style={[type.body, styles.nextText]} numberOfLines={2}>
+              <Text style={styles.nextLabel}>Next: </Text>
+              {nextStep}
+            </Text>
+          ) : (
+            <View style={styles.nextText} />
+          )}
+          {onDirections ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Walking directions in Maps" onPress={onDirections} style={({ pressed }) => [styles.directions, pressed && { opacity: 0.8 }]}>
+              <Text style={styles.directionsText}>Directions</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {open ? (
         <View style={styles.body}>
@@ -129,4 +151,9 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   attribution: { flex: 1 },
   attributionCollapsed: { fontSize: 11 },
+  nextRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  nextText: { flex: 1 },
+  nextLabel: { fontWeight: "700", color: colors.brand },
+  directions: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.brand },
+  directionsText: { color: colors.surface, fontWeight: "700", fontSize: 14 },
 });

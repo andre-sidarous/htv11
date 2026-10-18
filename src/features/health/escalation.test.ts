@@ -65,9 +65,11 @@ const VALID: Record<string, [EscalationState, number | null]> = {
 
   "USER_RESPONDED|DEADLINE": ["RESOLVED", null],
 
-  "GROUP_ALERT_SENT|GROUP_ACK": ["GROUP_MEMBER_ACKNOWLEDGED", null],
+  "GROUP_ALERT_SENT|GROUP_ACK": ["GROUP_MEMBER_ACKNOWLEDGED", C.groupResponseTimeoutMs],
   "GROUP_ALERT_SENT|DEADLINE": ["AI_CALL_STARTING", C.aiCallConnectTimeoutMs],
   "GROUP_ALERT_SENT|START_AI_CALL": ["AI_CALL_STARTING", C.aiCallConnectTimeoutMs],
+  "GROUP_MEMBER_ACKNOWLEDGED|START_AI_CALL": ["AI_CALL_STARTING", C.aiCallConnectTimeoutMs],
+  "GROUP_MEMBER_ACKNOWLEDGED|DEADLINE": ["AI_CALL_STARTING", C.aiCallConnectTimeoutMs],
 
   "AI_CALL_STARTING|AI_CALL_CONNECTED": ["AI_CALL_ACTIVE", C.aiCallResponseTimeoutMs],
   "AI_CALL_STARTING|DEADLINE": ["AI_CALL_ACTIVE", C.aiCallResponseTimeoutMs],
@@ -137,6 +139,11 @@ describe("escalation transition()", () => {
     });
     it("START_AI_CALL is rejected", () => {
       expect(transition("GROUP_ALERT_SENT", { type: "START_AI_CALL" }, NOW, noAi)).toBeNull();
+    });
+    it("a helper on the way just waits (no deadline, no call)", () => {
+      expect(transition("GROUP_ALERT_SENT", { type: "GROUP_ACK" }, NOW, noAi)!.deadlineAt).toBeNull();
+      expect(transition("GROUP_MEMBER_ACKNOWLEDGED", { type: "DEADLINE" }, NOW, noAi)).toBeNull();
+      expect(transition("GROUP_MEMBER_ACKNOWLEDGED", { type: "START_AI_CALL" }, NOW, noAi)).toBeNull();
     });
   });
 

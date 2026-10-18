@@ -7,6 +7,24 @@ import { buildCallContext, callRoute, nearestSupportPoint } from "./callContext"
 describe("buildCallContext", () => {
   const robarts = { latitude: 43.6644, longitude: -79.3994 };
 
+  it("tells them how to rejoin their planned route when they're off it", () => {
+    const planned: Route = {
+      coordinates: [
+        { latitude: 43.66, longitude: -79.4 },
+        { latitude: 43.67, longitude: -79.4 },
+      ],
+      distanceM: 1100,
+      durationS: 800,
+      source: "osrm",
+      isDemoRoute: false,
+    };
+    const off = buildCallContext({ displayName: "Alex", location: { latitude: 43.665, longitude: -79.394 }, signal: null, groupResponded: false, plannedRoute: planned });
+    expect(off.backToRoute).toMatch(/^Your planned route is about \d+ metres west/);
+    expect(JSON.stringify(off)).not.toMatch(/43\.66|79\.39/);
+    const on = buildCallContext({ displayName: "Alex", location: { latitude: 43.665, longitude: -79.4 }, signal: null, groupResponded: false, plannedRoute: planned });
+    expect(on.backToRoute).toBeUndefined();
+  });
+
   it("summarizes location without coordinates and passes the shared schema", () => {
     const context = buildCallContext({
       displayName: "Alex",
