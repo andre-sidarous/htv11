@@ -4,8 +4,9 @@ import { getDemoContext } from "@/features/demo/demoContext";
 import { campusWalk } from "@/lib/demo/campusWalk";
 import { distanceToPolylineM, haversineM } from "@/lib/geo";
 import type { DemoAction, LatLng } from "@/lib/types";
-import { realtimeService } from "@/services";
+import { realtimeService, routingService } from "@/services";
 import { mapUi } from "./mapUiStore";
+import { nearestHelp, pickQuietSpot, straightPath, thinPath } from "./quietArea";
 
 /**
  * P3's demo actions (owner "map"). They run on the phone that taps them, so every movement is
@@ -15,6 +16,9 @@ import { mapUi } from "./mapUiStore";
  */
 
 const STEP_MS = 1_500;
+
+/** Where the scripted moves last put the affected user (the next move starts there). */
+let lastAffectedPosition: LatLng | null = null;
 
 /** Only one scripted movement at a time; a new one (or a stop/reset) cancels the previous. */
 let runToken = 0;
@@ -33,8 +37,9 @@ async function withChannel(run: (send: ReturnType<typeof sender>) => Promise<voi
 
 function sender(channel: ReturnType<typeof realtimeService.join>, jamId: string, userId: string) {
   return {
-    location: (p: LatLng, activity = "walking") =>
-      channel.send("location_update", {
+    location: (p: LatLng, activity = "walking") => {
+      lastAffectedPosition = p;
+      return channel.send("location_update", {
         jamId,
         userId,
         latitude: p.latitude,
@@ -42,7 +47,8 @@ function sender(channel: ReturnType<typeof realtimeService.join>, jamId: string,
         accuracy: 8,
         activity,
         timestamp: new Date().toISOString(),
-      }),
+      });
+    },
     /**
      * A presence hint for the affected phone only: "offline" makes it stop broadcasting,
      * "live" resumes. Other phones ignore broadcast presence and use their own timers.
@@ -81,6 +87,15 @@ function deviationPoint(): LatLng {
     distanceToPolylineM(p, campusWalk.plannedRoute) > distanceToPolylineM(best, campusWalk.plannedRoute) ? p : best,
   path[0] ?? campusWalk.start);
 }
+
+/** A real walking route from a to b, thinned to `steps` moves (straight line if routing is down). */
+async function walkingPath(a: LatLng, b: LatLng, steps: number): Promise<LatLng[]> {
+  const route = await routingService.getRoute(a, b, "walking").catch(() => null);
+  const usable = route && !route.isDemoRoute && route.coordinates.length >= 2;
+  return usable ? thinPath(route.coordinates, steps) : straightPath(a, b, steps);
+}
+
+const currentAffected = () => lastAffectedPosition ?? campusWalk.affectedUserOffRoutePath.at(-1) ?? campusWalk.start;
 
 const affectedStart = (): LatLng =>
   campusWalk.members.find((m) => m.demoRole === "affected_user")?.position ?? campusWalk.start;
@@ -123,11 +138,34 @@ export const MAP_DEMO_ACTIONS: DemoAction[] = [
     owner: "map",
     run: async () => {
       ++runToken;
+      lastAffectedPosition = null;
       mapUi.reset();
       await withChannel(async (send) => {
         await send.presence("live");
         await send.location(affectedStart());
       });
+    },
+  },
+  {
+    id: DEMO_ACTION_IDS.walkToQuietArea,
+    label: "Walk into a quiet area (few TTC stops)",
+    owner: "map",
+    async run() {
+      const from = currentAffected();
+      const spot = pickQuietSpot(from, campusWalk.plannedRoute);
+      if (!spot) throw new Error("No quiet spot found near them.");
+      await walk(await walkingPath(from, spot, 8));
+    },
+  },
+  {
+    id: DEMO_ACTION_IDS.walkTowardHelp,
+    label: "Walk toward the nearest public place",
+    owner: "map",
+    async run() {
+      const from = currentAffected();
+      const help = nearestHelp(from);
+      if (!help) throw new Error("No public place nearby.");
+      await walk(await walkingPath(from, help, 10));
     },
   },
   {

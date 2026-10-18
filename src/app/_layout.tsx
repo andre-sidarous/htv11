@@ -42,7 +42,7 @@ function SessionGate({ children }: { children: ReactNode }) {
       return;
     }
     if (!onboardingComplete) {
-      const onOnboardingScreen = inAuthGroup && (authScreen === "consent" || authScreen === "baseline");
+      const onOnboardingScreen = inAuthGroup && (authScreen === "consent" || authScreen === "health" || authScreen === "baseline");
       if (!onOnboardingScreen) router.replace("/(auth)/consent");
       return;
     }
@@ -88,6 +88,7 @@ export default function RootLayout() {
             <Stack.Screen name="join/[code]" options={{ title: "Join a Huddle" }} />
             <Stack.Screen name="demo" options={{ title: "Demo Mode", presentation: "modal" }} />
             <Stack.Screen name="privacy" options={{ title: "Privacy defaults", presentation: "modal" }} />
+            <Stack.Screen name="health-profile" options={{ title: "Health profile" }} />
             <Stack.Screen name="jam/[jamId]/lobby" options={{ title: "Huddle lobby" }} />
             <Stack.Screen name="jam/[jamId]/chat" options={{ title: "Chat" }} />
             <Stack.Screen name="jam/[jamId]/(tabs)" options={{ headerShown: false, title: "Huddle" }} />

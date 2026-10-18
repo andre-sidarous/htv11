@@ -60,6 +60,15 @@ export type DemoResetEvent = {
   timestamp: string;
 };
 
+/** Demo Control's automated story started/stopped: the affected phone uses the in-app AI call (visible when mirrored). */
+export type DemoStoryEvent = {
+  jamId: string;
+  running: boolean;
+  /** true = run the AI support call inside the app instead of ringing a real phone. */
+  inAppCall: boolean;
+  timestamp: string;
+};
+
 export type RealtimeEventMap = {
   location_update: LocationUpdate;
   member_status: MemberStatusEvent;
@@ -70,6 +79,7 @@ export type RealtimeEventMap = {
   ai_call_state: AiCallStateEvent;
   incident_created: IncidentCreatedEvent;
   demo_reset: DemoResetEvent;
+  demo_story: DemoStoryEvent;
 };
 
 export type RealtimeEventName = keyof RealtimeEventMap;

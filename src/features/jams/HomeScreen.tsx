@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
+import { ChevronRight, Contact, FlaskConical, HeartPulse, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { BrandLine, HuddleLogo, PenguinHuddle } from "@/components/brand";
@@ -149,6 +149,7 @@ export function HomeScreen() {
 
       <SectionHeader title="More" />
       <Card padded={false}>
+        <ListRow icon={HeartPulse} label="Health profile" onPress={() => router.push("/health-profile")} />
         <ListRow icon={Contact} label="Emergency contacts" onPress={() => router.push("/contacts")} />
         <ListRow icon={ShieldCheck} tone="sage" label="Privacy defaults" onPress={() => router.push("/privacy")} />
         <ListRow icon={FlaskConical} tone="lavender" label="Demo Mode" onPress={() => router.push("/demo")} last />

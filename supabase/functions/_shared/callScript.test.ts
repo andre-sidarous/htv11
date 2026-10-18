@@ -1,6 +1,6 @@
 // deno test supabase/functions/_shared/callScript.test.ts
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { buildCallMessage, buildSmsMessage, buildTwiml, describePlace, toE164 } from "./callScript.ts";
+import { buildCallMessage, buildSmsMessage, buildTwiml, describeMedical, describePlace, toE164 } from "./callScript.ts";
 
 Deno.test("message includes only what the contact may receive", () => {
   const bare = buildCallMessage({ contactName: "Sam", personName: "Alex" });
@@ -66,4 +66,12 @@ Deno.test("text includes only what the contact may receive", () => {
 Deno.test("call mentions the text only when one follows", () => {
   assert(!buildCallMessage({ contactName: "Sam", personName: "Alex" }).includes("text message"));
   assertStringIncludes(buildCallMessage({ contactName: "Sam", personName: "Alex", textFollows: true }), "text message");
+});
+
+Deno.test("medical info line only says what's in the profile", () => {
+  assertEquals(describeMedical({ allergies: ["Peanuts", "Bee stings"], carriesEpipen: true, conditions: ["Asthma"] }), "allergic to peanuts and bee stings (carries an EpiPen); asthma");
+  assertEquals(describeMedical({ allergies: [], carriesEpipen: false, conditions: [] }), null);
+  const sms = buildSmsMessage({ personName: "Alex", medical: { allergies: ["Peanuts"], carriesEpipen: true, conditions: [] } });
+  assertStringIncludes(sms, "Medical info: allergic to peanuts (carries an EpiPen).");
+  assert(!buildSmsMessage({ personName: "Alex" }).includes("Medical info"), "nothing without permission");
 });

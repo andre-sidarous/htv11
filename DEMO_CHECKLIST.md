@@ -25,10 +25,19 @@ Full plan: [docs/demo.md](docs/demo.md).
 - [ ] All five consents on, emergency preference **AI support call**
 - [ ] Presenter 4 saved as a trusted contact with phone, the email they sign in with, and all three sharing toggles on
 
+- [ ] **Health profile** filled in (Home → Health profile): age, e.g. asthma + family history of heart disease, *Are you vulnerable?* on with a medical card photo
+- [ ] Recording and trusted-contact consents on in this Huddle (Demo Control warns otherwise)
+
 ## Presenter 4 (emergency contact)
 
 - [ ] Signed in with the email presenter 3 saved
 - [ ] Phone not on Do Not Disturb (it must ring)
+
+## Automated story (Demo Control)
+
+- [ ] Presenter 1 opened the Huddle once (map/health actions load), then Settings → Demo this Huddle
+- [ ] Affected user picked; no warnings under the Automated demo card
+- [ ] 1. Reset demo → 2. Move affected user away → 3. ▶ Run the rest automatically
 
 ## Right before going on stage
 

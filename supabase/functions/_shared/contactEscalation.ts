@@ -78,6 +78,9 @@ export async function escalateToContacts(
       : Promise.resolve({ data: null }),
   ]);
   const reasons = Array.isArray(alert.reasons) ? (alert.reasons as string[]) : [];
+  // Medical ID bits for the text (health profile, migration 007); only sent to contacts allowed health info.
+  const { data: hp } = await admin.from("health_profiles").select("allergies, carries_epipen, conditions").eq("user_id", userId).maybeSingle();
+  const medical = hp ? { allergies: (hp.allergies ?? []) as string[], carriesEpipen: Boolean(hp.carries_epipen), conditions: (hp.conditions ?? []) as string[] } : null;
 
   // Contacts are only involved with contact_notify_consent (given at sign-up / join).
   const { data: contactRows } = member?.contact_notify_consent
@@ -192,6 +195,7 @@ export async function escalateToContacts(
           location: contact.receive_location && loc ? { latitude: loc.latitude, longitude: loc.longitude, placeDescription: place, minutesAgo } : null,
           reasons: allowed.reasons,
           recordingUrl: contact.receive_recording ? recordingUrl : null,
+          medical: contact.receive_health_summary ? medical : null,
         });
         const sms = await sendSms(twilio, to, body);
         await log("sms", sms.ok ? "sent" : "failed", `contact:${contact.id} ${sms.ok ? `sms:${sms.sid}` : sms.detail}`);

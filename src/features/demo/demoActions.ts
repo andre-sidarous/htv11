@@ -18,6 +18,8 @@ export const DEMO_ACTION_IDS = {
   resetLocations: "reset_locations",
   showDisruption: "show_disruption",
   showAlternativeRoute: "show_alternative_route",
+  walkToQuietArea: "walk_to_quiet_area",
+  walkTowardHelp: "walk_toward_help",
   // P4 (health / escalation)
   triggerRouteDeviation: "trigger_route_deviation",
   triggerHeartRateSpike: "trigger_heart_rate_spike",

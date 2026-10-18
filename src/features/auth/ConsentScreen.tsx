@@ -60,7 +60,7 @@ export function ConsentScreen() {
     setSaving(true);
     await setOnboardingDraft({ ...onboardingDraft, consents, emergencyPreference: preference });
     setSaving(false);
-    router.push("/(auth)/baseline");
+    router.push("/(auth)/health");
   }
 
   return (

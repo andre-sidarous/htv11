@@ -55,7 +55,7 @@ Deno.test("spoken distances", () => {
 });
 
 Deno.test("scripted lines carry the directions", () => {
-  const k = { name: "Alex", destination: "St. George Station", directions: "Head east for about 400 metres.", remaining: null, places: [], fewPlaces: false, locationAgeMin: 0, reasons: [] };
+  const k = { name: "Alex", destination: "St. George Station", directions: "Head east for about 400 metres.", remaining: null, places: [], fewPlaces: false, locationAgeMin: 0, reasons: [], medical: null };
   assertStringIncludes(scriptedTurn(k, "greeting", "continue"), "Are you okay?");
   assertStringIncludes(scriptedTurn(k, "greeting", "continue"), "Head east for about 400 metres.");
   assertStringIncludes(scriptedTurn(k, "reply", "help"), "trusted contacts");

@@ -1,5 +1,6 @@
 import { loadAllSupportPoints } from "@/features/map/civicData";
 import { describeSupportNearby, getSpokenGuidance, spokenSupportPoints } from "@/features/map/guidance";
+import { describeTransitNearby, nearestHelp } from "@/features/map/quietArea";
 import { campusWalk } from "@/lib/demo/campusWalk";
 import { haversineM } from "@/lib/geo";
 import type { AiCallContext, HealthSignal, LatLng, Route, RouteStatus, RoutingService, SupportPoint, TravelMode } from "@/lib/types";
@@ -9,6 +10,10 @@ import { heartRateIncreasePct } from "@/services/risk/engine";
 const NEARBY_M = 800;
 
 export type CallDestination = LatLng & { name?: string };
+
+/** When support is sparse, guide to a public place within this distance rather than the destination. */
+const HELP_DETOUR_M = 800;
+const ARRIVED_M = 60;
 
 /** Citywide (Toronto) support points; the Campus Walk demo points come first. */
 export function nearestSupportPoint(location: LatLng | null | undefined, points: readonly SupportPoint[] = loadAllSupportPoints()) {
@@ -58,11 +63,22 @@ export function buildCallContext(input: {
   route?: Route | null;
 }): AiCallContext {
   const nearest = nearestSupportPoint(input.location);
+  // In an area with few public support points, guide them to the nearest staffed place (library,
+  // station, hospital...) instead of the destination, and say how scarce transit is.
+  const supportNote = input.location ? describeSupportNearby(input.location, spokenSupportPoints()) : undefined;
+  const sparse = Boolean(supportNote?.startsWith("You're in an area with few"));
+  const help = input.location && sparse ? nearestHelp(input.location) : null;
+  // Already there (or nothing close): no detour.
+  const towardHelp = help && help.distanceM > ARRIVED_M && help.distanceM <= HELP_DETOUR_M ? help : null;
+  const transitNote = input.location && sparse ? describeTransitNearby(input.location) : null;
   const directions = input.location
-    ? input.destination
-      ? getSpokenGuidance({ position: input.location, route: input.route ?? null, destination: input.destination })
-      : { guidance: undefined, supportNote: describeSupportNearby(input.location, spokenSupportPoints()) }
+    ? towardHelp
+      ? { ...getSpokenGuidance({ position: input.location, route: null, destination: towardHelp }), supportNote }
+      : input.destination
+        ? getSpokenGuidance({ position: input.location, route: input.route ?? null, destination: input.destination })
+        : { guidance: undefined, supportNote }
     : null;
+  const note = [directions?.supportNote, transitNote].filter(Boolean).join(" ");
   const pct = heartRateIncreasePct(input.signal?.heartRate, input.signal?.baselineHeartRate);
   return {
     displayName: (input.displayName ?? "there").slice(0, 60),
@@ -74,10 +90,10 @@ export function buildCallContext(input: {
     routeDeviationLevel: input.routeStatus?.level,
     heartRateSummary: pct !== null ? `${pct > 0 ? `${pct}% above` : "near"} personal baseline (simulated)` : undefined,
     activity: input.signal?.activity,
-    nearestSupportPoint: nearest?.point.name,
+    nearestSupportPoint: towardHelp?.name ?? nearest?.point.name,
     groupResponded: input.groupResponded,
     ...(input.destination?.name ? { destinationName: input.destination.name.slice(0, 120) } : {}),
     ...(directions?.guidance ? { guidance: directions.guidance.slice(0, 300) } : {}),
-    ...(directions?.supportNote ? { supportNote: directions.supportNote.slice(0, 300) } : {}),
+    ...(note ? { supportNote: note.slice(0, 300) } : {}),
   };
 }

@@ -1,4 +1,5 @@
 import type { AlertRow, EscalationState, RiskEvaluation } from "@/lib/types";
+import { demoFlags } from "@/features/demo/demoFlags";
 import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { notificationService } from "@/services/notification";
 import { alertRepository, toSafetyAlert, type AlertPatch } from "./alertRepository";
@@ -27,7 +28,8 @@ async function afterTransition(prevState: EscalationState, next: AlertRow, { byS
   // made it (AI call silence, demo "Simulate AI non-response"), run the same Twilio step via call-contacts.
   // It reuses this alert's incident package and skips anyone already called, so repeats are harmless.
   // advance-alert rings the phone itself when the server makes this move.
-  if (!byServer && entered(prevState, next, "AI_CALL_STARTING")) {
+  // (Demo story: the call runs inside the app on their phone instead, so it's visible when mirrored.)
+  if (!byServer && entered(prevState, next, "AI_CALL_STARTING") && !demoFlags.get().inAppCall) {
     void startAiPhoneCall(next.id).catch((error) => console.warn("[alerts] AI phone call failed to start", error));
   }
 

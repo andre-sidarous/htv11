@@ -16,7 +16,7 @@
 import type { SupabaseClient } from "npm:@supabase/supabase-js@2";
 import { escalateToContacts } from "./contactEscalation.ts";
 import { escalationConfigFor, transition, type EscalationEvent, type EscalationState } from "./escalation.ts";
-import { toE164 } from "./callScript.ts";
+import { describeMedical, toE164 } from "./callScript.ts";
 import supportPointsRaw from "./support-points.json" with { type: "json" };
 import { webhookUrl } from "./callUrls.ts";
 import { twilioConfig, twilioError, type TwilioConfig } from "./twilio.ts";
@@ -210,6 +210,8 @@ export type CallKnowledge = {
   fewPlaces: boolean;
   locationAgeMin: number | null;
   reasons: string[];
+  /** From their health profile: "allergic to peanuts (carries an EpiPen); asthma". */
+  medical: string | null;
 };
 
 const toRad = (d: number) => (d * Math.PI) / 180;
@@ -378,7 +380,7 @@ async function overpassPlaces(at: { lat: number; lng: number }): Promise<Place[]
 const placeCache = new Map<string, { at: number; places: { name: string; lat: number; lng: number; d: number }[] | null }>();
 
 export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite): Promise<CallKnowledge> {
-  const [{ data: profile }, { data: jam }, { data: member }] = await Promise.all([
+  const [{ data: profile }, { data: jam }, { data: member }, { data: hp }] = await Promise.all([
     admin.from("profiles").select("display_name").eq("id", alert.affected_user_id).maybeSingle(),
     admin.from("jams").select("destination_name, destination_lat, destination_lng").eq("id", alert.jam_id).maybeSingle(),
     admin
@@ -387,6 +389,7 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
       .eq("jam_id", alert.jam_id)
       .eq("user_id", alert.affected_user_id)
       .maybeSingle(),
+    admin.from("health_profiles").select("allergies, carries_epipen, conditions").eq("user_id", alert.affected_user_id).maybeSingle(),
   ]);
   const { data: loc } = member?.location_consent
     ? await admin
@@ -417,6 +420,9 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
     fewPlaces: false,
     locationAgeMin: null,
     reasons,
+    medical: describeMedical(
+      hp ? { allergies: (hp.allergies ?? []) as string[], carriesEpipen: Boolean(hp.carries_epipen), conditions: (hp.conditions ?? []) as string[] } : null,
+    ),
   };
   if (!loc) return knowledge;
 
@@ -469,6 +475,7 @@ function knowledgeLines(k: CallKnowledge): string {
     k.places.length ? `Nearby public places: ${k.places.join("; ")}` : "Nearby public places: none found",
     k.fewPlaces ? "Note: few public support points are close to them." : null,
     k.reasons.length ? `Why Huddle checked in: ${k.reasons.join("; ")}` : null,
+    k.medical ? `Their medical info (for practical questions only, e.g. whether they have their EpiPen or inhaler; never diagnose): ${k.medical}` : null,
   ]
     .filter(Boolean)
     .join("\n");

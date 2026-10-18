@@ -25,6 +25,18 @@ export type IncidentView = {
     capturedAt?: string | null;
   } | null;
   reasons: string[] | null;
+  /** From their health profile; only for readers allowed to see health. */
+  medicalId: {
+    age: number | null;
+    sex: string | null;
+    allergies: string[];
+    carriesEpipen: boolean;
+    conditions: string[];
+    familyHistory: string[];
+    isVulnerable: boolean;
+    medicalCardUrl: string | null;
+    riskPercent: number | null;
+  } | null;
   destinationName: string | null;
   hasRecording: boolean;
   recordingUrl: string | null;

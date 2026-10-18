@@ -115,6 +115,24 @@ export type AlertRow = {
   checkin_response?: CheckInResponse | null;
 };
 
+/** Migration 007. Owner-only; shared only inside incident packages (Medical ID). */
+export type HealthProfileRow = {
+  user_id: string;
+  age: number | null;
+  sex: "female" | "male" | "unspecified" | null;
+  weight_kg: number | null;
+  height_cm: number | null;
+  allergies: string[];
+  carries_epipen: boolean;
+  conditions: string[];
+  family_history: string[];
+  is_vulnerable: boolean;
+  medical_card_path: string | null;
+  /** NHANES model: chance of high blood pressure, diabetes or heart disease, at save time. */
+  risk_percent: number | null;
+  updated_at: string;
+};
+
 export type AlertResponseRow = {
   id: string;
   alert_id: string;
@@ -201,6 +219,7 @@ export type Database = {
       incident_packages: TableDef<IncidentPackageRow, "alert_id" | "affected_user_id">;
       notification_events: TableDef<NotificationEventRow, "jam_id" | "channel" | "status">;
       chat_messages: TableDef<ChatMessageRow, "jam_id" | "user_id" | "body">;
+      health_profiles: TableDef<HealthProfileRow, "user_id">;
     };
     Views: {
       member_profiles: { Row: MemberProfileRow; Relationships: [] };

@@ -1,0 +1,225 @@
+{
+  "source": "NHANES 2017-March 2020 pre-pandemic (CDC), adults 18+",
+  "trainedOn": "2026-10-17",
+  "predicts": "high blood pressure, diabetes or heart disease (told by a doctor)",
+  "features": [
+    "age",
+    "male",
+    "bmi",
+    "resting_hr",
+    "family_heart",
+    "family_diabetes"
+  ],
+  "intercept": -7.551095,
+  "coefficients": {
+    "age": 0.070583,
+    "male": 0.315501,
+    "bmi": 0.061502,
+    "resting_hr": 0.018012,
+    "family_heart": 0.498048,
+    "family_diabetes": 0.615935
+  },
+  "metrics": {
+    "auc": 0.806,
+    "accuracy": 0.731,
+    "testSize": 1678,
+    "trainSize": 5034
+  },
+  "baseRate": 0.444,
+  "prevalenceByAgeSex": [
+    {
+      "ageMin": 18,
+      "ageMax": 29,
+      "sex": "female",
+      "rate": 0.104
+    },
+    {
+      "ageMin": 18,
+      "ageMax": 29,
+      "sex": "male",
+      "rate": 0.111
+    },
+    {
+      "ageMin": 30,
+      "ageMax": 39,
+      "sex": "female",
+      "rate": 0.173
+    },
+    {
+      "ageMin": 30,
+      "ageMax": 39,
+      "sex": "male",
+      "rate": 0.254
+    },
+    {
+      "ageMin": 40,
+      "ageMax": 49,
+      "sex": "female",
+      "rate": 0.311
+    },
+    {
+      "ageMin": 40,
+      "ageMax": 49,
+      "sex": "male",
+      "rate": 0.344
+    },
+    {
+      "ageMin": 50,
+      "ageMax": 59,
+      "sex": "female",
+      "rate": 0.507
+    },
+    {
+      "ageMin": 50,
+      "ageMax": 59,
+      "sex": "male",
+      "rate": 0.529
+    },
+    {
+      "ageMin": 60,
+      "ageMax": 69,
+      "sex": "female",
+      "rate": 0.664
+    },
+    {
+      "ageMin": 60,
+      "ageMax": 69,
+      "sex": "male",
+      "rate": 0.663
+    },
+    {
+      "ageMin": 70,
+      "ageMax": 80,
+      "sex": "female",
+      "rate": 0.754
+    },
+    {
+      "ageMin": 70,
+      "ageMax": 80,
+      "sex": "male",
+      "rate": 0.745
+    }
+  ],
+  "restingHeartRate": [
+    {
+      "ageMin": 18,
+      "ageMax": 29,
+      "sex": "female",
+      "n": 527,
+      "p10": 61,
+      "p50": 74,
+      "p90": 88,
+      "mostCommon": 75
+    },
+    {
+      "ageMin": 18,
+      "ageMax": 29,
+      "sex": "male",
+      "n": 469,
+      "p10": 55,
+      "p50": 68,
+      "p90": 84,
+      "mostCommon": 73
+    },
+    {
+      "ageMin": 30,
+      "ageMax": 39,
+      "sex": "female",
+      "n": 554,
+      "p10": 60,
+      "p50": 72,
+      "p90": 87,
+      "mostCommon": 70
+    },
+    {
+      "ageMin": 30,
+      "ageMax": 39,
+      "sex": "male",
+      "n": 484,
+      "p10": 57,
+      "p50": 69,
+      "p90": 85,
+      "mostCommon": 65
+    },
+    {
+      "ageMin": 40,
+      "ageMax": 49,
+      "sex": "female",
+      "n": 540,
+      "p10": 59,
+      "p50": 71,
+      "p90": 85,
+      "mostCommon": 68
+    },
+    {
+      "ageMin": 40,
+      "ageMax": 49,
+      "sex": "male",
+      "n": 549,
+      "p10": 56,
+      "p50": 69,
+      "p90": 85,
+      "mostCommon": 69
+    },
+    {
+      "ageMin": 50,
+      "ageMax": 59,
+      "sex": "female",
+      "n": 635,
+      "p10": 58,
+      "p50": 70,
+      "p90": 86,
+      "mostCommon": 69
+    },
+    {
+      "ageMin": 50,
+      "ageMax": 59,
+      "sex": "male",
+      "n": 561,
+      "p10": 55,
+      "p50": 68,
+      "p90": 86,
+      "mostCommon": 66
+    },
+    {
+      "ageMin": 60,
+      "ageMax": 69,
+      "sex": "female",
+      "n": 648,
+      "p10": 57,
+      "p50": 69,
+      "p90": 84,
+      "mostCommon": 66
+    },
+    {
+      "ageMin": 60,
+      "ageMax": 69,
+      "sex": "male",
+      "n": 680,
+      "p10": 54,
+      "p50": 66,
+      "p90": 84,
+      "mostCommon": 60
+    },
+    {
+      "ageMin": 70,
+      "ageMax": 80,
+      "sex": "female",
+      "n": 505,
+      "p10": 55,
+      "p50": 68,
+      "p90": 83,
+      "mostCommon": 65
+    },
+    {
+      "ageMin": 70,
+      "ageMax": 80,
+      "sex": "male",
+      "n": 560,
+      "p10": 53,
+      "p50": 64,
+      "p90": 80,
+      "mostCommon": 62
+    }
+  ]
+}

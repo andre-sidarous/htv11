@@ -17,7 +17,9 @@ import { fonts, colors, radius, shadow, space, tones, type } from "@/theme";
 import { createCheckInAlert, dispatchAlertEvent } from "./alertActions";
 import { alertRepository } from "./alertRepository";
 import { openAlertFor, safetyStore, useSafetySnapshot } from "./safetyStore";
+import { HeartRateHeadsUp } from "./HeartRateHeadsUp";
 import { SafetyControls } from "./SafetyControls";
+import { simulatedHealth } from "@/services/health";
 import { useHealthDemoActions } from "./useHealthDemoActions";
 import { useSafetyEngine } from "./useSafetyEngine";
 
@@ -76,6 +78,8 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   const [helpNote, setHelpNote] = useState<string | null>(null);
   /** "Call someone in my group": shown after the group has been alerted. */
   const [callList, setCallList] = useState<{ userId: string; name: string; phone: string }[] | "loading" | null>(null);
+  /** "I need help" from the heart-rate heads-up opens the help choices without a check-in. */
+  const [helpOpen, setHelpOpen] = useState(false);
   const here = useCurrentPosition();
 
   const myAlert = openAlertFor(snapshot, engine.me);
@@ -94,6 +98,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   const reasons = (Array.isArray(myAlert?.reasons) ? (myAlert.reasons as unknown[]) : [])
     .filter((r): r is string => typeof r === "string" && r.length > 0)
     .slice(0, 3);
+  const awayFromGroup = reasons.some((r) => /route|away from|group/i.test(r));
 
   // A calm haptic each time a check-in opens.
   const hapticFor = useRef<string | null>(null);
@@ -162,8 +167,15 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
   }
 
   /** "I need help" → stay on a live call with Huddle's AI (it rings their phone and keeps guiding). */
+  /** Answer "I need help" if a check-in is open; otherwise use the alert as it is (or open one). */
+  async function needHelpAlert(): Promise<AlertRow | null> {
+    if (myAlert && myAlert.escalation_state !== "CHECK_IN_SENT") return myAlert;
+    return respond("need_help");
+  }
+
   async function helpWithCall() {
-    const updated = await respond("need_help");
+    setHelpOpen(false);
+    const updated = await needHelpAlert();
     if (!updated) return;
     const started = updated.escalation_state === "GROUP_ALERT_SENT" ? await dispatchAlertEvent(updated, { type: "START_AI_CALL" }) : null;
     setStep("choose");
@@ -172,14 +184,16 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
 
   /** "I need help" → call someone in the group (numbers are only shared while you have an open alert). */
   async function helpCallGroup() {
+    setHelpOpen(false);
     setCallList("loading");
-    await respond("need_help");
+    await needHelpAlert();
     setStep("choose");
     setCallList(await memberPhoneNumbers(jamId));
   }
 
   async function helpAlertOnly() {
-    await respond("need_help");
+    setHelpOpen(false);
+    await needHelpAlert();
     setStep("choose");
   }
 
@@ -214,7 +228,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
         </View>
       ) : null}
 
-      <Modal visible={checkInOpen} transparent animationType="slide" onRequestClose={() => {}}>
+      <Modal visible={checkInOpen || helpOpen} transparent animationType="slide" onRequestClose={() => setHelpOpen(false)}>
         <View style={styles.backdrop}>
           <View style={[styles.sheet, { paddingBottom: insets.bottom + space(4) }]} accessibilityViewIsModal>
             <View style={styles.handle} />
@@ -222,7 +236,7 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
               <Pico mood="concerned" size={64} />
               <View style={styles.flex}>
                 <Text style={type.title} accessibilityRole="header">
-                  Are you okay?
+                  {awayFromGroup ? "You’re away from your group" : "Are you okay?"}
                 </Text>
                 <Text style={[type.body, styles.muted]} maxFontSizeMultiplier={1.6}>
                   {myAlert ? "We noticed some unusual activity. Please let us know how you’re doing." : "Your group is checking in. Let them know how you’re doing."}
@@ -285,7 +299,15 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
                   onPress={() => void helpCallGroup()}
                 />
                 <HelpOption icon={HandHeart} title="Just alert my group" description="They’ll see you asked for help and where you are." disabled={busy} onPress={() => void helpAlertOnly()} />
-                <Button label="Back" icon={ArrowLeft} variant="ghost" onPress={() => setStep("choose")} />
+                <Button
+                  label="Back"
+                  icon={ArrowLeft}
+                  variant="ghost"
+                  onPress={() => {
+                    setStep("choose");
+                    setHelpOpen(false);
+                  }}
+                />
               </View>
             ) : (
             <View style={styles.options}>
@@ -321,6 +343,23 @@ export function CheckInOverlay({ jamId }: { jamId: string }) {
           </View>
         </View>
       </Modal>
+
+      <HeartRateHeadsUp
+        userId={engine.me}
+        heartRate={snapshot.lastSignal?.heartRate}
+        baselineHeartRate={snapshot.lastSignal?.baselineHeartRate}
+        blocked={checkInOpen || helpOpen || callList !== null}
+        onUnderstood={async () => {
+          if (engine.me) simulatedHealth.setScenario(engine.me, "safe_again");
+          if (myAlert?.escalation_state === "CHECK_IN_SENT") await respond("im_okay");
+          else if (myAlert) await markSafe();
+          engine.calmDown();
+        }}
+        onNeedHelp={() => {
+          setStep("help");
+          setHelpOpen(true);
+        }}
+      />
 
       <Modal visible={callList !== null} transparent animationType="slide" onRequestClose={() => setCallList(null)}>
         <View style={styles.backdrop}>

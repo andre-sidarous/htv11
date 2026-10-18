@@ -1,13 +1,15 @@
 import { router, Stack } from "expo-router";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { DEMO_ACTION_IDS, demoActions, type DemoActionId } from "@/features/demo/demoActions";
 import { getDemoContext, SEEDED_DEMO_CONTEXT, setDemoContext, subscribeDemoContext } from "@/features/demo/demoContext";
+import { runStory, type StepStatus, type StoryProgress } from "@/features/demo/storyRunner";
 import { useDemoActions } from "@/hooks/useDemoActions";
 import { useJamChannel } from "@/hooks/useJamChannel";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { fonts, colors, radius, shadow, space, TAP_TARGET, type } from "@/theme";
 import { currentUserId, getMemberNames } from "./api";
+import { buildDemoStory, setStoryRunning, storyIncidentId, storyPreflight } from "./demoStory";
 import { SessionGate } from "./SessionGate";
 import { useAlertDemoActions } from "./useAlertDemoActions";
 
@@ -53,6 +55,41 @@ function Panel() {
   useAlertDemoActions(channel);
   const registered = useDemoActions();
   const [runs, setRuns] = useState<Record<string, RunState>>({});
+
+  // ---- the automated story ----
+  const [story] = useState(buildDemoStory);
+  const [progress, setProgress] = useState<StoryProgress | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [incidentId, setIncidentId] = useState<string | null>(null);
+  const [tick, setTick] = useState(() => Date.now());
+  const cancelled = useRef(false);
+  const storyRunning = Boolean(progress && !progress.finished);
+  useEffect(() => {
+    if (!storyRunning) return;
+    const timer = setInterval(() => setTick(Date.now()), 250);
+    return () => clearInterval(timer);
+  }, [storyRunning]);
+  useEffect(() => {
+    let active = true;
+    void storyPreflight().then((w) => active && setWarnings(w));
+    return () => {
+      active = false;
+    };
+  }, [context.jamId, context.affectedUserId]);
+
+  async function startStory() {
+    cancelled.current = false;
+    setIncidentId(null);
+    await setStoryRunning(true).catch(() => undefined);
+    const result = await runStory(story, { onProgress: setProgress, isCancelled: () => cancelled.current });
+    setIncidentId(storyIncidentId);
+    await setStoryRunning(false).catch(() => undefined);
+    setProgress(result);
+  }
+
+  function stopStory() {
+    cancelled.current = true;
+  }
   const [jams, setJams] = useState<{ id: string; name: string; isHost: boolean }[]>([]);
   const [members, setMembers] = useState<{ id: string; name: string }[]>([]);
 
@@ -140,6 +177,65 @@ function Panel() {
         </View>
       </View>
 
+      <View style={[styles.card, styles.storyCard]}>
+        <Text style={type.heading}>Automated demo</Text>
+        <Text style={type.caption}>Two taps to set the scene, then one tap runs the whole story on its own. Read the line in bold aloud.</Text>
+        <ActionRow index={1} label="Reset demo" available={demoActions.has(DEMO_ACTION_IDS.resetDemo)} state={runs[DEMO_ACTION_IDS.resetDemo]} onPress={() => run(DEMO_ACTION_IDS.resetDemo, "Reset demo")} />
+        <ActionRow
+          index={2}
+          label="Move affected user away"
+          available={demoActions.has(DEMO_ACTION_IDS.moveAffectedUserAway)}
+          state={runs[DEMO_ACTION_IDS.moveAffectedUserAway]}
+          onPress={() => run(DEMO_ACTION_IDS.moveAffectedUserAway, "Move affected user away")}
+        />
+        {warnings.length && !storyRunning ? (
+          <View style={styles.warnings}>
+            {warnings.map((w) => (
+              <Text key={w} style={[type.caption, styles.warnText]}>
+                · {w}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+        {storyRunning ? (
+          <Pressable accessibilityRole="button" onPress={stopStory} style={({ pressed }) => [styles.action, styles.stop, pressed && styles.pressed]}>
+            <Text style={styles.actionText}>Stop the story</Text>
+          </Pressable>
+        ) : (
+          <Pressable accessibilityRole="button" onPress={() => void startStory()} style={({ pressed }) => [styles.action, styles.play, pressed && styles.pressed]}>
+            <Text style={styles.actionText}>3. ▶ Run the rest automatically</Text>
+          </Pressable>
+        )}
+
+        {progress ? (
+          <View style={styles.steps}>
+            {progress.current >= 0 && !progress.finished ? (
+              <Text style={styles.narration} accessibilityLiveRegion="polite">
+                {story[progress.current]?.narration}
+              </Text>
+            ) : null}
+            {story.map((step, i) => (
+              <StoryRow
+                key={step.id}
+                title={step.title}
+                status={progress.statuses[i] ?? "pending"}
+                secondsLeft={i === progress.current && progress.startsAt ? Math.max(0, Math.ceil((progress.startsAt - tick) / 1000)) : null}
+              />
+            ))}
+            {progress.error ? <Text style={[type.caption, styles.error]}>{progress.error}</Text> : null}
+            {progress.finished && incidentId ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push({ pathname: "/incident/[token]", params: { token: incidentId } })}
+                style={({ pressed }) => [styles.action, pressed && styles.pressed]}
+              >
+                <Text style={styles.actionText}>Open the incident package</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+
       {missing > 0 ? (
         <View style={[styles.card, styles.notice]}>
           <Text style={type.heading}>Open the Huddle once</Text>
@@ -225,6 +321,20 @@ function ActionRow({
   );
 }
 
+const STEP_MARK: Record<StepStatus, string> = { pending: "○", waiting: "◔", running: "●", done: "✓", failed: "✕", skipped: "–" };
+
+function StoryRow({ title, status, secondsLeft }: { title: string; status: StepStatus; secondsLeft: number | null }) {
+  const active = status === "waiting" || status === "running";
+  return (
+    <View style={styles.storyRow} accessibilityLabel={`${title}: ${status}`}>
+      <Text style={[styles.storyMark, status === "done" && styles.ok, status === "failed" && styles.error, active && styles.activeMark]}>{STEP_MARK[status]}</Text>
+      <Text style={[type.body, styles.flexText, !active && status !== "done" && styles.dimText, active && styles.activeText]}>{title}</Text>
+      {status === "waiting" && secondsLeft !== null ? <Text style={styles.countdown}>in {secondsLeft}s</Text> : null}
+      {status === "running" ? <ActivityIndicator color={colors.brand} /> : null}
+    </View>
+  );
+}
+
 function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return (
     <Pressable
@@ -241,6 +351,20 @@ function Chip({ label, selected, onPress }: { label: string; selected: boolean; 
 const styles = StyleSheet.create({
   content: { gap: space(4), padding: space(4), paddingBottom: space(12) },
   card: { gap: space(2), padding: space(5), borderRadius: radius.card, backgroundColor: colors.surface, ...shadow.card },
+  storyCard: { borderWidth: 1, borderColor: colors.brand },
+  play: { backgroundColor: colors.brand },
+  stop: { backgroundColor: colors.escalation },
+  steps: { gap: space(2), marginTop: space(2) },
+  narration: { ...type.body, fontWeight: "700", color: colors.ink, padding: space(3), borderRadius: radius.sm, backgroundColor: colors.blushSoft },
+  storyRow: { flexDirection: "row", alignItems: "center", gap: space(2), minHeight: 28 },
+  storyMark: { width: 18, textAlign: "center", fontSize: 15, color: colors.inkFaint },
+  activeMark: { color: colors.brand },
+  flexText: { flex: 1 },
+  dimText: { color: colors.inkMuted },
+  activeText: { fontWeight: "700", color: colors.brand },
+  countdown: { fontSize: 13, color: colors.brand, fontVariant: ["tabular-nums"] },
+  warnings: { gap: space(1), padding: space(3), borderRadius: radius.sm, backgroundColor: colors.amberSoft },
+  warnText: { color: colors.amberInk },
   notice: { borderWidth: 1, borderColor: colors.amber },
   mono: { fontFamily: "monospace", fontSize: 11, color: colors.inkMuted },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space(2) },

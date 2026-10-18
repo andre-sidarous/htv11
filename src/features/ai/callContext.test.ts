@@ -49,7 +49,8 @@ describe("buildCallContext", () => {
       route: toDemoRoute(campusWalk.plannedRoute),
     });
     expect(context.destinationName).toBe("St. George Station");
-    expect(context.guidance).toBe("Head east for about 400 metres to Robarts Library.");
+    // Few support points around them: guided to the nearest staffed place, not back to the route.
+    expect(context.guidance).toBe("Head east for about 400 metres toward Robarts Library.");
     expect(context.supportNote).toMatch(/^You're in an area with few public support points\. The nearest is Robarts Library/);
     expect(JSON.stringify(context)).not.toMatch(/43\.6|79\.3/);
     expect(aiCallContextSchema.safeParse(context).success).toBe(true);

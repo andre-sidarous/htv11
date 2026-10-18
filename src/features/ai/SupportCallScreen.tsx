@@ -12,6 +12,7 @@ import { alertRepository, type MemberPolicy } from "@/features/health/alertRepos
 import { openAlertFor, safetyStore, useSafetySnapshot } from "@/features/health/safetyStore";
 import { SafetyControls, STATE_COPY } from "@/features/health/SafetyControls";
 import { useCurrentUserId } from "@/features/health/useCurrentUserId";
+import { demoFlags } from "@/features/demo/demoFlags";
 import { useJam } from "@/features/jams/useJam";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { AI_CALL_SILENCE_TIMEOUT_MS, SUPPORT_CALL_SCRIPT } from "@/lib/constants";
@@ -200,16 +201,9 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     await speak(THANKS, mutedRef.current);
   }
 
-  async function runCall(initial: AlertRow) {
-    const userId = me;
+  /** What the AI knows right now: their latest location, directions and nearby help (rebuilt every turn). */
+  async function contextNow(userId: string, alert: AlertRow, displayName: string | null) {
     const p = policyRef.current;
-    if (!userId || !p) return;
-    let current: AlertRow = initial;
-    if (current.escalation_state === "AI_CALL_STARTING") current = (await dispatchAlertEvent(current, { type: "AI_CALL_CONNECTED" })) ?? current;
-    sendState("active");
-    setCallStartedAt(Date.now());
-    void recordingRef.current.start(initial.id, p.consents.recording);
-
     const s = safetyStore.get();
     const location = s.locations[userId] ?? null;
     const j = jamRef.current;
@@ -226,16 +220,13 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
         : j?.destination_lat != null && j.destination_lng != null
           ? { latitude: Number(j.destination_lat), longitude: Number(j.destination_lng), name: j.destination_name ?? undefined }
           : null;
-    const [displayName, route] = await Promise.all([
-      alertRepository.displayName(userId).catch(() => null),
-      location && destination ? callRoute(routingService, location, destination, j?.travel_mode) : Promise.resolve(null),
-    ]);
+    const route = location && destination ? await callRoute(routingService, location, destination, j?.travel_mode) : null;
     const context = buildCallContext({
       displayName,
       location,
       routeStatus: s.routeStatus[userId],
-      signal: p.consents.health ? s.lastSignal : null,
-      groupResponded: Boolean(current.acknowledged_at),
+      signal: p?.consents.health ? s.lastSignal : null,
+      groupResponded: Boolean(alert.acknowledged_at),
       destination,
       route,
     });
@@ -245,8 +236,22 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
       supportNote: context.supportNote,
       destinationName: context.destinationName,
     });
+    return context;
+  }
 
+  async function runCall(initial: AlertRow) {
+    const userId = me;
+    const p = policyRef.current;
+    if (!userId || !p) return;
+    let current: AlertRow = initial;
+    if (current.escalation_state === "AI_CALL_STARTING") current = (await dispatchAlertEvent(current, { type: "AI_CALL_CONNECTED" })) ?? current;
+    sendState("active");
+    setCallStartedAt(Date.now());
+    void recordingRef.current.start(initial.id, p.consents.recording);
+
+    const displayName = await alertRepository.displayName(userId).catch(() => null);
     for (let step = 0; step < SUPPORT_CALL_SCRIPT.length && stillCalling(); step++) {
+      const context = await contextNow(userId, current, displayName);
       const next = await aiService.getSupportCallTurn(context, step);
       if (!stillCalling()) return;
       setTurn(next);
@@ -260,7 +265,9 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
   /** Ring their real phone (AI talks on the call); fall back to speaking here if that isn't possible. */
   async function beginCall(initial: AlertRow) {
     setCallStartedAt(Date.now());
-    const result = await startAiPhoneCall(initial.id);
+    const result = demoFlags.get().inAppCall
+      ? ({ mode: "app", reason: "Demo: the call runs in the app" } as const)
+      : await startAiPhoneCall(initial.id);
     if (result.mode === "phone") {
       setPhaseBoth("phone");
       sendState("active");

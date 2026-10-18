@@ -37,10 +37,24 @@ export type SmsInput = {
   reasons?: string[] | null;
   /** Only when the contact may receive the recording and one exists. Short-lived signed URL. */
   recordingUrl?: string | null;
+  /** Only when the contact may receive the health summary: from their health profile. */
+  medical?: MedicalInfo | null;
 };
 
+export type MedicalInfo = { allergies: string[]; carriesEpipen: boolean; conditions: string[] };
+
+/** "allergic to peanuts and bee stings (carries an EpiPen); asthma" — or null when there's nothing to say. */
+export function describeMedical(m: MedicalInfo | null | undefined): string | null {
+  if (!m) return null;
+  const parts: string[] = [];
+  if (m.allergies.length) parts.push(`allergic to ${m.allergies.map((a) => a.toLowerCase()).join(" and ")}${m.carriesEpipen ? " (carries an EpiPen)" : ""}`);
+  else if (m.carriesEpipen) parts.push("carries an EpiPen");
+  if (m.conditions.length) parts.push(m.conditions.map((c) => c.toLowerCase()).join(", "));
+  return parts.length ? parts.join("; ") : null;
+}
+
 /** The follow-up text. Same rules as the call: only what this contact is allowed to receive. */
-export function buildSmsMessage({ personName, location, reasons, recordingUrl }: SmsInput): string {
+export function buildSmsMessage({ personName, location, reasons, recordingUrl, medical }: SmsInput): string {
   const lines = [`Huddle alert: ${personName} may need support. They stopped responding to their group and to Huddle's support call.`];
   if (location) {
     const where = location.placeDescription ? `Last seen ${location.placeDescription}` : "Last seen location";
@@ -49,6 +63,8 @@ export function buildSmsMessage({ personName, location, reasons, recordingUrl }:
   }
   const shown = (reasons ?? []).filter(Boolean).slice(0, 3);
   if (shown.length) lines.push(`Huddle noticed: ${shown.map((r) => r.replace(/\.$/, "")).join("; ")}.`);
+  const medicalLine = describeMedical(medical);
+  if (medicalLine) lines.push(`Medical info: ${medicalLine}.`);
   if (recordingUrl) lines.push(`Support call recording (link expires in 24 hours): ${recordingUrl}`);
   lines.push(`Try to reach ${personName}. If they are in immediate danger, call 911. Huddle is not an emergency service.`);
   return lines.join("\n");

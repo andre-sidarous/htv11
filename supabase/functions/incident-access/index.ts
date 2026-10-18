@@ -45,6 +45,36 @@ async function contactIdsForEmail(admin: SupabaseClient, email: string | undefin
   return data ?? [];
 }
 
+/**
+ * Medical ID from their health profile (migration 007), read at view time so it's always current.
+ * Same rule as the health summary: only readers allowed to see health get it. The medical card
+ * photo (only if they marked themselves vulnerable) is a 1-hour signed URL.
+ */
+async function medicalId(admin: SupabaseClient, userId: string) {
+  const { data: hp } = await admin
+    .from("health_profiles")
+    .select("age, sex, allergies, carries_epipen, conditions, family_history, is_vulnerable, medical_card_path, risk_percent")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!hp) return null;
+  const cardUrl =
+    hp.is_vulnerable && hp.medical_card_path
+      ? (await admin.storage.from("medical-cards").createSignedUrl(hp.medical_card_path, RECORDING_URL_TTL_S)).data?.signedUrl ?? null
+      : null;
+  return {
+    age: hp.age as number | null,
+    sex: hp.sex as string | null,
+    allergies: (hp.allergies ?? []) as string[],
+    carriesEpipen: Boolean(hp.carries_epipen),
+    conditions: (hp.conditions ?? []) as string[],
+    familyHistory: (hp.family_history ?? []) as string[],
+    isVulnerable: Boolean(hp.is_vulnerable),
+    medicalCardUrl: cardUrl,
+    /** NHANES risk estimate: chance of high blood pressure, diabetes or heart disease. */
+    riskPercent: hp.risk_percent as number | null,
+  };
+}
+
 async function view(admin: SupabaseClient, pkg: Pkg, role: Role, allowed: Allowed) {
   const [{ data: alert }, { data: person }] = await Promise.all([
     admin.from("alerts").select("jam_id, reasons, resolved_at, created_at").eq("id", pkg.alert_id).maybeSingle(),
@@ -74,6 +104,7 @@ async function view(admin: SupabaseClient, pkg: Pkg, role: Role, allowed: Allowe
     location: allowed.location ? pkg.location_snapshot : null,
     health: allowed.health ? pkg.health_summary : null,
     reasons: allowed.health && Array.isArray(alert?.reasons) ? alert.reasons : null,
+    medicalId: allowed.health ? await medicalId(admin, pkg.affected_user_id) : null,
     destinationName: (pkg.route_summary?.destinationName as string | null | undefined) ?? null,
     hasRecording: Boolean(pkg.recording_url),
     recordingUrl,

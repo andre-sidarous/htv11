@@ -4,6 +4,7 @@ import { Activity, Map as MapIcon, Settings, Users, type LucideIcon } from "luci
 import { StyleSheet, View, type ColorValue } from "react-native";
 import { HuddleLogo } from "@/components/brand";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
+import { useDemoStorySync } from "@/features/demo/useDemoStorySync";
 import { ChatBanner } from "@/features/jams/ChatBanner";
 import { useChatUnread } from "@/features/jams/chatUnread";
 import { JamIdProvider } from "@/features/jams/JamIdContext";
@@ -29,6 +30,7 @@ export default function JamTabsLayout() {
   const { jamId } = useLocalSearchParams<{ jamId: string }>();
   useKeepAwake();
   const unreadChat = useChatUnread(jamId);
+  useDemoStorySync(jamId);
 
   return (
     <JamIdProvider jamId={jamId}>

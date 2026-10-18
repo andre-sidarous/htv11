@@ -2,9 +2,9 @@ import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as Clipboard from "expo-clipboard";
 import { Stack, router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CircleCheck, Clock, Copy, ExternalLink, HeartPulse, Hourglass, ListChecks, MapPin, Mic, Navigation, Pause, Play, Trash2, Users, type LucideIcon } from "lucide-react-native";
+import { ArrowLeft, CircleCheck, Clock, Copy, ExternalLink, HeartPulse, Hourglass, IdCard, ListChecks, MapPin, Mic, Navigation, Pause, Play, Trash2, Users, type LucideIcon } from "lucide-react-native";
 import type { ReactNode } from "react";
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
 import { JamMapView } from "@/components/map/JamMapView";
 import { Badge, Button, IconBadge } from "@/components/ui";
@@ -183,6 +183,8 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
         </Section>
       ) : null}
 
+      {incident.medicalId ? <MedicalIdSection id={incident.medicalId} /> : null}
+
       <Section icon={ListChecks} title="What happened">
         {incident.alertCreatedAt ? <HistoryRow label="Huddle checked in, no response" time={clock(incident.alertCreatedAt)} /> : null}
         <HistoryRow label="Incident package created" time={clock(incident.createdAt)} />
@@ -231,6 +233,35 @@ function IncidentBody({ incidentId }: { incidentId: string }) {
       </View>
       <Text style={[type.caption, styles.footnote]}>Huddle is not an emergency service. If someone is in immediate danger, call 911.</Text>
     </ScrollView>
+  );
+}
+
+/** Like a phone's Medical ID: what a responder or contact should know. Only shown to people allowed health info. */
+function MedicalIdSection({ id }: { id: NonNullable<IncidentView["medicalId"]> }) {
+  const line = (label: string, items: string[]) =>
+    items.length ? (
+      <Text style={type.body}>
+        <Text style={type.label}>{label}: </Text>
+        {items.join(", ")}
+      </Text>
+    ) : null;
+  const sex = id.sex && id.sex !== "unspecified" ? id.sex : null;
+  return (
+    <Section icon={IdCard} title="Medical ID" tone="neutral">
+      {id.age ? <Text style={type.body}>{[`${id.age} years old`, sex].filter(Boolean).join(" · ")}</Text> : null}
+      {line("Allergies", id.allergies)}
+      {id.carriesEpipen ? <Badge label="Carries an EpiPen" tone="escalation" /> : null}
+      {line("Conditions", id.conditions)}
+      {line("Family history", id.familyHistory)}
+      {id.riskPercent !== null ? (
+        <Text style={type.caption}>
+          Health estimate: {id.riskPercent}% chance of high blood pressure, diabetes or heart disease (model trained on CDC NHANES data). Not a diagnosis.
+        </Text>
+      ) : null}
+      {id.medicalCardUrl ? (
+        <Image source={{ uri: id.medicalCardUrl }} style={styles.medicalCard} resizeMode="contain" accessibilityLabel="Medical card photo" />
+      ) : null}
+    </Section>
   );
 }
 
@@ -302,4 +333,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", gap: space(2), marginTop: space(1) },
   footerActions: { gap: space(2), marginTop: space(1) },
   footnote: { textAlign: "center" },
+  medicalCard: { width: "100%", height: 200, borderRadius: radius.md, backgroundColor: colors.surface },
 });
