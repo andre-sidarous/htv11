@@ -1,43 +1,32 @@
-<p align="center">
+ <p align="center">
   <img src="assets/brand/logo-slogan.png" alt="Huddle" width="420">
 </p>
 
 <p align="center">
-  A native app for groups and solo travellers who want someone watching out for them —
-  without being watched over.
+  Getting home shouldn't mean hoping someone notices if you don't.
 </p>
 
 ---
-
 ## What it is
 
-Huddle is an Expo app for students, tourists, and friends travelling together — and for
-anyone travelling alone. A group creates or joins a private Huddle, shares live location
-while it's active, and sets a destination. If someone may need support, Huddle doesn't
-jump straight to an alarm — it checks in with them, then tells the group, then calls them,
-and only after that reaches their trusted contacts.
+Getting home shouldn't depend on someone remembering to check in. Yet most of the time, looking out for each other relies on a text, a location check, or someone noticing when something feels wrong.
 
-You don't need a group to use it. A **Solo Huddle** is just you: pick a destination (or
-don't) and start. Pulse and Lifeline run exactly the same — the only difference is that
-the "tell the group" step has nobody to notify, so it falls straight through to the AI
-phone call and then your trusted contacts. It's built for the person walking home alone
-at night as much as for a group of friends out together.
+**Huddle is built for the moments when someone can't ask for help and no one knows they need it.**
 
-Nothing is shared, recorded, or sent to a contact without that person's consent. Huddle
-never diagnoses a medical event, never labels a place as safe or unsafe, and never claims
-to be emergency services.
+Built with Expo, Huddle is a personal safety app that helps you look out for yourself and the people you care about. Start a private Huddle with friends or activate a Solo Huddle when you're on your own. Share your live location, set a destination, and let Huddle help watch over your journey.
 
-The product was built around three features, with everything else — onboarding, the map,
-group chat — supporting them.
+When you don't respond to a check-in, Huddle can escalate from group alerts to **Lifeline**, an AI-powered phone call that uses real walking directions and nearby public places to guide you towards your destination. If you remain unresponsive, Huddle can notify your trusted contacts with context about what happened. Powered by server-side timers, this process can continue even when the app is closed.
 
-| | |
+Your safety, your control. Location sharing and notifications follow your consent and settings. Huddle is designed to provide an extra layer of support, not replace emergency services.
+
+**Because looking out for each other shouldn't stop when someone goes quiet.**
+| Feature | What it does |
 |---|---|
-| **Lifeline** | An automatic AI phone call that talks an unresponsive member toward their destination, using real walking directions and nearby public places. |
-| **Safety Circle** | A step-by-step escalation — check-in, group alert, AI call, trusted contacts — backed by server-side timers so it keeps running even if every phone is closed. |
-| **Pulse** | A simulated wearable feed and a deterministic, explainable scoring system that decides when a check-in is warranted. It is not machine learning, and it says so on screen. |
+| **Lifeline** | An AI-powered phone call that talks an unresponsive member through real walking directions and nearby public places to help guide them towards their destination. |
+| **Safety Circle** | A step-by-step escalation process: check-in, group alert, AI call, and trusted contacts. Server-side timers keep it running even if every phone is closed. |
+| **Pulse** | A simulated wearable feed and a deterministic, explainable scoring system that decides when a check-in is warranted. It is not machine learning, and the app makes that clear. |
 
-The full behaviour of each — state machines, timers, what the AI is and isn't allowed to
-know — is documented in [`CLAUDE.md`](CLAUDE.md) and [`docs/architecture.md`](docs/architecture.md).
+The full behaviour of each feature, including state machines, timers, and what the AI is and isn't allowed to know, is documented in [`CLAUDE.md`](CLAUDE.md) and [`docs/architecture.md`](docs/architecture.md).
 
 ## Why we built it
 
