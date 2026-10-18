@@ -39,6 +39,39 @@ group chat — supporting them.
 The full behaviour of each — state machines, timers, what the AI is and isn't allowed to
 know — is documented in [`CLAUDE.md`](CLAUDE.md) and [`docs/architecture.md`](docs/architecture.md).
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/sign-in.jpg" alt="Sign in screen" width="220"><br>
+      <sub>Sign in</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/home.jpg" alt="Home screen with active, completed, and total Huddles, plus a Solo Huddle shortcut" width="220"><br>
+      <sub>Home — active Huddles, or start one on your own</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/lobby.jpg" alt="Huddle lobby with a QR code and join code" width="220"><br>
+      <sub>Lobby — join by code or QR</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/map.jpg" alt="Live map with route guidance and an SOS button" width="220"><br>
+      <sub>Live map, route guidance, and SOS</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/checkin.jpg" alt="Are you okay check-in sheet" width="220"><br>
+      <sub>A check-in, triggered by Pulse</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="assets/readme_pics/health.jpg" alt="Escalation timeline and recent heart rate signals" width="220"><br>
+      <sub>The escalation timeline</sub>
+    </td>
+  </tr>
+</table>
+
 ## Stack
 
 Expo SDK 57 (React Native, Expo Router), running in Expo Go, written in TypeScript.
