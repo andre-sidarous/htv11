@@ -4,9 +4,8 @@
 
 Huddle is a native mobile app for students, tourists and friends heading somewhere together, or on their own. Create or join a private Huddle, share your live location while it's running, and set where you're going: one destination for the whole group, or one each. If someone may need support, Huddle responds calmly, in steps: it checks in with them, tells the group, calls them with an AI that guides them toward help, and only then reaches their trusted contacts.
 
-Built in 36 hours at **Hack the Valley 11**.
+Built at **Hack the Valley 11**.
 
-> **Formerly "Jam".** Only the words people see were renamed. Code, routes (`/jam/[jamId]`), tables (`jams`, `jam_members`), realtime channels, the `jam://` scheme, bundle ids and demo emails still say `jam` on purpose: renaming them would break the database, links, QR codes and installs. See "Naming" in [CLAUDE.md](CLAUDE.md).
 
 ## Contents
 
@@ -22,7 +21,7 @@ Built in 36 hours at **Hack the Valley 11**.
 - [Running the demo](#running-the-demo)
 - [Data sources](#data-sources)
 - [Documentation](#documentation)
-- [Team and ownership](#team-and-ownership)
+- [Ownership](#ownership)
 - [Known limitations](#known-limitations)
 
 ## Features
@@ -302,31 +301,14 @@ The TTC disruption shown in the demo is scripted, not live data. Regenerating th
 | `src/features/*/README.md` | Per-area APIs |
 | [docs/prompts/](docs/prompts/README.md) | Each team member's original brief |
 
-## Team and ownership
+## Ownership
 
-Built by **Shivam Murawala**, **Aditi Nahar**, **Andre Sidarous** and **Sanae Faghfouri** at Hack the Valley 11.
-
-### Ownership
-
-| Area | Owner | Branch |
-|---|---|---|
-| Auth, profile, consent, baseline, Huddle create/join/lobby, tabs, Group/Signals/Settings, home, Demo Mode entry, theme | P2 | `feature/ui-onboarding` |
-| Map, live location, routing, route deviation, civic data, support points, route recommendation, data sources | P3 | `feature/maps-location-data` |
-| Health simulation, risk engine, escalation state machine, check-in, AI call and recording, incident package creation | P4 | `feature/health-risk-ai` |
-| Trusted contacts, in-app alerts, ntfy, SMS preview, incident screen, notification settings, Demo Control, QA, docs | P5 | `feature/alerts-contacts-demo` |
-
-### Contributing
-
-1. Branch from an updated `main`: `git checkout main && git pull origin main && git checkout -b feature/<name>`.
-2. Import types from `@/lib/types` and **never redefine them**. Contracts (types, schema, event payloads, service interfaces) are frozen: change them only in a small PR that tags the team. Adding optional fields or new types is fine. A schema change needs a new migration and an update to `src/lib/types/database.ts`.
-3. Use services through `@/services`.
-4. Edit only your own area. Cross-owner screens are mounted stubs: replace the body and keep the export.
-5. Realtime: `const ch = useJamChannel(jamId); useJamEvent(ch, "location_update", handler)`. Never put phone numbers, health history or recordings in broadcasts.
-6. Demo controls: don't build your own. Register with `demoActions.register({ id: DEMO_ACTION_IDS.x, label, owner, run })`.
-7. Install native modules with `npx expo install <pkg>`, and only ones that ship in Expo Go.
-8. Run `npm run check` and `npm run doctor` before opening a PR, and say in the PR what changed and how to test it.
-
-New screens follow the design system in [CLAUDE.md](CLAUDE.md#design-system-use-this-for-every-new-screen): tokens from `src/theme`, components from `@/components/ui`, no hard-coded colours.
+| Area | Owner |
+|---|---|
+| App experience: sign-in, profile, consent, baseline, creating and joining a Huddle, lobby, Group and Settings tabs, home, theme | Andre Sidarous |
+| Map, live location, routing, route deviation, Toronto civic data, support points, data sources | Shivam Murawala |
+| Pulse health simulation, risk engine, escalation state machine, check-in, Lifeline AI call and recording | Sanae Faghfouri |
+| Alerts, trusted contacts, ntfy, incident packages, notification settings, Demo Control, NHANES health model | Aditi Nahar |
 
 ## Known limitations
 
