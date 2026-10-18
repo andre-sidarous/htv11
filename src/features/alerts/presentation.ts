@@ -1,4 +1,4 @@
-import type { AlertResponseKind, EscalationState } from "@/lib/types";
+import type { AlertResponseKind, CheckInResponse, EscalationState } from "@/lib/types";
 
 /** Pure copy helpers for alert cards (no react-native imports, so vitest can test them). */
 
@@ -13,8 +13,23 @@ export function responseStatus(kinds: AlertResponseKind[], resolved: boolean): R
   return LABEL[Math.max(0, ...kinds.map((k) => RANK[k]))]!;
 }
 
+/** Card headline that reflects what they answered, if they answered. */
+export function alertHeadline(name: string, response: CheckInResponse | null | undefined, resolved: boolean): string {
+  if (resolved) return `${name} is marked safe.`;
+  if (response === "im_lost") return `${name} is lost.`;
+  if (response === "need_help") return `${name} asked for help.`;
+  if (response === "cannot_respond") return `${name} can’t respond right now.`;
+  if (response === "changed_destination") return `${name} changed their destination.`;
+  return `${name} may need support.`;
+}
+
 /** Calm, plain-language line for where escalation is. Never alarming. */
-export function escalationLine(state: EscalationState, name: string): string {
+export function escalationLine(state: EscalationState, name: string, response?: CheckInResponse | null): string {
+  if (state === "GROUP_ALERT_SENT") {
+    if (response === "im_lost") return `${name} said they’re lost and is sharing their location. Tap Find ${name} for a route to them.`;
+    if (response === "need_help") return `${name} asked for help. Your group has been notified.`;
+    if (response === "cannot_respond") return `${name} said they can’t respond right now. Your group has been notified.`;
+  }
   switch (state) {
     case "MONITORING":
     case "CHECK_IN_SENT":

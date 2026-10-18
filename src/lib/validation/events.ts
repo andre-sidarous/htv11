@@ -75,6 +75,7 @@ export const safetyAlertSchema = z.object({
   nextDeadlineAt: z.string().nullable().optional(),
   acknowledgedAt: z.string().nullable().optional(),
   resolvedAt: z.string().nullable().optional(),
+  checkinResponse: z.enum(["im_okay", "changed_destination", "im_lost", "need_help", "cannot_respond"]).nullable().optional(),
 });
 
 export const checkInRequestedSchema = z.object({

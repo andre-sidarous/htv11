@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { escalationLine, formatAgo, formatRemaining, responseStatus } from "./presentation";
+import { alertHeadline, escalationLine, formatAgo, formatRemaining, responseStatus } from "./presentation";
 
 describe("responseStatus", () => {
   it("is New with no responses", () => expect(responseStatus([], false)).toBe("New"));
@@ -37,5 +37,20 @@ describe("formatRemaining", () => {
     expect(formatRemaining("2026-10-18T11:00:00Z", now)).toBe("about 23 hours");
     expect(formatRemaining("2026-10-17T12:40:00Z", now)).toBe("40 minutes");
     expect(formatRemaining("2026-10-17T11:00:00Z", now)).toBe("expired");
+  });
+});
+
+describe("check-in answers", () => {
+  it("says what they actually answered, not 'hasn't checked in'", () => {
+    expect(escalationLine("GROUP_ALERT_SENT", "Alex")).toMatch(/hasn't answered/);
+    expect(escalationLine("GROUP_ALERT_SENT", "Alex", "im_lost")).toMatch(/said they’re lost/);
+    expect(escalationLine("GROUP_ALERT_SENT", "Alex", "need_help")).toMatch(/asked for help/);
+    expect(escalationLine("GROUP_ALERT_SENT", "Alex", "cannot_respond")).toMatch(/can’t respond/);
+  });
+
+  it("headlines follow the answer", () => {
+    expect(alertHeadline("Alex", null, false)).toBe("Alex may need support.");
+    expect(alertHeadline("Alex", "im_lost", false)).toBe("Alex is lost.");
+    expect(alertHeadline("Alex", "im_lost", true)).toBe("Alex is marked safe.");
   });
 });

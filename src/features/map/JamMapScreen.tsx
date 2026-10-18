@@ -12,7 +12,8 @@ import { createCheckInAlert, dispatchAlertEvent } from "@/features/health/alertA
 import { useLocationSharing } from "@/features/location/useLocationSharing";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { campusWalk } from "@/lib/demo/campusWalk";
-import type { LatLng } from "@/lib/types";
+import type { LatLng, Route } from "@/lib/types";
+import { routingService } from "@/services";
 import { colors, radius, shadow, space, type } from "@/theme";
 import { loadAllSupportPoints, loadTransitDisruption, loadTransitLines, loadTransitStops } from "./civicData";
 import { LocationPermissionCard } from "./components/LocationPermissionCard";
@@ -21,7 +22,9 @@ import { MemberMarker } from "./components/MemberMarker";
 import { MemberTrail } from "./components/MemberTrail";
 import { RouteStatusCard } from "./components/RouteStatusCard";
 import { SharingBar } from "./components/SharingBar";
+import { GuideCard } from "./components/GuideCard";
 import { DisruptionLayer, SupportPointLayer, TransitLayer } from "./components/SupportLayers";
+import { guideRouteKey, pickGuideTarget, type GuideTarget } from "./guideTarget";
 import { mapUi, useMapUi } from "./mapUiStore";
 import { createMemberStore } from "./memberStore";
 import { getRouteRecommendation } from "./recommendation";
@@ -165,6 +168,68 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
   const shownSupport = useMemo(() => visibleSupportPoints(SUPPORT_POINTS, viewRegion, highlightedIds), [viewRegion, highlightedIds]);
   const shownStops = useMemo(() => visibleStops(SURFACE_STOPS, viewRegion), [viewRegion]);
 
+  // ---- "Find Alex" / "Guide me back to my group": a live walking route to that person ----
+  const [guide, setGuide] = useState<{ key: string; from: LatLng; target: GuideTarget } | null>(null);
+  const [guideRoute, setGuideRoute] = useState<{ key: string; route: Route | null } | null>(null);
+  useEffect(() => {
+    if (!ui.guide) return;
+    const update = () => {
+      const me = sharing.lastPosition ?? (data.selfId ? (store.get(data.selfId)?.position ?? null) : null);
+      const candidates = store.all().map((m) => ({
+        userId: m.userId,
+        name: names.get(m.userId) ?? "Huddle member",
+        position: m.position,
+        presence: m.presence,
+        isActive: !inactiveIds.has(m.userId),
+      }));
+      const target = pickGuideTarget(ui.guide, me, data.selfId, candidates);
+      const next = target && me ? { key: guideRouteKey(me, target), from: me, target } : null;
+      setGuide((prev) => (prev?.key === next?.key ? prev : next));
+    };
+    const first = setTimeout(update, 0);
+    const timer = setInterval(update, PRESENCE_TICK_MS);
+    return () => {
+      clearTimeout(first);
+      clearInterval(timer);
+    };
+  }, [ui.guide, sharing.lastPosition, data.selfId, names, inactiveIds, store]);
+  const activeGuide = ui.guide ? guide : null;
+  useEffect(() => {
+    if (!activeGuide) return;
+    let cancelled = false;
+    void routingService
+      .getRoute(activeGuide.from, activeGuide.target.position, "walking")
+      .catch(() => null)
+      .then((route) => {
+        // The Campus Walk fallback isn't a route to this person: draw a straight line instead.
+        if (!cancelled) setGuideRoute({ key: activeGuide.key, route: route && !route.isDemoRoute ? route : null });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeGuide]);
+  const guideLine =
+    activeGuide && guideRoute?.key === activeGuide.key && guideRoute.route
+      ? guideRoute.route.coordinates
+      : activeGuide
+        ? [activeGuide.from, activeGuide.target.position]
+        : null;
+  // Frame both ends when guiding starts.
+  const framedGuide = useRef<string | null>(null);
+  useEffect(() => {
+    const target = activeGuide?.target.userId;
+    if (!activeGuide || framedGuide.current === target) return;
+    framedGuide.current = target ?? null;
+    mapRef.current?.fitToCoordinates([toMapCoord(activeGuide.from), toMapCoord(activeGuide.target.position)], {
+      edgePadding: { top: 160, right: 64, bottom: 260, left: 64 },
+      animated: true,
+    });
+  }, [activeGuide]);
+  const stopGuide = useCallback(() => {
+    framedGuide.current = null;
+    mapUi.set({ guide: null });
+  }, []);
+
   // Frame the route once it arrives.
   const framedRoute = useRef<string | null>(null);
   useEffect(() => {
@@ -285,6 +350,21 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
             zIndex={5}
           />
         ) : null}
+        {guideLine ? (
+          <Polyline coordinates={guideLine.map(toMapCoord)} strokeColor={colors.ok} strokeWidth={6} lineDashPattern={guideRoute?.route ? undefined : [8, 8]} zIndex={7} />
+        ) : null}
+        {data.members
+          .filter((m) => m.isActive && m.userId !== data.selfId && m.personalDestination)
+          .map((m) => (
+            <Marker
+              key={`dest-${m.userId}`}
+              coordinate={toMapCoord(m.personalDestination!)}
+              title={`${m.displayName}’s new destination`}
+              description={m.personalDestination!.name}
+              pinColor={colors.amber}
+              zIndex={8}
+            />
+          ))}
         <SupportPointLayer points={shownSupport} highlightedIds={highlightedIds} />
         {ui.showDisruption ? <DisruptionLayer disruption={DISRUPTION} /> : null}
         {destination ? (
@@ -357,7 +437,14 @@ export function JamMapScreen({ jamId }: { jamId: string }) {
       </View>
 
       <View style={styles.bottom} pointerEvents="box-none">
-        {selectedId ? (
+        {ui.guide ? (
+          <GuideCard
+            request={ui.guide}
+            target={activeGuide?.target ?? null}
+            routeDistanceM={activeGuide && guideRoute?.key === activeGuide.key ? (guideRoute.route?.distanceM ?? null) : null}
+            onStop={stopGuide}
+          />
+        ) : selectedId ? (
           <MemberCard
             store={store}
             userId={selectedId}

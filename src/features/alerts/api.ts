@@ -17,10 +17,11 @@ export const toSafetyAlert = (row: AlertRow): SafetyAlert => ({
   nextDeadlineAt: row.next_deadline_at,
   acknowledgedAt: row.acknowledged_at,
   resolvedAt: row.resolved_at,
+  checkinResponse: row.checkin_response ?? null,
 });
 
 const ALERT_COLUMNS =
-  "id, jam_id, affected_user_id, risk_score, severity, status, escalation_state, reasons, next_deadline_at, created_at, acknowledged_at, resolved_at";
+  "id, jam_id, affected_user_id, risk_score, severity, status, escalation_state, reasons, next_deadline_at, created_at, acknowledged_at, resolved_at, checkin_response";
 
 export async function currentUserId(): Promise<string | null> {
   const supabase = getSupabaseClient();

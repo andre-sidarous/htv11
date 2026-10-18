@@ -71,6 +71,8 @@ export async function dispatchAlertEvent(alert: AlertRow, event: EscalationEvent
     next_deadline_at: next.deadlineAt,
     ...(next.resolvedAt ? { resolved_at: next.resolvedAt } : {}),
     ...(event.type === "GROUP_ACK" ? { acknowledged_at: new Date(now).toISOString() } : {}),
+    // Keep their answer so the group sees "Alex is lost", not "hasn't checked in".
+    ...(event.type === "CHECK_IN_RESPONSE" ? { checkin_response: event.response } : {}),
   };
   const updated = await alertRepository.update(alert.id, alert.escalation_state, patch);
   if (!updated) {

@@ -16,6 +16,7 @@ import { useJam } from "@/features/jams/useJam";
 import { useJamChannel, useJamEvent } from "@/hooks/useJamChannel";
 import { AI_CALL_SILENCE_TIMEOUT_MS, SUPPORT_CALL_SCRIPT } from "@/lib/constants";
 import type { AiCallContext, AiCallState, AiCallTurn, AlertRow } from "@/lib/types";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { startAiPhoneCall } from "@/lib/supabase/functions";
 import { aiService } from "@/services/ai";
 import { simulatedHealth } from "@/services/health";
@@ -212,10 +213,19 @@ export function SupportCallScreen({ jamId }: { jamId: string }) {
     const s = safetyStore.get();
     const location = s.locations[userId] ?? null;
     const j = jamRef.current;
+    // "I changed my destination" overrides the Huddle's destination for this person.
+    const { data: mine } = (await getSupabaseClient()
+      ?.from("jam_members")
+      .select("destination_name, destination_lat, destination_lng")
+      .eq("jam_id", jamId)
+      .eq("user_id", userId)
+      .maybeSingle()) ?? { data: null };
     const destination: CallDestination | null =
-      j?.destination_lat != null && j.destination_lng != null
-        ? { latitude: Number(j.destination_lat), longitude: Number(j.destination_lng), name: j.destination_name ?? undefined }
-        : null;
+      mine?.destination_lat != null && mine.destination_lng != null
+        ? { latitude: Number(mine.destination_lat), longitude: Number(mine.destination_lng), name: mine.destination_name ?? undefined }
+        : j?.destination_lat != null && j.destination_lng != null
+          ? { latitude: Number(j.destination_lat), longitude: Number(j.destination_lng), name: j.destination_name ?? undefined }
+          : null;
     const [displayName, route] = await Promise.all([
       alertRepository.displayName(userId).catch(() => null),
       location && destination ? callRoute(routingService, location, destination, j?.travel_mode) : Promise.resolve(null),

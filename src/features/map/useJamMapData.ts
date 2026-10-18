@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { campusWalk } from "@/lib/demo/campusWalk";
 import { mockServicesEnabled } from "@/lib/env";
 import { haversineM } from "@/lib/geo";
@@ -19,6 +19,8 @@ export type MapMember = {
   isActive: boolean;
   locationConsent: boolean;
   healthConsent: boolean;
+  /** "I changed my destination": where this member is heading instead of the Huddle's destination. */
+  personalDestination: (LatLng & { name: string }) | null;
 };
 
 export type MapJam = {
@@ -26,7 +28,10 @@ export type MapJam = {
   name: string;
   status: JamStatus;
   travelMode: TravelMode;
+  /** Where THIS phone is heading: their personal destination if they changed it, else the Huddle's. */
   destination: (LatLng & { name: string }) | null;
+  /** The Huddle's shared destination. */
+  groupDestination: (LatLng & { name: string }) | null;
 };
 
 /** Unresolved alerts, only to label markers "Possible concern" after a reload (P4/P5 own alerts). */
@@ -62,6 +67,7 @@ function mockData(jamId: string): Omit<JamMapData, "route" | "alternativeRoute" 
       status: "active",
       travelMode: campusWalk.jam.travelMode,
       destination: campusWalk.destination,
+      groupDestination: campusWalk.destination,
     },
     members: campusWalk.members.map((m) => ({
       userId: m.userId,
@@ -70,6 +76,7 @@ function mockData(jamId: string): Omit<JamMapData, "route" | "alternativeRoute" 
       isActive: true,
       locationConsent: true,
       healthConsent: true,
+      personalDestination: null,
     })),
     initialLocations: campusWalk.members
       .filter((m) => m.userId !== host.userId)
@@ -96,6 +103,8 @@ export function routeOrigin(destination: LatLng, fallback: LatLng | null): LatLn
 }
 
 export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): JamMapData {
+  // Per-instance channel name (see realtimeTable.ts): a repeated topic reuses a channel being removed.
+  const instanceId = useId();
   const supabase = mockServicesEnabled ? null : getSupabaseClient();
   const [state, setState] = useState<Omit<JamMapData, "route" | "alternativeRoute" | "routeLoading" | "reload">>({
     status: "loading",
@@ -135,7 +144,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             .maybeSingle(),
           supabase
             .from("jam_members")
-            .select("user_id, role, is_active, location_consent, health_consent")
+            .select("user_id, role, is_active, location_consent, health_consent, destination_name, destination_lat, destination_lng")
             .eq("jam_id", jamId),
           supabase.from("live_locations").select("*").eq("jam_id", jamId),
           supabase
@@ -157,6 +166,14 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
 
         const j = jamRes.data;
         const hasDestination = j.destination_lat != null && j.destination_lng != null;
+        const groupDestination = hasDestination
+          ? { name: j.destination_name ?? "Destination", latitude: Number(j.destination_lat), longitude: Number(j.destination_lng) }
+          : null;
+        const personal = (r: (typeof rows)[number]) =>
+          r.destination_lat != null && r.destination_lng != null
+            ? { name: r.destination_name ?? "New destination", latitude: Number(r.destination_lat), longitude: Number(r.destination_lng) }
+            : null;
+        const selfRow = rows.find((r) => r.user_id === selfId);
         setState({
           status: "ready",
           error: null,
@@ -166,9 +183,8 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             name: j.name,
             status: j.status,
             travelMode: j.travel_mode,
-            destination: hasDestination
-              ? { name: j.destination_name ?? "Destination", latitude: Number(j.destination_lat), longitude: Number(j.destination_lng) }
-              : null,
+            destination: (selfRow ? personal(selfRow) : null) ?? groupDestination,
+            groupDestination,
           },
           members: rows.map((r) => ({
             userId: r.user_id,
@@ -177,6 +193,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
             isActive: r.is_active,
             locationConsent: r.location_consent,
             healthConsent: r.health_consent,
+            personalDestination: personal(r),
           })),
           // Positions are optional; RLS hides members who aren't sharing.
           initialLocations: locationsRes.error ? [] : (locationsRes.data ?? []),
@@ -212,7 +229,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
       timer = setTimeout(() => void load(true), 300);
     };
     const channel = supabase
-      .channel(`map-db:${jamId}`)
+      .channel(`map-db:${jamId}:${instanceId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "jams", filter: `id=eq.${jamId}` }, refresh)
       .on("postgres_changes", { event: "*", schema: "public", table: "jam_members", filter: `jam_id=eq.${jamId}` }, refresh)
       .subscribe();
@@ -220,7 +237,7 @@ export function useJamMapData(jamId: string, fallbackOrigin: LatLng | null): Jam
       clearTimeout(timer);
       void supabase.removeChannel(channel);
     };
-  }, [jamId, load, supabase]);
+  }, [jamId, load, supabase, instanceId]);
 
   // Planned + alternative route, once per destination/origin.
   const destination = state.jam?.destination ?? null;

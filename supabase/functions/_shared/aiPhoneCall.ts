@@ -381,7 +381,12 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
   const [{ data: profile }, { data: jam }, { data: member }] = await Promise.all([
     admin.from("profiles").select("display_name").eq("id", alert.affected_user_id).maybeSingle(),
     admin.from("jams").select("destination_name, destination_lat, destination_lng").eq("id", alert.jam_id).maybeSingle(),
-    admin.from("jam_members").select("location_consent").eq("jam_id", alert.jam_id).eq("user_id", alert.affected_user_id).maybeSingle(),
+    admin
+      .from("jam_members")
+      .select("location_consent, destination_name, destination_lat, destination_lng")
+      .eq("jam_id", alert.jam_id)
+      .eq("user_id", alert.affected_user_id)
+      .maybeSingle(),
   ]);
   const { data: loc } = member?.location_consent
     ? await admin
@@ -396,9 +401,16 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
     .filter((r): r is string => typeof r === "string")
     .map((r) => r.replace(/\d+(\.\d+)?\s*%/g, "well").replace(/\.$/, ""))
     .slice(0, 2);
+  // "I changed my destination" overrides the Huddle's destination for this person.
+  const personal = member?.destination_lat != null && member.destination_lng != null;
+  const dest = personal
+    ? { name: member!.destination_name ?? "your new destination", lat: Number(member!.destination_lat), lng: Number(member!.destination_lng) }
+    : jam?.destination_lat != null && jam.destination_lng != null
+      ? { name: jam.destination_name ?? "your destination", lat: Number(jam.destination_lat), lng: Number(jam.destination_lng) }
+      : null;
   const knowledge: CallKnowledge = {
     name: (profile?.display_name ?? "there").split(/\s+/)[0],
-    destination: jam?.destination_name ?? null,
+    destination: dest?.name ?? null,
     directions: null,
     remaining: null,
     places: [],
@@ -414,9 +426,7 @@ export async function gatherKnowledge(admin: SupabaseClient, alert: AlertRowLite
   const key = `${here.lat.toFixed(4)},${here.lng.toFixed(4)}`;
   const cached = placeCache.get(key);
   const [route, places] = await Promise.all([
-    jam?.destination_lat != null && jam.destination_lng != null
-      ? osrmDirections(here, { lat: Number(jam.destination_lat), lng: Number(jam.destination_lng) })
-      : Promise.resolve(null),
+    dest ? osrmDirections(here, { lat: dest.lat, lng: dest.lng }) : Promise.resolve(null),
     cached && Date.now() - cached.at < 5 * 60_000 ? Promise.resolve(cached.places) : nearbyPlaces(here),
   ]);
   if (!cached || cached.places !== places) placeCache.set(key, { at: Date.now(), places });

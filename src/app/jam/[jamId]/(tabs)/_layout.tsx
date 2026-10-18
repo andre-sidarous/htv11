@@ -4,6 +4,8 @@ import { Activity, Map as MapIcon, Settings, Users, type LucideIcon } from "luci
 import { StyleSheet, View, type ColorValue } from "react-native";
 import { HuddleLogo } from "@/components/brand";
 import { JamOverlayHost } from "@/components/JamOverlayHost";
+import { ChatBanner } from "@/features/jams/ChatBanner";
+import { useChatUnread } from "@/features/jams/chatUnread";
 import { JamIdProvider } from "@/features/jams/JamIdContext";
 import { fonts, colors } from "@/theme";
 
@@ -26,6 +28,7 @@ function tabIcon(Glyph: LucideIcon) {
 export default function JamTabsLayout() {
   const { jamId } = useLocalSearchParams<{ jamId: string }>();
   useKeepAwake();
+  const unreadChat = useChatUnread(jamId);
 
   return (
     <JamIdProvider jamId={jamId}>
@@ -45,11 +48,21 @@ export default function JamTabsLayout() {
           }}
         >
           <Tabs.Screen name="map" options={{ title: "Map", tabBarAccessibilityLabel: "Map", tabBarIcon: tabIcon(MapIcon) }} />
-          <Tabs.Screen name="group" options={{ title: "Group", tabBarAccessibilityLabel: "Group", tabBarIcon: tabIcon(Users) }} />
+          <Tabs.Screen
+            name="group"
+            options={{
+              title: "Group",
+              tabBarAccessibilityLabel: unreadChat ? `Group, ${unreadChat} new chat messages` : "Group",
+              tabBarIcon: tabIcon(Users),
+              tabBarBadge: unreadChat ? (unreadChat > 9 ? "9+" : unreadChat) : undefined,
+              tabBarBadgeStyle: { backgroundColor: colors.brand, color: colors.surface, fontSize: 11 },
+            }}
+          />
           <Tabs.Screen name="signals" options={{ title: "Health", tabBarAccessibilityLabel: "Health signals", tabBarIcon: tabIcon(Activity) }} />
           <Tabs.Screen name="settings" options={{ title: "Settings", tabBarAccessibilityLabel: "Settings", tabBarIcon: tabIcon(Settings) }} />
         </Tabs>
         <JamOverlayHost jamId={jamId} />
+        <ChatBanner jamId={jamId} />
       </View>
     </JamIdProvider>
   );

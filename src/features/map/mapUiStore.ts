@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { GuideRequest } from "./guideTarget";
 
 /**
  * Map display toggles shared by the map screen and the map demo actions on this device.
@@ -9,9 +10,11 @@ export type MapUiState = {
   showAlternative: boolean;
   /** Bumped by "Reset locations" so screens clear breadcrumb trails. */
   resetCount: number;
+  /** "Find Alex" / "Guide me back to my group": the map routes this phone to them. */
+  guide: GuideRequest | null;
 };
 
-const initial: MapUiState = { showDisruption: false, showAlternative: false, resetCount: 0 };
+const initial: MapUiState = { showDisruption: false, showAlternative: false, resetCount: 0, guide: null };
 let state = initial;
 const listeners = new Set<() => void>();
 
@@ -22,7 +25,7 @@ export const mapUi = {
     listeners.forEach((l) => l());
   },
   reset() {
-    state = { ...initial, resetCount: state.resetCount + 1 };
+    state = { ...initial, resetCount: state.resetCount + 1, guide: null };
     listeners.forEach((l) => l());
   },
   subscribe(listener: () => void) {

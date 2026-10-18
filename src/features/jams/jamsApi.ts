@@ -13,6 +13,10 @@ export type MemberSettableFields = Partial<
     | "contact_notify_consent"
     | "emergency_preference"
     | "left_at"
+    | "destination_name"
+    | "destination_lat"
+    | "destination_lng"
+    | "destination_updated_at"
   >
 >;
 
@@ -104,6 +108,28 @@ export async function updateMyMembership(
   if (!supabase) return { error: "Supabase is not configured." };
   const { error } = await supabase.from("jam_members").update(updates).eq("jam_id", jamId).eq("user_id", userId);
   return { error: error?.message ?? null };
+}
+
+/** "I changed my destination": save where this member is heading now (their route follows it). */
+export async function setMyDestination(
+  jamId: string,
+  userId: string,
+  place: { name: string; latitude: number; longitude: number },
+): Promise<{ error: string | null }> {
+  return updateMyMembership(jamId, userId, {
+    destination_name: place.name.slice(0, 120),
+    destination_lat: place.latitude,
+    destination_lng: place.longitude,
+    destination_updated_at: new Date().toISOString(),
+  });
+}
+
+/** "Call someone in my group": their numbers, only while I have an open alert (enforced by the DB). */
+export async function memberPhoneNumbers(jamId: string): Promise<{ userId: string; name: string; phone: string }[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
+  const { data } = await supabase.rpc("member_phone_numbers", { p_jam_id: jamId });
+  return (data ?? []).map((r) => ({ userId: r.user_id, name: r.display_name, phone: r.phone_number }));
 }
 
 export async function startJam(jamId: string): Promise<{ error: string | null }> {

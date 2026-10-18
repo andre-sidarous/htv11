@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import { ChevronRight, Contact, FlaskConical, LogOut, MapPin, Plus, QrCode, ShieldCheck, User, type LucideIcon } from "lucide-react-native";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { BrandLine, HuddleLogo, PenguinHuddle } from "@/components/brand";
 import { Avatar, Badge, Button, Card, Icon, IconBadge, ListRow, Screen, SectionHeader } from "@/components/ui";
 import { useSession } from "@/features/auth/SessionProvider";
@@ -8,6 +9,7 @@ import { APP_SLOGAN_CTA } from "@/lib/constants";
 import { signOut } from "@/lib/supabase/auth";
 import type { JamRow } from "@/lib/types";
 import { fonts, colors, radius, shadow, space, tones, type, type Tone } from "@/theme";
+import { joinJamByCode } from "./jamsApi";
 import { useJamMembers } from "./useJamMembers";
 import { useMyJams, type MyJam } from "./useMyJams";
 
@@ -27,6 +29,20 @@ export function HomeScreen() {
   function openJam({ jam }: MyJam) {
     if (jam.status === "waiting") router.push(`/jam/${jam.id}/lobby`);
     else router.push(`/jam/${jam.id}/map`);
+  }
+
+  // Left by accident? Rejoin a Huddle that's still running (same as entering its code again).
+  const [rejoining, setRejoining] = useState<string | null>(null);
+  async function rejoin(pair: MyJam) {
+    setRejoining(pair.jam.id);
+    const { error } = await joinJamByCode(pair.jam.join_code);
+    setRejoining(null);
+    if (error) {
+      Alert.alert("Couldn’t rejoin", error);
+      return;
+    }
+    void refresh();
+    openJam(pair);
   }
 
   return (
@@ -114,7 +130,17 @@ export function HomeScreen() {
                   <Text style={type.body}>{pair.jam.name}</Text>
                   <Text style={type.caption}>{pair.jam.destination_name ?? "No destination set"}</Text>
                 </View>
-                <Badge label="Ended" tone="neutral" />
+                {pair.jam.status !== "ended" && !pair.membership.is_active ? (
+                  <Button
+                    label="Rejoin"
+                    variant="secondary"
+                    loading={rejoining === pair.jam.id}
+                    onPress={() => void rejoin(pair)}
+                    accessibilityHint={`Rejoins ${pair.jam.name}, which is still running`}
+                  />
+                ) : (
+                  <Badge label="Ended" tone="neutral" />
+                )}
               </View>
             ))}
           </Card>
