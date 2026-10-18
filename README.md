@@ -98,19 +98,6 @@ supabase/           migrations, RLS policies, and Edge Functions
 docs/                architecture, data model, environment setup, demo script
 ```
 
-`CLAUDE.md` is the canonical reference for how the app actually behaves — it's kept
-current by design, so it's worth reading before the docs folder for anything you're
-unsure about.
-
-## A note on naming
-
-The app was called **Jam** for most of its development and was renamed to **Huddle**
-late — on purpose, only in what people see and hear. Route paths, database tables,
-realtime channel names, the deep-link scheme, and the bundle identifier still say `jam`,
-because renaming them would have meant breaking existing installs, QR codes, and the
-database. If you're reading the source and wondering why a screen says "Huddle" but the
-file is in `src/app/jam/[jamId]/`, that's why.
-
 ## Status
 
 This was built in 36 hours by a small team, split by feature area (onboarding and Jam
